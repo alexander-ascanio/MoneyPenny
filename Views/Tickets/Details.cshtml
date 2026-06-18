@@ -2,66 +2,160 @@
 
 @{
     ViewData["Title"] = $"Ticket {Model.Number}";
+
+    string PriorityClass(string priority) => priority.ToLowerInvariant() switch
+    {
+        "critical" or "critica" or "crítica" => "ticket-pill-priority-critical",
+        "high" or "alta" => "ticket-pill-priority-high",
+        "low" or "baja" => "ticket-pill-priority-low",
+        _ => "ticket-pill-priority-normal"
+    };
+
+    string StatusClass(string status) => status.ToLowerInvariant() switch
+    {
+        "resolved" or "closed" or "cerrado" or "resuelto" => "ticket-pill-status-closed",
+        "in progress" or "en progreso" => "ticket-pill-status-progress",
+        "new" or "nuevo" or "open" or "abierto" => "ticket-pill-status-open",
+        _ => "ticket-pill-status-default"
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">@Model.Number — @Model.Title</h2>
-    <a asp-action="Index" class="btn btn-outline-secondary">Volver</a>
-</div>
-
-@if (TempData["SuccessMessage"] is string successMessage)
-{
-    <div class="alert alert-success">@successMessage</div>
-}
-
-@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-{
-    <div class="alert alert-danger">@Model.ErrorMessage</div>
-}
-
-<div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header">Detalle</div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-3">Estado</dt>
-                    <dd class="col-sm-9">@Model.Status</dd>
-                    <dt class="col-sm-3">Prioridad</dt>
-                    <dd class="col-sm-9">@Model.Priority</dd>
-                    <dt class="col-sm-3">Asignado</dt>
-                    <dd class="col-sm-9">@(Model.Assignee ?? "Sin asignar")</dd>
-                    <dt class="col-sm-3">Creado</dt>
-                    <dd class="col-sm-9">@Model.CreatedAt.ToLocalTime().ToString("g")</dd>
-                    <dt class="col-sm-3">Descripción</dt>
-                    <dd class="col-sm-9"><pre class="mb-0">@Model.Description</pre></dd>
-                </dl>
+<div class="tickets-page ticket-detail-page">
+    <div class="ticket-detail-hero card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="ticket-number-badge">#@Model.Number</span>
+                        <span class="ticket-pill @StatusClass(Model.Status)">@Model.Status</span>
+                        <span class="ticket-pill @PriorityClass(Model.Priority)">@Model.Priority</span>
+                        @if (Model.IsIndexed)
+                        {
+                            <span class="badge rounded-pill text-bg-success">Indexado RAG</span>
+                        }
+                    </div>
+                    <h2 class="ticket-detail-title mb-1">@Model.Title</h2>
+                    <p class="text-muted mb-0 small">
+                        ID interno: @Model.Id
+                        @if (!string.IsNullOrWhiteSpace(Model.TeamSupportId))
+                        {
+                            <span class="mx-2">·</span>
+                            <span>TS: @Model.TeamSupportId</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.CodigoTelegestion))
+                        {
+                            <span class="mx-2">·</span>
+                            <span>Cód. telegestión: @Model.CodigoTelegestion</span>
+                        }
+                    </p>
+                </div>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
-        <div class="card shadow-sm">
-            <div class="card-header">Acciones RAG</div>
-            <div class="card-body d-grid gap-2">
-                <p class="text-muted mb-0">
-                    Indexado:
-                    @if (Model.IsIndexed)
-                    {
-                        <span class="badge text-bg-success">Sí</span>
-                    }
-                    else
-                    {
-                        <span class="badge text-bg-secondary">No</span>
-                    }
-                </p>
-                <form asp-action="IndexTicket" method="post">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-primary w-100">Indexar ticket</button>
-                </form>
-                <a asp-controller="Rag" asp-action="Ask" asp-route-ticketId="@Model.Id" asp-route-ticketNumber="@Model.Number" class="btn btn-outline-success w-100">
-                    Preguntar sobre este ticket
-                </a>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success border-0 shadow-sm">@successMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-card-text me-2 text-primary"></i>Descripción</h5>
+                </div>
+                <div class="card-body">
+                    <div class="ticket-description">@(string.IsNullOrWhiteSpace(Model.Description) ? "Sin descripción." : Model.Description)</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="ticket-info-tile card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="ticket-info-label"><i class="bi bi-building me-1"></i> Cliente</div>
+                            <div class="ticket-info-value">@(Model.Customer ?? "—")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="ticket-info-tile card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="ticket-info-label"><i class="bi bi-people me-1"></i> Contactos</div>
+                            <div class="ticket-info-value">@(Model.Contacts ?? "—")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="ticket-info-tile card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="ticket-info-label"><i class="bi bi-person-check me-1"></i> Asignado</div>
+                            <div class="ticket-info-value">@(Model.Assignee ?? "Sin asignar")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="ticket-info-tile card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="ticket-info-label"><i class="bi bi-clock-history me-1"></i> Fechas</div>
+                            <div class="ticket-info-value small">
+                                <div class="ticket-datetime mb-1">
+                                    <i class="bi bi-calendar3 text-success"></i>
+                                    <span>Creado: @Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                                @if (Model.UpdatedAt.HasValue)
+                                {
+                                    <div class="ticket-datetime">
+                                        <i class="bi bi-pencil-square text-primary"></i>
+                                        <span>Modificado: @Model.UpdatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm ticket-rag-panel">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-robot me-2 text-success"></i>Acciones RAG</h5>
+                </div>
+                <div class="card-body d-grid gap-3">
+                    <div class="ticket-rag-status">
+                        Estado de indexación:
+                        @if (Model.IsIndexed)
+                        {
+                            <span class="badge rounded-pill text-bg-success">Indexado</span>
+                        }
+                        else
+                        {
+                            <span class="badge rounded-pill text-bg-secondary">Pendiente</span>
+                        }
+                    </div>
+                    <form asp-action="IndexTicket" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
+                        </button>
+                    </form>
+                    <a asp-controller="Rag" asp-action="Ask"
+                       asp-route-ticketId="@Model.Id"
+                       asp-route-ticketNumber="@Model.Number"
+                       class="btn btn-primary w-100">
+                        <i class="bi bi-chat-dots me-1"></i> Preguntar sobre este ticket
+                    </a>
+                </div>
             </div>
         </div>
     </div>

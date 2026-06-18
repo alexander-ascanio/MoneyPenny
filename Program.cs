@@ -34,6 +34,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 

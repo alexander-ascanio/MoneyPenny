@@ -2,95 +2,399 @@
 
 @{
     ViewData["Title"] = "Tickets";
+
+    string PriorityClass(string priority) => priority.ToLowerInvariant() switch
+    {
+        "critical" or "critica" or "crítica" => "ticket-pill-priority-critical",
+        "high" or "alta" => "ticket-pill-priority-high",
+        "low" or "baja" => "ticket-pill-priority-low",
+        _ => "ticket-pill-priority-normal"
+    };
+
+    string StatusClass(string status) => status.ToLowerInvariant() switch
+    {
+        "resolved" or "closed" or "cerrado" or "resuelto" => "ticket-pill-status-closed",
+        "in progress" or "en progreso" => "ticket-pill-status-progress",
+        "new" or "nuevo" or "open" or "abierto" => "ticket-pill-status-open",
+        _ => "ticket-pill-status-default"
+    };
+
+    string Truncate(string? value, int max = 40) =>
+        string.IsNullOrWhiteSpace(value) ? "—" :
+        value.Length <= max ? value : value[..(max - 1)] + "…";
+
+    bool IsSelected(string? current, string value) =>
+        string.Equals(current, value, StringComparison.Ordinal);
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-        <i class="bi bi-ticket-detailed me-2"></i>
-        @ViewData["Title"]
-    </h2>
-</div>
-
-@if (TempData["SuccessMessage"] is string successMessage)
-{
-    <div class="alert alert-success">@successMessage</div>
-}
-
-@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
-{
-    <div class="alert alert-danger">@Model.ErrorMessage</div>
-}
-
-<form method="get" class="row g-3 mb-4">
-    <div class="col-md-5">
-        <input type="text" name="search" value="@Model.Search" class="form-control" placeholder="Buscar por número, título o descripción" />
-    </div>
-    <div class="col-md-3">
-        <input type="text" name="status" value="@Model.StatusFilter" class="form-control" placeholder="Filtrar por estado" />
-    </div>
-    <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">Buscar</button>
-    </div>
-</form>
-
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Número</th>
-                    <th>Título</th>
-                    <th>Estado</th>
-                    <th>Prioridad</th>
-                    <th>Cliente</th>
-                    <th>Contactos</th>
-                    <th>Creado</th>
-                    <th>Indexado</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Tickets.Any())
+<div class="tickets-page">
+    <div class="tickets-header">
+        <div>
+            <h2 class="tickets-title">
+                <i class="bi bi-ticket-detailed"></i>
+                Tickets
+            </h2>
+            <p class="tickets-subtitle text-muted mb-0">
+                @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
                 {
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
-                            @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                    @:Listado de tickets TeamSupport
+                    @if (Model.TotalCount > 0)
+                    {
+                        <span class="tickets-count-badge">@Model.TotalCount</span>
+                    }
+                }
+                else
+                {
+                    @:No se pudo cargar el listado
+                }
+            </p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success border-0 shadow-sm">@successMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div>
+    }
+
+    <form method="get" id="tickets-filter-form" asp-action="Index" asp-controller="Tickets">
+        <div class="tickets-toolbar card border-0 shadow-sm">
+            <div class="card-body py-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-lg-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" name="search" value="@Model.Search"
+                                   class="form-control border-start-0 ps-0"
+                                   placeholder="Buscar por número, asunto o descripción" />
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <input type="text" name="status" value="@Model.StatusFilter"
+                               class="form-control" placeholder="Filtrar por estado" />
+                    </div>
+                    <div class="col-lg-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-funnel me-1"></i> Buscar
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Search) || !string.IsNullOrWhiteSpace(Model.StatusFilter) || Model.Filters.HasAny)
+                    {
+                        <div class="col-lg-2">
+                            <a asp-action="Index" class="btn btn-outline-secondary w-100">Limpiar</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="tickets-filters card border-0 shadow-sm">
+            <div class="card-body py-3">
+                <div class="tickets-filters-row">
+                    <div class="tickets-filters-label">
+                        <i class="bi bi-funnel"></i>
+                        <span>Filtros</span>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-group">Grupo:</label>
+                        <select id="filter-group" name="group" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Groups)
                             {
-                                @:No hay tickets. Conecta TicketsDatabase y ajusta el esquema en Models/Tickets/Ticket.cs.
+                                if (IsSelected(Model.Filters.Group, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-customer">Cliente:</label>
+                        <select id="filter-customer" name="customer" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Customers)
+                            {
+                                if (IsSelected(Model.Filters.Customer, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-product">Producto:</label>
+                        <select id="filter-product" name="product" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Products)
+                            {
+                                if (IsSelected(Model.Filters.Product, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-estado">Estado:</label>
+                        <select id="filter-estado" name="estado" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Statuses)
+                            {
+                                if (IsSelected(Model.Filters.Status, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-priority">Prioridad:</label>
+                        <select id="filter-priority" name="priority" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Priorities)
+                            {
+                                if (IsSelected(Model.Filters.Priority, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
+                        <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.ResultLimit, "50"))
+                            {
+                                <option value="50" selected>Últimos 50</option>
                             }
                             else
                             {
-                                @:No se pudieron cargar los tickets.
+                                <option value="50">Últimos 50</option>
                             }
-                        </td>
-                    </tr>
-                }
-                @foreach (var ticket in Model.Tickets)
-                {
-                    <tr>
-                        <td>@ticket.Number</td>
-                        <td>@ticket.Title</td>
-                        <td>@ticket.Status</td>
-                        <td>@ticket.Priority</td>
-                        <td>@(ticket.Customer ?? "—")</td>
-                        <td>@(ticket.Contacts ?? "—")</td>
-                        <td>@ticket.CreatedAt.ToLocalTime().ToString("g")</td>
-                        <td>
-                            @if (ticket.IsIndexed)
+                            @if (IsSelected(Model.Filters.ResultLimit, "100"))
                             {
-                                <span class="badge text-bg-success">Sí</span>
+                                <option value="100" selected>Últimos 100</option>
                             }
                             else
                             {
-                                <span class="badge text-bg-secondary">No</span>
+                                <option value="100">Últimos 100</option>
                             }
-                        </td>
-                        <td class="text-end">
-                            <a asp-action="Details" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">Ver</a>
-                        </td>
+                            @if (IsSelected(Model.Filters.ResultLimit, "all"))
+                            {
+                                <option value="all" selected>Todos</option>
+                            }
+                            else
+                            {
+                                <option value="all">Todos</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="tickets-table-card card border-0 shadow-sm mt-3">
+        <div class="table-responsive">
+            <table class="table tickets-table mb-0 align-middle" id="tickets-table">
+                <colgroup>
+                    <col data-col="number" style="width: 7rem;" />
+                    <col data-col="subject" style="width: 18rem;" />
+                    <col data-col="customer" style="width: 12rem;" />
+                    <col data-col="status" style="width: 8rem;" />
+                    <col data-col="priority" style="width: 8rem;" />
+                    <col data-col="created" style="width: 10rem;" />
+                    <col data-col="modified" style="width: 10rem;" />
+                    <col data-col="rag" style="width: 4rem;" />
+                    <col data-col="actions" style="width: 6rem;" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="tickets-th-resizable" data-col="number">
+                            <span class="tickets-th-label">Número</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Número" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="subject">
+                            <span class="tickets-th-label">Asunto</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Asunto" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="customer">
+                            <span class="tickets-th-label">Cliente</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Cliente" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="status">
+                            <span class="tickets-th-label">Estado</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Estado" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="priority">
+                            <span class="tickets-th-label">Prioridad</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Prioridad" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="created">
+                            <span class="tickets-th-label">Creado</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Creado" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable" data-col="modified">
+                            <span class="tickets-th-label">Modificado</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Modificado" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable text-center" data-col="rag">
+                            <span class="tickets-th-label">RAG</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna RAG" tabindex="0"></span>
+                        </th>
+                        <th class="tickets-th-resizable text-end" data-col="actions">
+                            <span class="tickets-th-label">Acciones</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Acciones" tabindex="0"></span>
+                        </th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @if (!Model.Tickets.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="tickets-empty text-center">
+                                @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                                {
+                                    <i class="bi bi-inbox display-6 d-block mb-2 text-muted"></i>
+                                    <span>No hay tickets para mostrar.</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-exclamation-circle display-6 d-block mb-2 text-danger"></i>
+                                    <span>No se pudieron cargar los tickets.</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var ticket in Model.Tickets)
+                    {
+                        <tr class="tickets-row">
+                            <td>
+                                <span class="ticket-number-badge">#@ticket.Number</span>
+                            </td>
+                            <td>
+                                <div class="ticket-subject">@ticket.Title</div>
+                            </td>
+                            <td>
+                                <span class="ticket-client">@Truncate(ticket.Customer, 28)</span>
+                            </td>
+                            <td>
+                                <span class="ticket-pill @StatusClass(ticket.Status)">@ticket.Status</span>
+                            </td>
+                            <td>
+                                <span class="ticket-pill @PriorityClass(ticket.Priority)">@ticket.Priority</span>
+                            </td>
+                            <td>
+                                <div class="ticket-datetime">
+                                    <i class="bi bi-calendar3 text-success"></i>
+                                    <span>@ticket.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                            </td>
+                            <td>
+                                @if (ticket.UpdatedAt.HasValue)
+                                {
+                                    <div class="ticket-datetime">
+                                        <i class="bi bi-pencil-square text-primary"></i>
+                                        <span>@ticket.UpdatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (ticket.IsIndexed)
+                                {
+                                    <span class="ticket-indexed-yes" title="Indexado para RAG">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="ticket-indexed-no" title="Sin indexar">
+                                        <i class="bi bi-circle"></i>
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="ticket-actions">
+                                    <a asp-action="Details" asp-route-id="@ticket.Id"
+                                       class="btn btn-ticket-view" title="Ver detalle">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-controller="Rag" asp-action="Ask"
+                                       asp-route-ticketId="@ticket.Id"
+                                       asp-route-ticketNumber="@ticket.Number"
+                                       class="btn btn-ticket-rag" title="Preguntar con RAG">
+                                        <i class="bi bi-chat-dots"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/tickets-table.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const form = document.getElementById('tickets-filter-form');
+            if (!form) return;
+
+            form.querySelectorAll('.tickets-filter-auto').forEach(function (select) {
+                select.addEventListener('change', function () {
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
+                });
+            });
+
+            form.addEventListener('submit', function () {
+                document.querySelector('.tickets-table-card')?.classList.add('tickets-loading');
+            });
+
+            if (typeof initTicketsColumnResize === 'function') {
+                initTicketsColumnResize('tickets-table', 'moneypenny.tickets.columnWidths');
+            }
+        })();
+    </script>
+}

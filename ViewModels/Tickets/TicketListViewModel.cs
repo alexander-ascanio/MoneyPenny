@@ -5,7 +5,10 @@ public class TicketListViewModel
     public IReadOnlyList<TicketListItemViewModel> Tickets { get; init; } = [];
     public string? Search { get; init; }
     public string? StatusFilter { get; init; }
+    public TicketFilterSelections Filters { get; init; } = new();
+    public TicketFilterOptions FilterOptions { get; init; } = new();
     public string? ErrorMessage { get; init; }
+    public int TotalCount => Tickets.Count;
 }
 
 public class TicketListItemViewModel
@@ -17,6 +20,9 @@ public class TicketListItemViewModel
     public string Priority { get; init; } = string.Empty;
     public string? Customer { get; init; }
     public string? Contacts { get; init; }
+    public string? TeamSupportId { get; init; }
+    public string? CodigoTelegestion { get; init; }
     public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
     public bool IsIndexed { get; init; }
 }

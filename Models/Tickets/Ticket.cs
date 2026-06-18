@@ -13,6 +13,11 @@ public class Ticket
     public string Priority { get; set; } = string.Empty;
     public string? Customer { get; set; }
     public string? Contacts { get; set; }
+    public string? TeamSupportId { get; set; }
+    public string? CodigoTelegestion { get; set; }
+    public string? Group { get; set; }
+    public string? Product { get; set; }
+    public bool IsKnowledgeBase { get; set; }
     public string? Assignee { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

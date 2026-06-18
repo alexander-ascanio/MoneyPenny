@@ -1,5 +1,7 @@
 using MoneyPenny.Data.Repositories;
+using MoneyPenny.Models.Tickets;
 using MoneyPenny.ViewModels.Tickets;
+using Microsoft.Extensions.Caching.Memory;
 using Npgsql;
 
 namespace MoneyPenny.Services.Tickets;
@@ -8,32 +10,41 @@ public class TicketService : ITicketService
 {
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<TicketService> _logger;
+
+    private const string FilterOptionsCacheKey = "tickets-filter-options";
 
     public TicketService(
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
+        IMemoryCache cache,
         ILogger<TicketService> logger)
     {
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
+        _cache = cache;
         _logger = logger;
     }
 
     public async Task<TicketListViewModel> GetListAsync(
-        string? search = null,
-        string? status = null,
+        TicketFilters filters,
         CancellationToken cancellationToken = default)
     {
+        var selections = ToFilterSelections(filters);
+
         try
         {
-            var tickets = await _ticketRepository.GetAllAsync(search, status, cancellationToken);
+            var filterOptions = await GetFilterOptionsAsync(cancellationToken);
+            var tickets = await _ticketRepository.GetAllAsync(filters, cancellationToken);
             var indexedIds = (await GetIndexedTicketIdsSafeAsync(cancellationToken)).ToHashSet();
 
             return new TicketListViewModel
             {
-                Search = search,
-                StatusFilter = status,
+                Search = filters.Search,
+                StatusFilter = filters.StatusText,
+                Filters = selections,
+                FilterOptions = filterOptions,
                 Tickets = tickets.Select(t => new TicketListItemViewModel
                 {
                     Id = t.Id,
@@ -43,7 +54,10 @@ public class TicketService : ITicketService
                     Priority = t.Priority,
                     Customer = t.Customer,
                     Contacts = t.Contacts,
+                    TeamSupportId = t.TeamSupportId,
+                    CodigoTelegestion = t.CodigoTelegestion,
                     CreatedAt = t.CreatedAt,
+                    UpdatedAt = t.UpdatedAt,
                     IsIndexed = indexedIds.Contains(t.Id)
                 }).ToList()
             };
@@ -51,24 +65,44 @@ public class TicketService : ITicketService
         catch (PostgresException ex)
         {
             _logger.LogError(ex, "Error SQL al consultar TicketsDatabase.");
-            return new TicketListViewModel
-            {
-                Search = search,
-                StatusFilter = status,
-                ErrorMessage = $"Error al consultar tickets: {ex.MessageText}"
-            };
+            return BuildErrorViewModel(filters, selections, $"Error al consultar tickets: {ex.MessageText}");
         }
         catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
         {
             _logger.LogError(ex, "No se pudo conectar a TicketsDatabase.");
-            return new TicketListViewModel
-            {
-                Search = search,
-                StatusFilter = status,
-                ErrorMessage = BuildConnectionErrorMessage(ex)
-            };
+            return BuildErrorViewModel(filters, selections, BuildConnectionErrorMessage(ex));
         }
     }
+
+    private async Task<TicketFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken)
+    {
+        return await _cache.GetOrCreateAsync(FilterOptionsCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+            return await _ticketRepository.GetFilterOptionsAsync(cancellationToken);
+        }) ?? new TicketFilterOptions();
+    }
+
+    private static TicketFilterSelections ToFilterSelections(TicketFilters filters) => new()
+    {
+        Group = filters.Group,
+        Customer = filters.Customer,
+        Product = filters.Product,
+        Status = filters.Status,
+        Priority = filters.Priority,
+        ResultLimit = filters.ResultLimit
+    };
+
+    private static TicketListViewModel BuildErrorViewModel(
+        TicketFilters filters,
+        TicketFilterSelections selections,
+        string errorMessage) => new()
+    {
+        Search = filters.Search,
+        StatusFilter = filters.StatusText,
+        Filters = selections,
+        ErrorMessage = errorMessage
+    };
 
     public async Task<TicketDetailViewModel?> GetDetailAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -90,6 +124,10 @@ public class TicketService : ITicketService
                 Description = ticket.Description,
                 Status = ticket.Status,
                 Priority = ticket.Priority,
+                Customer = ticket.Customer,
+                Contacts = ticket.Contacts,
+                TeamSupportId = ticket.TeamSupportId,
+                CodigoTelegestion = ticket.CodigoTelegestion,
                 Assignee = ticket.Assignee,
                 CreatedAt = ticket.CreatedAt,
                 UpdatedAt = ticket.UpdatedAt,

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MoneyPenny.Models.Tickets;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Tickets;
 
@@ -17,9 +18,30 @@ public class TicketsController : Controller
         _ingestionService = ingestionService;
     }
 
-    public async Task<IActionResult> Index(string? search, string? status, CancellationToken cancellationToken)
+    public async Task<IActionResult> Index(
+        string? search,
+        string? status,
+        string? group,
+        string? customer,
+        string? product,
+        string? estado,
+        string? priority,
+        string? limit,
+        CancellationToken cancellationToken)
     {
-        var model = await _ticketService.GetListAsync(search, status, cancellationToken);
+        var filters = new TicketFilters
+        {
+            Search = search,
+            StatusText = status,
+            Group = group,
+            Customer = customer,
+            Product = product,
+            Status = estado,
+            Priority = priority,
+            ResultLimit = string.IsNullOrWhiteSpace(limit) ? "50" : limit
+        };
+
+        var model = await _ticketService.GetListAsync(filters, cancellationToken);
         return View(model);
     }
 
