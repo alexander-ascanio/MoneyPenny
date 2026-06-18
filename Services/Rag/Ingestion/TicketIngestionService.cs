@@ -1,8 +1,10 @@
 using MoneyPenny.Data.Repositories;
+using MoneyPenny.Helpers;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Services.Rag.Embeddings;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace MoneyPenny.Services.Rag.Ingestion;
 
@@ -28,19 +30,40 @@ public class TicketIngestionService : ITicketIngestionService
         _logger = logger;
     }
 
-    public Task<string> BuildTicketDocumentAsync(Ticket ticket, CancellationToken cancellationToken = default)
+    public async Task<string> BuildTicketDocumentAsync(Ticket ticket, CancellationToken cancellationToken = default)
     {
-        var document = $"""
-            Ticket: {ticket.Number}
-            Título: {ticket.Title}
-            Estado: {ticket.Status}
-            Prioridad: {ticket.Priority}
-            Asignado: {ticket.Assignee ?? "Sin asignar"}
-            Descripción:
-            {ticket.Description}
-            """;
+        var document = new StringBuilder();
+        document.AppendLine($"Ticket: {ticket.Number}");
+        document.AppendLine($"Título: {ticket.Title}");
+        document.AppendLine($"Estado: {ticket.Status}");
+        document.AppendLine($"Prioridad: {ticket.Priority}");
+        document.AppendLine($"Asignado: {ticket.Assignee ?? "Sin asignar"}");
+        document.AppendLine("Descripción:");
+        document.AppendLine(ticket.Description);
 
-        return Task.FromResult(document);
+        var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
+            ticket.Id,
+            cancellationToken);
+
+        if (oldestComment is not null)
+        {
+            var plainComment = TicketHtmlHelper.ToPlainText(oldestComment.Content);
+            if (!string.IsNullOrWhiteSpace(plainComment))
+            {
+                var author = oldestComment.CreatedByName
+                    ?? oldestComment.ModifierName
+                    ?? oldestComment.AssignedUsername
+                    ?? "Desconocido";
+
+                document.AppendLine();
+                document.AppendLine("Primer comentario:");
+                document.AppendLine($"Autor: {author}");
+                document.AppendLine($"Fecha: {oldestComment.CreatedAt:yyyy-MM-dd HH:mm} UTC");
+                document.AppendLine(plainComment);
+            }
+        }
+
+        return document.ToString();
     }
 
     public async Task IndexTicketAsync(int ticketId, CancellationToken cancellationToken = default)

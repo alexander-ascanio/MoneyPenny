@@ -105,6 +105,17 @@ public class TicketRepository : ITicketRepository
             .ToListAsync(cancellationToken);
     }
 
+    public Task<TicketAction?> GetOldestActionWithContentByTicketIdAsync(
+        int ticketId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.TicketActions
+            .AsNoTracking()
+            .Where(a => a.TicketId == ticketId && a.Content != null && a.Content != "")
+            .OrderBy(a => a.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     private async Task<IReadOnlyList<string>> GetDistinctAsync(
         System.Linq.Expressions.Expression<Func<Ticket, string?>> selector,
         CancellationToken cancellationToken)
