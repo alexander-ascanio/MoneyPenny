@@ -1,0 +1,32 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.log
+publish/
+
+## Secretos y configuración local
+appsettings.Development.json
+appsettings.*.local.json
+.env
+secrets.json
+
+## RAG - datos e índices locales
+data/raw/
+data/processed/
+embeddings/
+vector-store/
+
+## IDE
+.vs/
+.idea/
+*.swp
+*~
+
+## OS
+Thumbs.db
+.DS_Store

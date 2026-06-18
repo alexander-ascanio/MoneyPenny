@@ -1,0 +1,807 @@
+@{
+    ViewData["Title"] = "Herramientas Necesarias";
+}
+
+<div class="mb-5">
+    <h1 class="display-5 fw-bold text-primary">🛠️ Herramientas Necesarias</h1>
+    <p class="lead text-muted">Todo lo que necesitas para comenzar a desarrollar con MoneyPenny</p>
+</div>
+
+<!-- Git & GitHub -->
+<div class="card shadow-sm border-danger mb-4" style="border-width: 2px;">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-git me-2" viewBox="0 0 16 16">
+                <path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.465l-4.79 4.79a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.953a1.031 1.031 0 0 0 0-1.457"/>
+            </svg>
+            Git & GitHub
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <div class="alert alert-warning border-warning mb-4" style="border-width: 2px;">
+            <h5 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Herramienta Opcional pero Muy Recomendable</strong>
+            </h5>
+            <p class="mb-2">
+                Git <strong>no es obligatorio</strong>, pero es <strong>altamente aconsejable</strong> para el desarrollo con MoneyPenny. 
+                Te permite construir tu aplicación paso a paso, guardando una copia de seguridad en cada avance que realices.
+            </p>
+            <p class="mb-0">
+                <strong>¿Por qué es importante?</strong> Cuando trabajas con agentes de IA, pueden ocurrir errores que sean difíciles de corregir. 
+                Con Git, puedes volver atrás fácilmente al último punto estable, recuperando el último paso bien dado y validado por ti. 
+                Es tu red de seguridad durante el desarrollo.
+            </p>
+        </div>
+
+        <h5 class="mb-3">¿Qué es Git?</h5>
+        <p class="mb-3">
+            Git es un sistema de control de versiones distribuido que te permite rastrear cambios en tu código, 
+            colaborar con otros desarrolladores y mantener un historial completo de tu proyecto.
+        </p>
+
+        <h5 class="mb-3">¿Qué es GitHub?</h5>
+        <p class="mb-4">
+            GitHub es una plataforma de alojamiento de código que utiliza Git. Te permite almacenar tus repositorios 
+            en la nube, colaborar con otros desarrolladores, gestionar proyectos y desplegar aplicaciones.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">
+                            <i class="bi bi-download"></i> Fork (Cliente Git)
+                        </h5>
+                        <p class="card-text">Cliente Git visual para Windows y Mac. Interfaz intuitiva para gestionar repositorios.</p>
+                        <a href="https://git-fork.com/" target="_blank" class="btn btn-danger">
+                            Descargar Fork
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-dark">
+                            <i class="bi bi-github"></i> Crear Cuenta en GitHub
+                        </h5>
+                        <p class="card-text">Crea tu cuenta gratuita en GitHub para alojar tus proyectos y colaborar.</p>
+                        <a href="https://github.com/signup" target="_blank" class="btn btn-dark">
+                            Registrarse en GitHub
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <strong>💡 Tip:</strong> También puedes descargar Git directamente desde 
+            <a href="https://git-scm.com/downloads" target="_blank" class="alert-link">git-scm.com</a> 
+            si prefieres usar la línea de comandos.
+        </div>
+    </div>
+</div>
+
+<!-- PostgreSQL & pgAdmin -->
+<div class="card shadow-sm border-success mb-4" style="border-width: 2px;">
+    <div class="card-header bg-success text-white">
+        <h3 class="mb-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-database me-2" viewBox="0 0 16 16">
+                <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
+            </svg>
+            PostgreSQL & pgAdmin
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <div class="alert alert-success border-success mb-4" style="border-width: 2px;">
+            <h5 class="alert-heading">
+                <i class="bi bi-database-check me-2"></i>
+                <strong>Base de Datos Integrada con Agente Especializado</strong>
+            </h5>
+            <p class="mb-2">
+                En la mayoría de tus aplicaciones necesitarás almacenar datos en una base de datos. Este esqueleto de MoneyPenny 
+                está <strong>preparado para trabajar directamente con PostgreSQL</strong> y cuenta con un agente especializado 
+                para facilitar esta tarea.
+            </p>
+            <p class="mb-3">
+                Podrás <strong>añadir tablas, campos y relaciones</strong> de forma sencilla utilizando el agente. Por ejemplo:
+            </p>
+            <div class="bg-white p-3 rounded border">
+                <code class="text-success">
+                    @@database-migration-agent.md quiero añadir una tabla nueva de propiedades de producto 
+                    con los campos Alto, Ancho y Largo, en los 3 campos quiero campos decimales con 2 posiciones.
+                </code>
+            </div>
+            <p class="mt-3 mb-0">
+                <strong>💡 El agente te guiará paso a paso</strong> para crear las migraciones, aplicar los cambios y mantener 
+                tu base de datos sincronizada con tu modelo de datos.
+            </p>
+        </div>
+
+        <h5 class="mb-3">¿Qué es PostgreSQL?</h5>
+        <p class="mb-3">
+            PostgreSQL es un sistema de gestión de bases de datos relacional de código abierto, potente y altamente escalable. 
+            Es conocido por su fiabilidad, robustez de características y rendimiento. Soporta SQL estándar y ofrece 
+            características avanzadas como transacciones ACID, índices complejos, claves foráneas, triggers y procedimientos almacenados.
+        </p>
+
+        <h5 class="mb-3">¿Qué es pgAdmin?</h5>
+        <p class="mb-4">
+            pgAdmin es la herramienta de administración gráfica más popular para PostgreSQL. Te permite gestionar tus bases de datos 
+            de forma visual: crear tablas, ejecutar consultas SQL, ver datos, gestionar usuarios y mucho más, todo desde una 
+            interfaz web intuitiva.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="bi bi-download"></i> PostgreSQL
+                        </h5>
+                        <p class="card-text">Motor de base de datos. Descarga el instalador para tu sistema operativo.</p>
+                        <a href="https://www.postgresql.org/download/" target="_blank" class="btn btn-primary">
+                            Descargar PostgreSQL
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            <i class="bi bi-download"></i> pgAdmin
+                        </h5>
+                        <p class="card-text">Herramienta gráfica de administración. Generalmente se incluye con PostgreSQL.</p>
+                        <a href="https://www.pgadmin.org/download/" target="_blank" class="btn btn-success">
+                            Descargar pgAdmin
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-warning mt-4">
+            <strong>⚙️ Instalación:</strong> Durante la instalación de PostgreSQL, recuerda la contraseña del usuario 
+            <code>postgres</code> que configures. La necesitarás para conectarte a la base de datos. Por defecto, 
+            PostgreSQL se ejecuta en el puerto <strong>5432</strong>.
+        </div>
+    </div>
+</div>
+
+<!-- Cursor IDE -->
+<div class="card shadow-sm border-primary mb-4" style="border-width: 2px;">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-code-slash me-2" viewBox="0 0 16 16">
+                <path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/>
+            </svg>
+            Cursor IDE
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <h5 class="mb-3">¿Qué es Cursor?</h5>
+        <p class="mb-3">
+            Cursor es un IDE de última generación diseñado específicamente para el desarrollo moderno de aplicaciones. 
+            Está construido sobre Visual Studio Code pero potenciado con <strong>Inteligencia Artificial integrada</strong> 
+            que te ayuda a escribir, editar y depurar código de forma más rápida y eficiente.
+        </p>
+
+        <h5 class="mb-3">Características Principales</h5>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <ul>
+                    <li><strong>IA Integrada:</strong> Asistente de código con GPT-4, Claude y otros modelos</li>
+                    <li><strong>Autocompletado Inteligente:</strong> Sugerencias contextuales avanzadas</li>
+                    <li><strong>Chat con tu Código:</strong> Pregunta sobre tu proyecto y obtén respuestas</li>
+                    <li><strong>Generación de Código:</strong> Crea funciones completas con lenguaje natural</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul>
+                    <li><strong>Refactorización Asistida:</strong> Mejora tu código automáticamente</li>
+                    <li><strong>Debugging Inteligente:</strong> Encuentra y corrige errores más rápido</li>
+                    <li><strong>Compatible con VS Code:</strong> Todas las extensiones funcionan</li>
+                    <li><strong>Multi-lenguaje:</strong> C#, JavaScript, Python, TypeScript, etc.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <i class="bi bi-download"></i> Descargar Cursor
+                        </h5>
+                        <p class="card-text">IDE potenciado con IA para desarrollo de aplicaciones. Compatible con Windows, Mac y Linux.</p>
+                        <a href="https://cursor.com/download" target="_blank" class="btn btn-primary">
+                            Descargar Cursor IDE
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            <i class="bi bi-book"></i> Documentación
+                        </h5>
+                        <p class="card-text">Aprende a usar Cursor y todas sus características de IA para maximizar tu productividad.</p>
+                        <a href="https://docs.cursor.com/" target="_blank" class="btn btn-info">
+                            Ver Documentación
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-success mt-4">
+            <h5 class="alert-heading">
+                <i class="bi bi-lightbulb me-2"></i>
+                ¿Por qué usar Cursor para MoneyPenny?
+            </h5>
+            <ul class="mb-0">
+                <li><strong>Desarrollo más rápido:</strong> La IA te ayuda a escribir código ASP.NET Core más rápido</li>
+                <li><strong>Menos errores:</strong> Detecta problemas antes de compilar</li>
+                <li><strong>Aprende mientras codificas:</strong> Explica patrones y mejores prácticas</li>
+                <li><strong>Refactorización fácil:</strong> Mejora tu código con comandos simples</li>
+                <li><strong>Integración con Git:</strong> Control de versiones integrado</li>
+                <li><strong>Debugging avanzado:</strong> Encuentra bugs más rápido con ayuda de IA</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <strong>💡 Tip:</strong> Cursor es especialmente útil para trabajar con este proyecto MoneyPenny. 
+            Puedes pedirle que te ayude a crear nuevas entidades, controladores, vistas y mucho más usando lenguaje natural.
+        </div>
+    </div>
+</div>
+
+<!-- Inteligencia Artificial -->
+<div class="card shadow-sm border-warning mb-4" style="border-width: 2px;">
+    <div class="card-header bg-warning text-dark">
+        <h3 class="mb-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-robot me-2" viewBox="0 0 16 16">
+                <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/>
+                <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/>
+            </svg>
+            Inteligencia Artificial
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <h5 class="mb-3">¿Por qué integrar IA en tu aplicación?</h5>
+        <p class="mb-4">
+            La Inteligencia Artificial te permite crear chatbots inteligentes, asistentes virtuales, análisis de texto, 
+            generación de contenido, traducción automática, resúmenes, clasificación de datos y mucho más. 
+            Integra modelos de lenguaje avanzados para potenciar tu aplicación.
+        </p>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-success" style="border-width: 2px;">
+                    <div class="card-body">
+                        <h5 class="card-title text-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-chat-dots me-2" viewBox="0 0 16 16">
+                                <path d="M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
+                                <path d="m2.165 15.803.02-.004c1.83-.363 2.948-.842 3.468-1.105A9 9 0 0 0 8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6a10.4 10.4 0 0 1-.524 2.318l-.003.011a11 11 0 0 1-.244.637c-.079.186.074.394.273.362a22 22 0 0 0 .693-.125m.8-3.108a1 1 0 0 0-.287-.801C1.618 10.83 1 9.468 1 8c0-3.192 3.004-6 7-6s7 2.808 7 6-3.004 6-7 6a8 8 0 0 1-2.088-.272 1 1 0 0 0-.711.074c-.387.196-1.24.57-2.634.893a11 11 0 0 0 .398-2"/>
+                            </svg>
+                            OpenAI (ChatGPT)
+                        </h5>
+                        <p class="card-text mb-3">
+                            GPT-4, GPT-4 Turbo y GPT-3.5. Los modelos más avanzados para conversación, análisis y generación de contenido.
+                        </p>
+                        <p class="mb-2"><strong>Casos de uso:</strong></p>
+                        <ul class="small">
+                            <li>Chatbots conversacionales</li>
+                            <li>Asistentes virtuales</li>
+                            <li>Generación de contenido</li>
+                            <li>Análisis de sentimientos</li>
+                            <li>Traducción y resúmenes</li>
+                        </ul>
+                        <a href="https://platform.openai.com/signup" target="_blank" class="btn btn-success w-100 mt-3">
+                            Crear Cuenta en OpenAI
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-primary" style="border-width: 2px;">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-lightning me-2" viewBox="0 0 16 16">
+                                <path d="M5.52.359A.5.5 0 0 1 6 0h4a.5.5 0 0 1 .474.658L8.694 6H12.5a.5.5 0 0 1 .395.807l-7 9a.5.5 0 0 1-.873-.454L6.823 9.5H3.5a.5.5 0 0 1-.48-.641z"/>
+                            </svg>
+                            Anthropic (Claude)
+                        </h5>
+                        <p class="card-text mb-3">
+                            Claude 3 Opus, Sonnet y Haiku. Modelos con contextos largos (200K tokens) y razonamiento avanzado.
+                        </p>
+                        <p class="mb-2"><strong>Casos de uso:</strong></p>
+                        <ul class="small">
+                            <li>Análisis de documentos largos</li>
+                            <li>Asistentes de código</li>
+                            <li>Investigación y análisis</li>
+                            <li>Redacción profesional</li>
+                            <li>Procesamiento de datos complejos</li>
+                        </ul>
+                        <a href="https://console.anthropic.com/" target="_blank" class="btn btn-primary w-100 mt-3">
+                            Crear Cuenta en Anthropic
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 border-info" style="border-width: 2px;">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-stars me-2" viewBox="0 0 16 16">
+                                <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/>
+                            </svg>
+                            Google (Gemini)
+                        </h5>
+                        <p class="card-text mb-3">
+                            Gemini Pro y Ultra. Modelos multimodales de Google con capacidades avanzadas de visión y razonamiento.
+                        </p>
+                        <p class="mb-2"><strong>Casos de uso:</strong></p>
+                        <ul class="small">
+                            <li>Análisis de imágenes y video</li>
+                            <li>Procesamiento multimodal</li>
+                            <li>Búsqueda inteligente</li>
+                            <li>Asistentes de productividad</li>
+                            <li>Análisis de datos visuales</li>
+                        </ul>
+                        <a href="https://makersuite.google.com/" target="_blank" class="btn btn-info w-100 mt-3">
+                            Crear Cuenta en Google AI
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card h-100 border-warning" style="border-width: 2px;">
+                    <div class="card-body">
+                        <h5 class="card-title text-warning">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-microsoft me-2" viewBox="0 0 16 16">
+                                <path d="M7.462 0H0v7.19h7.462zM16 0H8.538v7.19H16zM7.462 8.211H0V16h7.462zm8.538 0H8.538V16H16z"/>
+                            </svg>
+                            Azure OpenAI Service
+                        </h5>
+                        <p class="card-text mb-3">
+                            Acceso a modelos de OpenAI (GPT-4, GPT-3.5, DALL-E) a través de Azure con SLA empresarial y cumplimiento normativo.
+                        </p>
+                        <p class="mb-2"><strong>Ventajas:</strong></p>
+                        <ul class="small">
+                            <li>Integración nativa con Azure</li>
+                            <li>Cumplimiento normativo (GDPR, HIPAA)</li>
+                            <li>SLA empresarial del 99.9%</li>
+                            <li>Facturación integrada con Azure</li>
+                            <li>Redes privadas y seguridad avanzada</li>
+                        </ul>
+                        <a href="https://azure.microsoft.com/es-es/products/ai-services/openai-service" target="_blank" class="btn btn-warning w-100 mt-3">
+                            Más información sobre Azure OpenAI
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100 border-secondary" style="border-width: 2px;">
+                    <div class="card-body">
+                        <h5 class="card-title text-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-code-square me-2" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
+                                <path d="M6.854 4.646a.5.5 0 0 1 0 .708L4.207 8l2.647 2.646a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 0 1 .708 0m2.292 0a.5.5 0 0 0 0 .708L11.793 8l-2.647 2.646a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708 0"/>
+                            </svg>
+                            Otros Proveedores
+                        </h5>
+                        <p class="card-text mb-3">
+                            Alternativas adicionales para diferentes necesidades y presupuestos.
+                        </p>
+                        <ul class="small">
+                            <li><strong>Cohere:</strong> Modelos especializados en empresas</li>
+                            <li><strong>Hugging Face:</strong> Modelos open-source y personalizables</li>
+                            <li><strong>Mistral AI:</strong> Modelos europeos de alto rendimiento</li>
+                            <li><strong>Meta (Llama):</strong> Modelos open-source potentes</li>
+                            <li><strong>Perplexity:</strong> Búsqueda y respuestas con fuentes</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mb-3">📋 Cómo Integrar IA en MoneyPenny</h5>
+        
+        <div class="accordion" id="aiIntegration">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#aiStep1">
+                        <strong>Paso 1:</strong> &nbsp; Obtener API Key
+                    </button>
+                </h2>
+                <div id="aiStep1" class="accordion-collapse collapse show" data-bs-parent="#aiIntegration">
+                    <div class="accordion-body">
+                        <p><strong>OpenAI:</strong></p>
+                        <ol>
+                            <li>Crea cuenta en <a href="https://platform.openai.com/signup" target="_blank">platform.openai.com</a></li>
+                            <li>Ve a "API Keys" en tu perfil</li>
+                            <li>Click en "Create new secret key"</li>
+                            <li>Copia y guarda la clave (solo se muestra una vez)</li>
+                            <li>Añade créditos en "Billing" para empezar a usar</li>
+                        </ol>
+                        <p><strong>Anthropic (Claude):</strong></p>
+                        <ol>
+                            <li>Crea cuenta en <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
+                            <li>Ve a "API Keys"</li>
+                            <li>Genera una nueva clave</li>
+                            <li>Configura límites de gasto</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiStep2">
+                        <strong>Paso 2:</strong> &nbsp; Configurar en appsettings.json
+                    </button>
+                </h2>
+                <div id="aiStep2" class="accordion-collapse collapse" data-bs-parent="#aiIntegration">
+                    <div class="accordion-body">
+                        <p>Añade la configuración de IA en tu <code>appsettings.json</code>:</p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "AI": {
+    "OpenAI": {
+      "ApiKey": "sk-...",
+      "Model": "gpt-4-turbo-preview",
+      "MaxTokens": 2000,
+      "Temperature": 0.7
+    },
+    "Anthropic": {
+      "ApiKey": "sk-ant-...",
+      "Model": "claude-3-opus-20240229",
+      "MaxTokens": 4000
+    },
+    "Google": {
+      "ApiKey": "AIza...",
+      "Model": "gemini-pro"
+    }
+  }
+}</code></pre>
+                        <div class="alert alert-warning mt-3">
+                            <strong>⚠️ Seguridad:</strong> Nunca subas las API Keys a Git. Usa variables de entorno o Azure Key Vault en producción.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiStep3">
+                        <strong>Paso 3:</strong> &nbsp; Instalar Paquetes NuGet
+                    </button>
+                </h2>
+                <div id="aiStep3" class="accordion-collapse collapse" data-bs-parent="#aiIntegration">
+                    <div class="accordion-body">
+                        <p>Instala los paquetes necesarios:</p>
+                        <pre class="bg-light p-3 rounded"><code># OpenAI
+dotnet add package OpenAI
+
+# Anthropic (Claude)
+dotnet add package Anthropic.SDK
+
+# Google Gemini
+dotnet add package Google.Cloud.AIPlatform.V1
+
+# Azure OpenAI
+dotnet add package Azure.AI.OpenAI</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiStep4">
+                        <strong>Paso 4:</strong> &nbsp; Crear Servicio de IA
+                    </button>
+                </h2>
+                <div id="aiStep4" class="accordion-collapse collapse" data-bs-parent="#aiIntegration">
+                    <div class="accordion-body">
+                        <p>Ejemplo de servicio para OpenAI:</p>
+                        <pre class="bg-light p-3 rounded"><code>public class OpenAIService
+{
+    private readonly OpenAIClient _client;
+    private readonly string _model;
+
+    public OpenAIService(IConfiguration config)
+    {
+        var apiKey = config["AI:OpenAI:ApiKey"];
+        _model = config["AI:OpenAI:Model"];
+        _client = new OpenAIClient(apiKey);
+    }
+
+    public async Task&lt;string&gt; ChatAsync(string prompt)
+    {
+        var response = await _client.GetChatCompletionsAsync(
+            new ChatCompletionsOptions
+            {
+                Messages = {
+                    new ChatMessage(ChatRole.System, "Eres un asistente útil."),
+                    new ChatMessage(ChatRole.User, prompt)
+                },
+                Model = _model,
+                MaxTokens = 2000
+            }
+        );
+        
+        return response.Value.Choices[0].Message.Content;
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#aiStep5">
+                        <strong>Paso 5:</strong> &nbsp; Usar en tu Controlador
+                    </button>
+                </h2>
+                <div id="aiStep5" class="accordion-collapse collapse" data-bs-parent="#aiIntegration">
+                    <div class="accordion-body">
+                        <pre class="bg-light p-3 rounded"><code>public class ChatController : Controller
+{
+    private readonly OpenAIService _aiService;
+
+    public ChatController(OpenAIService aiService)
+    {
+        _aiService = aiService;
+    }
+
+    [HttpPost]
+    public async Task&lt;IActionResult&gt; SendMessage(string message)
+    {
+        var response = await _aiService.ChatAsync(message);
+        return Json(new { response });
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <h5 class="alert-heading">💡 Casos de Uso Prácticos</h5>
+            <ul class="mb-0">
+                <li><strong>Chatbot de Soporte:</strong> Responde preguntas frecuentes automáticamente</li>
+                <li><strong>Asistente de Ventas:</strong> Ayuda a los clientes a encontrar productos</li>
+                <li><strong>Generación de Contenido:</strong> Crea descripciones de productos, emails, etc.</li>
+                <li><strong>Análisis de Sentimientos:</strong> Analiza opiniones de clientes</li>
+                <li><strong>Resumen de Documentos:</strong> Extrae información clave de textos largos</li>
+                <li><strong>Traducción Automática:</strong> Traduce contenido a múltiples idiomas</li>
+                <li><strong>Clasificación de Datos:</strong> Categoriza tickets, emails, comentarios</li>
+                <li><strong>Agentes Personalizados:</strong> Crea asistentes especializados para tu negocio</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-success mt-4">
+            <h5 class="alert-heading">💰 Costos Aproximados (2026)</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>OpenAI GPT-4:</strong>
+                    <ul class="small mb-0">
+                        <li>Input: $0.03 / 1K tokens</li>
+                        <li>Output: $0.06 / 1K tokens</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <strong>Claude 3 Opus:</strong>
+                    <ul class="small mb-0">
+                        <li>Input: $0.015 / 1K tokens</li>
+                        <li>Output: $0.075 / 1K tokens</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <strong>Gemini Pro:</strong>
+                    <ul class="small mb-0">
+                        <li>Gratis hasta 60 req/min</li>
+                        <li>Luego: $0.0005 / 1K tokens</li>
+                    </ul>
+                </div>
+            </div>
+            <p class="mt-2 mb-0 small"><em>Nota: Los precios pueden variar. Consulta la documentación oficial de cada proveedor.</em></p>
+        </div>
+    </div>
+</div>
+
+<!-- Microsoft Azure -->
+<div class="card shadow-sm border-info mb-4" style="border-width: 2px;">
+    <div class="card-header bg-info text-white">
+        <h3 class="mb-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-cloud me-2" viewBox="0 0 16 16">
+                <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+            </svg>
+            Microsoft Azure
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <h5 class="mb-3">¿Qué es Microsoft Azure?</h5>
+        <p class="mb-4">
+            Microsoft Azure es una plataforma de computación en la nube que ofrece servicios de infraestructura (IaaS), 
+            plataforma (PaaS) y software (SaaS). Te permite desplegar aplicaciones web, bases de datos, servicios de IA, 
+            almacenamiento y mucho más. Es ideal para alojar tu aplicación ASP.NET Core en producción.
+        </p>
+
+        <div class="card border-secondary mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-primary">
+                    <i class="bi bi-cloud-check"></i> Crear Cuenta en Azure
+                </h5>
+                <p class="card-text mb-3">
+                    Azure ofrece una cuenta gratuita con $200 USD de crédito para los primeros 30 días y servicios gratuitos 
+                    durante 12 meses, además de más de 55 servicios siempre gratuitos.
+                </p>
+                <a href="https://azure.microsoft.com/es-es/free/" target="_blank" class="btn btn-primary">
+                    Crear Cuenta Gratuita en Azure
+                </a>
+            </div>
+        </div>
+
+        <h5 class="mb-3">📋 Pasos para Crear tu Suscripción de Azure</h5>
+        
+        <div class="accordion" id="azureSteps">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#step1">
+                        <strong>Paso 1:</strong> &nbsp; Acceder al Portal de Azure
+                    </button>
+                </h2>
+                <div id="step1" class="accordion-collapse collapse show" data-bs-parent="#azureSteps">
+                    <div class="accordion-body">
+                        <ol>
+                            <li>Visita <a href="https://azure.microsoft.com/es-es/free/" target="_blank">azure.microsoft.com/free</a></li>
+                            <li>Haz clic en <strong>"Comenzar gratis"</strong> o <strong>"Cuenta gratuita"</strong></li>
+                            <li>Inicia sesión con tu cuenta de Microsoft (Outlook, Hotmail, etc.) o crea una nueva</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step2">
+                        <strong>Paso 2:</strong> &nbsp; Completar el Registro
+                    </button>
+                </h2>
+                <div id="step2" class="accordion-collapse collapse" data-bs-parent="#azureSteps">
+                    <div class="accordion-body">
+                        <p><strong>Información requerida:</strong></p>
+                        <ul>
+                            <li><strong>Datos personales:</strong> Nombre, país, número de teléfono</li>
+                            <li><strong>Verificación de identidad:</strong> Verificación por SMS o llamada telefónica</li>
+                            <li><strong>Tarjeta de crédito/débito:</strong> Solo para verificación de identidad (no se cobrará)</li>
+                            <li><strong>Acuerdo:</strong> Acepta los términos y condiciones</li>
+                        </ul>
+                        <div class="alert alert-info">
+                            <strong>💳 Nota:</strong> La tarjeta es solo para verificación. No se te cobrará a menos que 
+                            actualices manualmente a un plan de pago después de que expire el período de prueba.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step3">
+                        <strong>Paso 3:</strong> &nbsp; Acceder al Portal de Azure
+                    </button>
+                </h2>
+                <div id="step3" class="accordion-collapse collapse" data-bs-parent="#azureSteps">
+                    <div class="accordion-body">
+                        <ol>
+                            <li>Una vez completado el registro, accede al <a href="https://portal.azure.com" target="_blank">Portal de Azure</a></li>
+                            <li>Verás el panel principal con acceso a todos los servicios</li>
+                            <li>Tu suscripción gratuita estará activa y lista para usar</li>
+                        </ol>
+                        <p class="mt-3"><strong>Servicios principales que puedes usar:</strong></p>
+                        <ul>
+                            <li><strong>App Service:</strong> Para desplegar tu aplicación ASP.NET Core</li>
+                            <li><strong>Azure Database for PostgreSQL:</strong> Base de datos PostgreSQL administrada</li>
+                            <li><strong>Azure Storage:</strong> Almacenamiento de archivos y blobs</li>
+                            <li><strong>Azure Active Directory:</strong> Gestión de identidades y acceso</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step4">
+                        <strong>Paso 4:</strong> &nbsp; Desplegar tu Aplicación
+                    </button>
+                </h2>
+                <div id="step4" class="accordion-collapse collapse" data-bs-parent="#azureSteps">
+                    <div class="accordion-body">
+                        <p><strong>Para desplegar MoneyPenny en Azure:</strong></p>
+                        <ol>
+                            <li>En el Portal de Azure, busca <strong>"App Services"</strong></li>
+                            <li>Haz clic en <strong>"Crear"</strong> y selecciona <strong>"Aplicación web"</strong></li>
+                            <li>Configura:
+                                <ul>
+                                    <li>Grupo de recursos (crea uno nuevo)</li>
+                                    <li>Nombre de la aplicación (será tu URL: nombre.azurewebsites.net)</li>
+                                    <li>Stack de runtime: <strong>.NET 10 (LTS)</strong></li>
+                                    <li>Sistema operativo: <strong>Linux</strong> o <strong>Windows</strong></li>
+                                    <li>Región: Elige la más cercana a tus usuarios</li>
+                                </ul>
+                            </li>
+                            <li>Crea una base de datos PostgreSQL en <strong>"Azure Database for PostgreSQL"</strong></li>
+                            <li>Configura las cadenas de conexión en la configuración de la aplicación</li>
+                            <li>Despliega desde Visual Studio, VS Code o GitHub Actions</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-success mt-4">
+            <strong>🎁 Beneficios de la Cuenta Gratuita:</strong>
+            <ul class="mb-0 mt-2">
+                <li>$200 USD de crédito para explorar servicios durante 30 días</li>
+                <li>Servicios gratuitos durante 12 meses (App Service, Database, Storage, etc.)</li>
+                <li>Más de 55 servicios siempre gratuitos</li>
+                <li>No se cobra automáticamente después del período de prueba</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Recursos Adicionales -->
+<div class="card shadow-sm border-secondary mb-4" style="border-width: 2px;">
+    <div class="card-header bg-secondary text-white">
+        <h3 class="mb-0">
+            <i class="bi bi-book"></i> Recursos Adicionales
+        </h3>
+    </div>
+    <div class="card-body p-4">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <h5 class="text-primary">📚 Documentación</h5>
+                <ul class="list-unstyled">
+                    <li><a href="https://docs.github.com/es" target="_blank">Documentación de GitHub</a></li>
+                    <li><a href="https://www.postgresql.org/docs/" target="_blank">Documentación de PostgreSQL</a></li>
+                    <li><a href="https://learn.microsoft.com/es-es/azure/" target="_blank">Documentación de Azure</a></li>
+                    <li><a href="https://learn.microsoft.com/es-es/aspnet/core/" target="_blank">Documentación de ASP.NET Core</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4 mb-3">
+                <h5 class="text-success">🎓 Tutoriales</h5>
+                <ul class="list-unstyled">
+                    <li><a href="https://learn.microsoft.com/es-es/training/azure/" target="_blank">Microsoft Learn - Azure</a></li>
+                    <li><a href="https://www.postgresqltutorial.com/" target="_blank">PostgreSQL Tutorial</a></li>
+                    <li><a href="https://skills.github.com/" target="_blank">GitHub Skills</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4 mb-3">
+                <h5 class="text-info">💬 Comunidad</h5>
+                <ul class="list-unstyled">
+                    <li><a href="https://stackoverflow.com/" target="_blank">Stack Overflow</a></li>
+                    <li><a href="https://github.com/discussions" target="_blank">GitHub Discussions</a></li>
+                    <li><a href="https://www.reddit.com/r/dotnet/" target="_blank">r/dotnet</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-5">
+    <a asp-controller="Home" asp-action="Index" class="btn btn-lg btn-primary">Volver al Inicio</a>
+</div>

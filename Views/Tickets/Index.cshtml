@@ -1,0 +1,96 @@
+@model MoneyPenny.ViewModels.Tickets.TicketListViewModel
+
+@{
+    ViewData["Title"] = "Tickets";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+        <i class="bi bi-ticket-detailed me-2"></i>
+        @ViewData["Title"]
+    </h2>
+</div>
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-5">
+        <input type="text" name="search" value="@Model.Search" class="form-control" placeholder="Buscar por número, título o descripción" />
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="status" value="@Model.StatusFilter" class="form-control" placeholder="Filtrar por estado" />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+    </div>
+</form>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Número</th>
+                    <th>Título</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Cliente</th>
+                    <th>Contactos</th>
+                    <th>Creado</th>
+                    <th>Indexado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Tickets.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
+                            {
+                                @:No hay tickets. Conecta TicketsDatabase y ajusta el esquema en Models/Tickets/Ticket.cs.
+                            }
+                            else
+                            {
+                                @:No se pudieron cargar los tickets.
+                            }
+                        </td>
+                    </tr>
+                }
+                @foreach (var ticket in Model.Tickets)
+                {
+                    <tr>
+                        <td>@ticket.Number</td>
+                        <td>@ticket.Title</td>
+                        <td>@ticket.Status</td>
+                        <td>@ticket.Priority</td>
+                        <td>@(ticket.Customer ?? "—")</td>
+                        <td>@(ticket.Contacts ?? "—")</td>
+                        <td>@ticket.CreatedAt.ToLocalTime().ToString("g")</td>
+                        <td>
+                            @if (ticket.IsIndexed)
+                            {
+                                <span class="badge text-bg-success">Sí</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">No</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@ticket.Id" class="btn btn-sm btn-outline-primary">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,34 @@
+@model MoneyPenny.ViewModels.Rag.RagResponseViewModel
+
+@{
+    ViewData["Title"] = "Respuesta RAG";
+}
+
+<h2 class="mb-4">Respuesta</h2>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">Pregunta</div>
+    <div class="card-body">@Model.Question</div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">Respuesta</div>
+    <div class="card-body">@Model.Answer</div>
+</div>
+
+@if (Model.ContextSnippets.Any())
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">Contexto recuperado</div>
+        <div class="card-body">
+            @foreach (var snippet in Model.ContextSnippets)
+            {
+                <pre class="bg-light p-3 rounded mb-3">@snippet</pre>
+            }
+        </div>
+    </div>
+}
+
+<a asp-action="Ask" asp-route-ticketId="@Model.TicketId" asp-route-ticketNumber="@Model.TicketNumber" class="btn btn-outline-primary">
+    Nueva pregunta
+</a>

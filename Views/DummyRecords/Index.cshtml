@@ -1,0 +1,246 @@
+@model IEnumerable<MoneyPenny.Models.DummyRecord>
+
+@{
+    ViewData["Title"] = "Registros";
+    var totalRecords = Model.Count();
+    var recentRecords = Model.Count(r => r.CreatedAt >= DateTime.UtcNow.AddDays(-7));
+    var oldRecords = Model.Count(r => r.CreatedAt < DateTime.UtcNow.AddMonths(-1));
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-clipboard-data me-2" viewBox="0 0 16 16">
+            <path d="M4 11a1 1 0 1 1 2 0v1a1 1 0 1 1-2 0zm6-4a1 1 0 1 1 2 0v5a1 1 0 1 1-2 0zM7 9a1 1 0 0 1 2 0v3a1 1 0 1 1-2 0z"/>
+            <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+            <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/>
+        </svg>
+        @ViewData["Title"]
+    </h2>
+    <a asp-action="Create" class="btn btn-primary btn-lg">
+        <i class="bi bi-plus-circle me-2"></i> Nuevo Registro
+    </a>
+</div>
+
+<!-- Tarjetas de Resumen -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary shadow-sm" style="border-width: 2px;">
+            <div class="card-body text-center">
+                <h3 class="display-4 text-primary mb-0">@totalRecords</h3>
+                <p class="text-muted mb-0">Total</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success shadow-sm" style="border-width: 2px;">
+            <div class="card-body text-center">
+                <h3 class="display-4 text-success mb-0">@recentRecords</h3>
+                <p class="text-muted mb-0">Recientes (7 días)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning shadow-sm" style="border-width: 2px;">
+            <div class="card-body text-center">
+                <h3 class="display-4 text-warning mb-0">@oldRecords</h3>
+                <p class="text-muted mb-0">Antiguos (+30 días)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info shadow-sm" style="border-width: 2px;">
+            <div class="card-body text-center">
+                <h3 class="display-4 text-info mb-0">@(totalRecords - oldRecords - recentRecords)</h3>
+                <p class="text-muted mb-0">Intermedios</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Búsqueda y Filtros -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Buscar</label>
+                <input type="text" name="search" class="form-control" placeholder="Nombre o descripción..." value="@ViewData["SearchQuery"]">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Estado</label>
+                <select name="filter" class="form-select">
+                    <option value="">Todos los registros</option>
+                    <option value="recent">Recientes (7 días)</option>
+                    <option value="old">Antiguos (+30 días)</option>
+                    <option value="intermediate">Intermedios</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Registros -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Prioridad</th>
+                        <th>Nombre</th>
+                        <th>Fecha de Creación</th>
+                        <th>Estado</th>
+                        <th>Antigüedad</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                                <p class="mt-2">No hay registros disponibles</p>
+                                <a asp-action="Create" class="btn btn-primary">Crear el primero</a>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model)
+                        {
+                            var daysOld = (DateTime.UtcNow - item.CreatedAt).Days;
+                            var priority = daysOld > 30 ? "BAJA" : daysOld < 7 ? "ALTA" : "MEDIA";
+                            var priorityClass = priority == "ALTA" ? "danger" : priority == "MEDIA" ? "warning" : "secondary";
+                            var statusClass = daysOld < 7 ? "success" : daysOld > 30 ? "secondary" : "warning";
+                            var statusText = daysOld < 7 ? "Reciente" : daysOld > 30 ? "Antiguo" : "Activo";
+                            var statusIcon = daysOld < 7 ? "check-circle" : daysOld > 30 ? "clock-history" : "hourglass-split";
+                            
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="badge bg-@priorityClass">@priority</span>
+                                </td>
+                                <td>
+                                    <strong>@item.Name</strong>
+                                    <br>
+                                    <small class="text-muted">ID: @item.Id</small>
+                                </td>
+                                <td>
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    @item.CreatedAt.ToString("dd/MM/yyyy")
+                                    <br>
+                                    <small class="text-muted">@item.CreatedAt.ToString("HH:mm")</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@statusClass">
+                                        <i class="bi bi-@statusIcon me-1"></i>
+                                        @statusText
+                                    </span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-clock me-1"></i>
+                                    @if (daysOld == 0)
+                                    {
+                                        <span class="text-success">Hoy</span>
+                                    }
+                                    else if (daysOld == 1)
+                                    {
+                                        <span>1 día</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@daysOld días</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewModal@(item.Id)" title="Ver">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete(@item.Id)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Modal de Vista -->
+                                    <div class="modal fade" id="viewModal@(item.Id)" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Detalles del Registro</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <dl class="row">
+                                                        <dt class="col-sm-4">ID:</dt>
+                                                        <dd class="col-sm-8">@item.Id</dd>
+                                                        
+                                                        <dt class="col-sm-4">Nombre:</dt>
+                                                        <dd class="col-sm-8">@item.Name</dd>
+                                                        
+                                                        <dt class="col-sm-4">Fecha de Creación:</dt>
+                                                        <dd class="col-sm-8">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+                                                        
+                                                        <dt class="col-sm-4">Prioridad:</dt>
+                                                        <dd class="col-sm-8"><span class="badge bg-@priorityClass">@priority</span></dd>
+                                                        
+                                                        <dt class="col-sm-4">Estado:</dt>
+                                                        <dd class="col-sm-8"><span class="badge bg-@statusClass">@statusText</span></dd>
+                                                    </dl>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary">Editar</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación de Eliminación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar este registro?</p>
+                <p class="text-danger"><strong>Esta acción no se puede deshacer.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id) {
+            var deleteForm = document.getElementById('deleteForm');
+            deleteForm.action = '@Url.Action("Delete", "DummyRecords")/' + id;
+            var deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
+    </script>
+}

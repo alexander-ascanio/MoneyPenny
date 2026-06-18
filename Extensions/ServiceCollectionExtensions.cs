@@ -1,0 +1,62 @@
+using MoneyPenny.Data;
+using MoneyPenny.Data.Repositories;
+using MoneyPenny.Options;
+using MoneyPenny.Services.Rag;
+using MoneyPenny.Services.Rag.Embeddings;
+using MoneyPenny.Services.Rag.Generation;
+using MoneyPenny.Services.Rag.Ingestion;
+using MoneyPenny.Services.Rag.Retrieval;
+using MoneyPenny.Services.Tickets;
+using Microsoft.EntityFrameworkCore;
+
+namespace MoneyPenny.Extensions;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddMoneyPennyDatabases(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<ApplicationDatabaseOptions>(
+            configuration.GetSection(ApplicationDatabaseOptions.SectionName));
+        services.Configure<TicketsDatabaseOptions>(
+            configuration.GetSection(TicketsDatabaseOptions.SectionName));
+        services.Configure<VectorDatabaseOptions>(
+            configuration.GetSection(VectorDatabaseOptions.SectionName));
+        services.Configure<RagOptions>(
+            configuration.GetSection(RagOptions.SectionName));
+
+        var appDb = configuration.GetSection(ApplicationDatabaseOptions.SectionName).Get<ApplicationDatabaseOptions>()
+            ?? new ApplicationDatabaseOptions();
+        var ticketsDb = configuration.GetSection(TicketsDatabaseOptions.SectionName).Get<TicketsDatabaseOptions>()
+            ?? new TicketsDatabaseOptions();
+        var vectorDb = configuration.GetSection(VectorDatabaseOptions.SectionName).Get<VectorDatabaseOptions>()
+            ?? new VectorDatabaseOptions();
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(appDb)));
+
+        services.AddDbContext<TicketsDbContext>(options =>
+            options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(ticketsDb)));
+
+        services.AddDbContext<VectorDbContext>(options =>
+            options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(vectorDb)));
+
+        return services;
+    }
+
+    public static IServiceCollection AddMoneyPennyServices(this IServiceCollection services)
+    {
+        services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IVectorRepository, VectorRepository>();
+        services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<IChunkingService, ChunkingService>();
+        services.AddScoped<ITicketIngestionService, TicketIngestionService>();
+        services.AddScoped<IEmbeddingService, OpenAiEmbeddingService>();
+        services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
+        services.AddScoped<IGenerationService, OpenAiGenerationService>();
+        services.AddScoped<IRagOrchestrator, RagOrchestrator>();
+
+        return services;
+    }
+}
