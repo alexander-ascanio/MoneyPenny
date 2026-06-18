@@ -115,6 +115,7 @@ public class TicketService : ITicketService
             }
 
             var isIndexed = await IsTicketIndexedSafeAsync(id, cancellationToken);
+            var actions = await _ticketRepository.GetActionsByTicketIdAsync(id, cancellationToken);
 
             return new TicketDetailViewModel
             {
@@ -131,7 +132,8 @@ public class TicketService : ITicketService
                 Assignee = ticket.Assignee,
                 CreatedAt = ticket.CreatedAt,
                 UpdatedAt = ticket.UpdatedAt,
-                IsIndexed = isIndexed
+                IsIndexed = isIndexed,
+                Comments = actions.Select(MapAction).ToList()
             };
         }
         catch (PostgresException ex)
@@ -220,4 +222,20 @@ public class TicketService : ITicketService
             return false;
         }
     }
+
+    private static TicketActionViewModel MapAction(TicketAction action) => new()
+    {
+        Id = action.Id,
+        ActionType = action.ActionType,
+        Content = action.Content,
+        Author = action.CreatedByName
+            ?? action.ModifierName
+            ?? action.AssignedUsername
+            ?? "Sistema",
+        CreatedAt = action.CreatedAt,
+        TicketStatus = action.TicketStatus,
+        Source = action.Source,
+        TimeSpentMinutes = action.TimeSpentMinutes,
+        IsVisible = action.IsVisible
+    };
 }

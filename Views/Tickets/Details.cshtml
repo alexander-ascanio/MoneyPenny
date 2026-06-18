@@ -77,6 +77,89 @@
                 </div>
             </div>
 
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-3 pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-left-text me-2 text-primary"></i>Comentarios
+                        <span class="badge rounded-pill text-bg-light text-dark ms-1">@Model.Comments.Count</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Comments.Any())
+                    {
+                        <div class="ticket-comments-empty text-muted text-center py-4">
+                            <i class="bi bi-chat-dots display-6 d-block mb-2"></i>
+                            <span>Este ticket no tiene comentarios registrados.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ticket-comments-timeline">
+                            @foreach (var comment in Model.Comments)
+                            {
+                                var hasContent = !string.IsNullOrWhiteSpace(comment.Content);
+                                <article class="ticket-comment @(comment.IsVisible ? "" : "ticket-comment-internal")">
+                                    <div class="ticket-comment-header">
+                                        <div class="ticket-comment-author">
+                                            <span class="ticket-comment-avatar">
+                                                <i class="bi bi-person-fill"></i>
+                                            </span>
+                                            <div>
+                                                <div class="ticket-comment-name">@comment.Author</div>
+                                                <div class="ticket-comment-meta">
+                                                    <time datetime="@comment.CreatedAt.ToString("o")">
+                                                        @comment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                                    </time>
+                                                    @if (!string.IsNullOrWhiteSpace(comment.Source))
+                                                    {
+                                                        <span class="ticket-comment-sep">·</span>
+                                                        <span>@comment.Source</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="ticket-comment-badges">
+                                            @if (!comment.IsVisible)
+                                            {
+                                                <span class="badge rounded-pill text-bg-warning">Interno</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(comment.TicketStatus))
+                                            {
+                                                <span class="badge rounded-pill text-bg-light text-dark">@comment.TicketStatus</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(comment.ActionType))
+                                            {
+                                                <span class="badge rounded-pill text-bg-secondary ticket-comment-type" title="@comment.ActionType">
+                                                    @(comment.ActionType.Length > 48 ? comment.ActionType[..45] + "…" : comment.ActionType)
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (hasContent)
+                                    {
+                                        <div class="ticket-comment-body ticket-comment-body-html">
+                                            @Html.Raw(TicketHtmlHelper.PrepareCommentHtml(comment.Content))
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(comment.ActionType))
+                                    {
+                                        <div class="ticket-comment-body ticket-comment-body-system text-muted">
+                                            <i class="bi bi-gear me-1"></i>@comment.ActionType
+                                        </div>
+                                    }
+                                    @if (comment.TimeSpentMinutes is > 0)
+                                    {
+                                        <div class="ticket-comment-footer text-muted small">
+                                            <i class="bi bi-clock me-1"></i>@comment.TimeSpentMinutes.Value.ToString("0.##") min
+                                        </div>
+                                    }
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="ticket-info-tile card border-0 shadow-sm h-100">

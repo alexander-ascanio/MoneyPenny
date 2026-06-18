@@ -9,4 +9,5 @@ public interface ITicketRepository
     Task<TicketFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default);
     Task<Ticket?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<Ticket?> GetByNumberAsync(string number, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TicketAction>> GetActionsByTicketIdAsync(int ticketId, CancellationToken cancellationToken = default);
 }

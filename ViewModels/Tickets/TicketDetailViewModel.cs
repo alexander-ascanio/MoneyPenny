@@ -17,4 +17,5 @@ public class TicketDetailViewModel
     public DateTime? UpdatedAt { get; init; }
     public bool IsIndexed { get; init; }
     public string? ErrorMessage { get; init; }
+    public IReadOnlyList<TicketActionViewModel> Comments { get; init; } = [];
 }

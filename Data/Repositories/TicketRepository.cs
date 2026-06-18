@@ -94,6 +94,17 @@ public class TicketRepository : ITicketRepository
             .FirstOrDefaultAsync(t => t.Number == number, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TicketAction>> GetActionsByTicketIdAsync(
+        int ticketId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.TicketActions
+            .AsNoTracking()
+            .Where(a => a.TicketId == ticketId)
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<IReadOnlyList<string>> GetDistinctAsync(
         System.Linq.Expressions.Expression<Func<Ticket, string?>> selector,
         CancellationToken cancellationToken)

@@ -302,7 +302,10 @@
                     {
                         <tr class="tickets-row">
                             <td>
-                                <span class="ticket-number-badge">#@ticket.Number</span>
+                                <a asp-action="Details" asp-route-id="@ticket.Id"
+                                   class="ticket-number-link" title="Ver comentarios del ticket">
+                                    <span class="ticket-number-badge">#@ticket.Number</span>
+                                </a>
                             </td>
                             <td>
                                 <div class="ticket-subject">@ticket.Title</div>
