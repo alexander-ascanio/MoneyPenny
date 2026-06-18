@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using MoneyPenny.Data;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Options;
@@ -45,8 +46,12 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddMoneyPennyServices(this IServiceCollection services)
+    public static IServiceCollection AddMoneyPennyServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        services.AddOpenAiHttpClient(configuration);
+
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IVectorRepository, VectorRepository>();
         services.AddScoped<ITicketService, TicketService>();
@@ -58,5 +63,21 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRagOrchestrator, RagOrchestrator>();
 
         return services;
+    }
+
+    private static void AddOpenAiHttpClient(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddHttpClient(OpenAiEmbeddingService.HttpClientName, (sp, client) =>
+        {
+            var section = configuration.GetSection("ExternalApis:OpenAI");
+            var baseUrl = section["BaseUrl"] ?? "https://api.openai.com/v1";
+            var apiKey = section["ApiKey"] ?? string.Empty;
+            var timeoutSeconds = int.TryParse(section["TimeoutSeconds"], out var timeout) ? timeout : 60;
+
+            client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
     }
 }

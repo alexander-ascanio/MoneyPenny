@@ -8,7 +8,7 @@ using MoneyPenny.Options;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMoneyPennyDatabases(builder.Configuration);
-builder.Services.AddMoneyPennyServices();
+builder.Services.AddMoneyPennyServices(builder.Configuration);
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
