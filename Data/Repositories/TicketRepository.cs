@@ -101,7 +101,7 @@ public class TicketRepository : ITicketRepository
         return await _context.TicketActions
             .AsNoTracking()
             .Where(a => a.TicketId == ticketId)
-            .OrderBy(a => a.CreatedAt)
+            .OrderByDescending(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 

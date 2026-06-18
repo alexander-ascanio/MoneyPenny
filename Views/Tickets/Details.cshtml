@@ -94,47 +94,43 @@
                     }
                     else
                     {
+                        var totalComments = Model.Comments.Count;
+                        var commentIndex = 0;
                         <div class="ticket-comments-timeline">
                             @foreach (var comment in Model.Comments)
                             {
+                                commentIndex++;
+                                var commentNumber = totalComments - commentIndex + 1;
                                 var hasContent = !string.IsNullOrWhiteSpace(comment.Content);
-                                <article class="ticket-comment @(comment.IsVisible ? "" : "ticket-comment-internal")">
-                                    <div class="ticket-comment-header">
-                                        <div class="ticket-comment-author">
+                                <article class="ticket-comment-card @(comment.IsVisible ? "ticket-comment-public" : "ticket-comment-internal")">
+                                    <div class="ticket-comment-top">
+                                        <div class="ticket-comment-top-left">
                                             <span class="ticket-comment-avatar">
                                                 <i class="bi bi-person-fill"></i>
                                             </span>
                                             <div>
                                                 <div class="ticket-comment-name">@comment.Author</div>
                                                 <div class="ticket-comment-meta">
+                                                    Comentario añadido el
                                                     <time datetime="@comment.CreatedAt.ToString("o")">
                                                         @comment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                                                     </time>
-                                                    @if (!string.IsNullOrWhiteSpace(comment.Source))
-                                                    {
-                                                        <span class="ticket-comment-sep">·</span>
-                                                        <span>@comment.Source</span>
-                                                    }
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="ticket-comment-badges">
-                                            @if (!comment.IsVisible)
+                                        <div class="ticket-comment-top-right">
+                                            <div class="ticket-comment-number" aria-label="Comentario @commentNumber">@commentNumber</div>
+                                            @if (comment.IsVisible)
                                             {
-                                                <span class="badge rounded-pill text-bg-warning">Interno</span>
+                                                <span class="ticket-comment-visibility ticket-comment-visibility-public">Public</span>
                                             }
-                                            @if (!string.IsNullOrWhiteSpace(comment.TicketStatus))
+                                            else
                                             {
-                                                <span class="badge rounded-pill text-bg-light text-dark">@comment.TicketStatus</span>
-                                            }
-                                            @if (!string.IsNullOrWhiteSpace(comment.ActionType))
-                                            {
-                                                <span class="badge rounded-pill text-bg-secondary ticket-comment-type" title="@comment.ActionType">
-                                                    @(comment.ActionType.Length > 48 ? comment.ActionType[..45] + "…" : comment.ActionType)
-                                                </span>
+                                                <span class="ticket-comment-visibility ticket-comment-visibility-internal">Interno</span>
                                             }
                                         </div>
                                     </div>
+                                    <hr class="ticket-comment-divider" />
                                     @if (hasContent)
                                     {
                                         <div class="ticket-comment-body ticket-comment-body-html">
@@ -146,6 +142,10 @@
                                         <div class="ticket-comment-body ticket-comment-body-system text-muted">
                                             <i class="bi bi-gear me-1"></i>@comment.ActionType
                                         </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(comment.ActionType) && hasContent)
+                                    {
+                                        <div class="ticket-comment-type-label">@comment.ActionType</div>
                                     }
                                     @if (comment.TimeSpentMinutes is > 0)
                                     {
