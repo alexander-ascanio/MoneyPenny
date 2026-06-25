@@ -40,7 +40,7 @@ public class TicketIngestionService : ITicketIngestionService
         document.AppendLine($"Prioridad: {ticket.Priority}");
         document.AppendLine($"Asignado: {ticket.Assignee ?? "Sin asignar"}");
         document.AppendLine("Descripción:");
-        document.AppendLine(ticket.Description);
+        document.AppendLine(TicketHtmlHelper.ToPlainText(ticket.Description));
 
         var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
             ticket.Id,
