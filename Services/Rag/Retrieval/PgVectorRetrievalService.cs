@@ -26,7 +26,7 @@ public class PgVectorRetrievalService : IRetrievalService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<DocumentChunk>> RetrieveContextAsync(
+    public async Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveContextAsync(
         string question,
         int? ticketId = null,
         CancellationToken cancellationToken = default)
@@ -45,6 +45,6 @@ public class PgVectorRetrievalService : IRetrievalService
             ticketId,
             _options.MinScore);
 
-        return results.Select(r => r.Chunk).ToList();
+        return results;
     }
 }

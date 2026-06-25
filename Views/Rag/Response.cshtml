@@ -1,34 +1,95 @@
 @model MoneyPenny.ViewModels.Rag.RagResponseViewModel
 
 @{
-    ViewData["Title"] = "Respuesta RAG";
+    ViewData["Title"] = Model.PreviewContextOnly ? "Contexto RAG" : "Respuesta RAG";
 }
 
-<h2 class="mb-4">Respuesta</h2>
+<div class="rag-response-page">
+    <h2 class="mb-2">
+        @if (Model.PreviewContextOnly)
+        {
+            <i class="bi bi-search me-2 text-primary"></i>
+            @:Previsualización de contexto
+        }
+        else
+        {
+            <i class="bi bi-robot me-2 text-success"></i>
+            @:Respuesta RAG
+        }
+    </h2>
 
-<div class="card shadow-sm mb-4">
-    <div class="card-header">Pregunta</div>
-    <div class="card-body">@Model.Question</div>
-</div>
+    @if (!string.IsNullOrWhiteSpace(Model.TicketNumber))
+    {
+        <p class="text-muted mb-4">Ticket: <strong>#@Model.TicketNumber</strong></p>
+    }
 
-<div class="card shadow-sm mb-4">
-    <div class="card-header">Respuesta</div>
-    <div class="card-body">@Model.Answer</div>
-</div>
-
-@if (Model.ContextSnippets.Any())
-{
     <div class="card shadow-sm mb-4">
-        <div class="card-header">Contexto recuperado</div>
+        <div class="card-header">Pregunta</div>
+        <div class="card-body">@Model.Question</div>
+    </div>
+
+    @if (Model.FirstComment is not null)
+    {
+        <div class="card shadow-sm mb-4 rag-reference-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-chat-left-quote me-2"></i>Primer comentario del ticket (referencia)</span>
+                <span class="badge text-bg-secondary">Comentario #1</span>
+            </div>
+            <div class="card-body">
+                <div class="rag-reference-meta text-muted small mb-2">
+                    @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                </div>
+                <pre class="rag-context-snippet mb-0">@Model.FirstComment.Content</pre>
+            </div>
+        </div>
+    }
+
+  <div class="card shadow-sm mb-4 rag-context-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-diagram-3 me-2"></i>Contexto recuperado al preguntar</span>
+            <span class="badge text-bg-primary">@Model.ContextItems.Count fragmento(s)</span>
+        </div>
         <div class="card-body">
-            @foreach (var snippet in Model.ContextSnippets)
+            @if (!Model.ContextItems.Any())
             {
-                <pre class="bg-light p-3 rounded mb-3">@snippet</pre>
+                <div class="alert alert-warning mb-0">
+                    No se recuperó contexto con el umbral actual (MinScore). Prueba otra pregunta, reindexa el ticket o revisa que el comentario #1 esté incluido en la indexación.
+                </div>
+            }
+            else
+            {
+                <p class="text-muted small">
+                    Compara estos fragmentos con el primer comentario. La puntuación indica similitud coseno con tu pregunta (más alto = más relevante).
+                </p>
+                @foreach (var item in Model.ContextItems)
+                {
+                    <div class="rag-context-item">
+                        <div class="rag-context-item-header">
+                            <span class="badge text-bg-light text-dark">Fragmento @item.ChunkIndex</span>
+                            <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
+                        </div>
+                        <pre class="rag-context-snippet">@item.Content</pre>
+                    </div>
+                }
             }
         </div>
     </div>
-}
 
-<a asp-action="Ask" asp-route-ticketId="@Model.TicketId" asp-route-ticketNumber="@Model.TicketNumber" class="btn btn-outline-primary">
-    Nueva pregunta
-</a>
+    @if (!Model.PreviewContextOnly)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">Respuesta GPT</div>
+            <div class="card-body rag-answer">@Model.Answer</div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            @Model.Answer
+        </div>
+    }
+
+    <a asp-action="Ask" asp-route-ticketId="@Model.TicketId" asp-route-ticketNumber="@Model.TicketNumber" class="btn btn-outline-primary">
+        Nueva pregunta
+    </a>
+</div>

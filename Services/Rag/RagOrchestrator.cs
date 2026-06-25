@@ -1,3 +1,5 @@
+using MoneyPenny.Data.Repositories;
+using MoneyPenny.Helpers;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Retrieval;
@@ -14,16 +16,19 @@ public class RagOrchestrator : IRagOrchestrator
 {
     private readonly IRetrievalService _retrievalService;
     private readonly IGenerationService _generationService;
-    private readonly Data.Repositories.IVectorRepository _vectorRepository;
+    private readonly IVectorRepository _vectorRepository;
+    private readonly ITicketRepository _ticketRepository;
 
     public RagOrchestrator(
         IRetrievalService retrievalService,
         IGenerationService generationService,
-        Data.Repositories.IVectorRepository vectorRepository)
+        IVectorRepository vectorRepository,
+        ITicketRepository ticketRepository)
     {
         _retrievalService = retrievalService;
         _generationService = generationService;
         _vectorRepository = vectorRepository;
+        _ticketRepository = ticketRepository;
     }
 
     public async Task<RagResponseViewModel> AskAsync(
@@ -31,13 +36,30 @@ public class RagOrchestrator : IRagOrchestrator
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var chunks = await _retrievalService.RetrieveContextAsync(
+        var retrieved = await _retrievalService.RetrieveContextAsync(
             request.Question,
             request.TicketId,
             cancellationToken);
 
-        var context = string.Join("\n---\n", chunks.Select(c => c.Content));
-        var answer = await _generationService.GenerateAnswerAsync(request.Question, context, cancellationToken);
+        var contextItems = retrieved.Select(item => new RagContextItemViewModel
+        {
+            ChunkIndex = item.Chunk.ChunkIndex,
+            Score = item.Score,
+            Content = item.Chunk.Content
+        }).ToList();
+
+        var context = string.Join("\n---\n", contextItems.Select(c => c.Content));
+        var firstComment = await LoadFirstCommentAsync(request.TicketId, cancellationToken);
+
+        string answer;
+        if (request.PreviewContextOnly)
+        {
+            answer = "Modo previsualización: no se generó respuesta GPT. Revisa el contexto recuperado y compáralo con el primer comentario.";
+        }
+        else
+        {
+            answer = await _generationService.GenerateAnswerAsync(request.Question, context, cancellationToken);
+        }
 
         await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
         {
@@ -45,16 +67,55 @@ public class RagOrchestrator : IRagOrchestrator
             TicketId = request.TicketId,
             Question = request.Question,
             Answer = answer,
-            PromptVersion = "v1-stub"
+            PromptVersion = request.PreviewContextOnly
+                ? "preview-context-only"
+                : OpenAiGenerationService.PromptVersion
         }, cancellationToken);
 
         return new RagResponseViewModel
         {
             Question = request.Question,
             Answer = answer,
-            ContextSnippets = chunks.Select(c => c.Content).ToList(),
+            ContextItems = contextItems,
+            FirstComment = firstComment,
             TicketId = request.TicketId,
-            TicketNumber = request.TicketNumber
+            TicketNumber = request.TicketNumber,
+            PreviewContextOnly = request.PreviewContextOnly
+        };
+    }
+
+    private async Task<RagFirstCommentViewModel?> LoadFirstCommentAsync(
+        int? ticketId,
+        CancellationToken cancellationToken)
+    {
+        if (ticketId is null)
+        {
+            return null;
+        }
+
+        var action = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
+            ticketId.Value,
+            cancellationToken);
+
+        if (action is null)
+        {
+            return null;
+        }
+
+        var plainText = TicketHtmlHelper.ToPlainText(action.Content);
+        if (string.IsNullOrWhiteSpace(plainText))
+        {
+            return null;
+        }
+
+        return new RagFirstCommentViewModel
+        {
+            Author = action.CreatedByName
+                ?? action.ModifierName
+                ?? action.AssignedUsername
+                ?? "Desconocido",
+            CreatedAt = action.CreatedAt,
+            Content = plainText
         };
     }
 }
