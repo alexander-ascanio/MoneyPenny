@@ -39,6 +39,10 @@
                 <div class="rag-reference-meta text-muted small mb-2">
                     @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                 </div>
+                @if (!string.IsNullOrWhiteSpace(Model.FirstComment.ImageExtractionWarning))
+                {
+                    <div class="alert alert-warning py-2 small mb-2">@Model.FirstComment.ImageExtractionWarning</div>
+                }
                 <pre class="rag-context-snippet mb-0">@Model.FirstComment.Content</pre>
             </div>
         </div>

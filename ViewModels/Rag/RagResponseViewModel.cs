@@ -12,6 +12,7 @@ public class RagFirstCommentViewModel
     public string Author { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public string Content { get; init; } = string.Empty;
+    public string? ImageExtractionWarning { get; init; }
 }
 
 public class RagResponseViewModel

@@ -4,6 +4,6 @@ public interface ICommentContentService
 {
     Task<CommentIndexableContent> ToIndexableContentAsync(
         string? htmlContent,
-        bool processImages = true,
+        CommentContentRequest? request = null,
         CancellationToken cancellationToken = default);
 }

@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<IVectorRepository, VectorRepository>();
+        services.AddScoped<ICommentImageTextCacheRepository, CommentImageTextCacheRepository>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IChunkingService, ChunkingService>();
         services.AddScoped<IImageTextExtractionService, OpenAiImageTextExtractionService>();

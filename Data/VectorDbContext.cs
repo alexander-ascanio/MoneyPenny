@@ -16,6 +16,7 @@ public class VectorDbContext : DbContext
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<TicketEmbedding> TicketEmbeddings => Set<TicketEmbedding>();
     public DbSet<RagQueryLog> RagQueryLogs => Set<RagQueryLog>();
+    public DbSet<CommentImageTextCache> CommentImageTextCaches => Set<CommentImageTextCache>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +49,17 @@ public class VectorDbContext : DbContext
             entity.ToTable("rag_query_logs");
             entity.HasKey(l => l.Id);
             entity.Property(l => l.UserId).HasMaxLength(450);
+        });
+
+        modelBuilder.Entity<CommentImageTextCache>(entity =>
+        {
+            entity.ToTable("comment_image_text_cache");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.ImageSource).HasMaxLength(2048);
+            entity.Property(c => c.VisionModel).HasMaxLength(100);
+            entity.HasIndex(c => c.ImageSource).IsUnique();
+            entity.HasIndex(c => c.TicketId);
+            entity.HasIndex(c => c.TicketActionId);
         });
     }
 }

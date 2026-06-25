@@ -107,7 +107,13 @@ public class RagOrchestrator : IRagOrchestrator
 
         var commentContent = await _commentContentService.ToIndexableContentAsync(
             action.Content,
-            processImages: true,
+            new CommentContentRequest
+            {
+                ProcessImages = true,
+                ImageCacheMode = ImageExtractionCacheMode.CacheOnly,
+                TicketId = ticketId,
+                TicketActionId = action.Id
+            },
             cancellationToken);
 
         if (string.IsNullOrWhiteSpace(commentContent.Text))
@@ -122,7 +128,8 @@ public class RagOrchestrator : IRagOrchestrator
                 ?? action.AssignedUsername
                 ?? "Desconocido",
             CreatedAt = action.CreatedAt,
-            Content = commentContent.Text
+            Content = commentContent.Text,
+            ImageExtractionWarning = commentContent.ImageExtractionWarning
         };
     }
 }

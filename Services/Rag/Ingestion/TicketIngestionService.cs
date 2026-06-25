@@ -116,7 +116,13 @@ public class TicketIngestionService : ITicketIngestionService
         {
             commentContent = await _commentContentService.ToIndexableContentAsync(
                 oldestComment.Content,
-                processImages,
+                new CommentContentRequest
+                {
+                    ProcessImages = processImages,
+                    ImageCacheMode = ImageExtractionCacheMode.UseAndRefresh,
+                    TicketId = ticket.Id,
+                    TicketActionId = oldestComment.Id
+                },
                 cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(commentContent.Text))
