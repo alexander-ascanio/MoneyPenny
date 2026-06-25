@@ -1,3 +1,5 @@
+using Pgvector;
+
 namespace MoneyPenny.Models.Rag;
 
 public class TicketEmbedding
@@ -7,9 +9,5 @@ public class TicketEmbedding
     public DocumentChunk DocumentChunk { get; set; } = null!;
     public int TicketId { get; set; }
     public string Model { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Vector de embedding. Sustituir por pgvector cuando se añada la extensión.
-    /// </summary>
-    public float[] Vector { get; set; } = [];
+    public Vector Embedding { get; set; } = null!;
 }

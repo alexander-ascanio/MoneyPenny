@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using MoneyPenny.Models.Rag;
+using Pgvector.EntityFrameworkCore;
 
 namespace MoneyPenny.Data;
 
 public class VectorDbContext : DbContext
 {
+    public const int EmbeddingDimensions = 1536;
+
     public VectorDbContext(DbContextOptions<VectorDbContext> options)
         : base(options)
     {
@@ -16,6 +19,8 @@ public class VectorDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("vector");
+
         modelBuilder.Entity<DocumentChunk>(entity =>
         {
             entity.ToTable("document_chunks");
@@ -33,6 +38,9 @@ public class VectorDbContext : DbContext
                 .HasForeignKey(e => e.DocumentChunkId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.TicketId);
+            entity.Property(e => e.Embedding)
+                .HasColumnName("Vector")
+                .HasColumnType($"vector({EmbeddingDimensions})");
         });
 
         modelBuilder.Entity<RagQueryLog>(entity =>

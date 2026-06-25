@@ -41,7 +41,9 @@ public static class ServiceCollectionExtensions
             options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(ticketsDb)));
 
         services.AddDbContext<VectorDbContext>(options =>
-            options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(vectorDb)));
+            options.UseNpgsql(
+                PostgresConnectionHelper.BuildConnectionString(vectorDb),
+                npgsql => npgsql.UseVector()));
 
         return services;
     }

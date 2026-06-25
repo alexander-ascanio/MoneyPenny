@@ -1,10 +1,11 @@
+using System.Text;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
-using MoneyPenny.Models.Tickets;
 using MoneyPenny.Models.Rag;
+using MoneyPenny.Models.Tickets;
 using MoneyPenny.Services.Rag.Embeddings;
 using Microsoft.Extensions.Logging;
-using System.Text;
+using Pgvector;
 
 namespace MoneyPenny.Services.Rag.Ingestion;
 
@@ -84,7 +85,7 @@ public class TicketIngestionService : ITicketIngestionService
                 DocumentChunkId = chunk.Id,
                 TicketId = ticket.Id,
                 Model = _embeddingService.ModelName,
-                Vector = vector
+                Embedding = new Vector(vector)
             });
         }
 
