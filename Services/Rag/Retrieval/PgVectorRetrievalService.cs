@@ -32,18 +32,34 @@ public class PgVectorRetrievalService : IRetrievalService
         CancellationToken cancellationToken = default)
     {
         var queryVector = await _embeddingService.CreateEmbeddingAsync(question, cancellationToken);
+        var minScore = ticketId is not null ? _options.TicketScopedMinScore : _options.MinScore;
         var results = await _vectorRepository.SearchSimilarAsync(
             queryVector,
             _options.TopK,
-            _options.MinScore,
+            minScore,
             ticketId,
             cancellationToken);
+
+        if (results.Count == 0 && ticketId is not null && minScore > 0)
+        {
+            _logger.LogInformation(
+                "Sin resultados para ticket {TicketId} con minScore={MinScore}. Reintentando sin umbral.",
+                ticketId,
+                minScore);
+
+            results = await _vectorRepository.SearchSimilarAsync(
+                queryVector,
+                _options.TopK,
+                minScore: 0,
+                ticketId,
+                cancellationToken);
+        }
 
         _logger.LogInformation(
             "Recuperados {Count} chunks para la pregunta (ticketId={TicketId}, minScore={MinScore}).",
             results.Count,
             ticketId,
-            _options.MinScore);
+            minScore);
 
         return results;
     }

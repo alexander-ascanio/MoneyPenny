@@ -1,7 +1,7 @@
 using MoneyPenny.Data.Repositories;
-using MoneyPenny.Helpers;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Services.Rag.Generation;
+using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Retrieval;
 using MoneyPenny.ViewModels.Rag;
 
@@ -18,17 +18,20 @@ public class RagOrchestrator : IRagOrchestrator
     private readonly IGenerationService _generationService;
     private readonly IVectorRepository _vectorRepository;
     private readonly ITicketRepository _ticketRepository;
+    private readonly ICommentContentService _commentContentService;
 
     public RagOrchestrator(
         IRetrievalService retrievalService,
         IGenerationService generationService,
         IVectorRepository vectorRepository,
-        ITicketRepository ticketRepository)
+        ITicketRepository ticketRepository,
+        ICommentContentService commentContentService)
     {
         _retrievalService = retrievalService;
         _generationService = generationService;
         _vectorRepository = vectorRepository;
         _ticketRepository = ticketRepository;
+        _commentContentService = commentContentService;
     }
 
     public async Task<RagResponseViewModel> AskAsync(
@@ -102,8 +105,12 @@ public class RagOrchestrator : IRagOrchestrator
             return null;
         }
 
-        var plainText = TicketHtmlHelper.ToPlainText(action.Content);
-        if (string.IsNullOrWhiteSpace(plainText))
+        var commentContent = await _commentContentService.ToIndexableContentAsync(
+            action.Content,
+            processImages: true,
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(commentContent.Text))
         {
             return null;
         }
@@ -115,7 +122,7 @@ public class RagOrchestrator : IRagOrchestrator
                 ?? action.AssignedUsername
                 ?? "Desconocido",
             CreatedAt = action.CreatedAt,
-            Content = plainText
+            Content = commentContent.Text
         };
     }
 }

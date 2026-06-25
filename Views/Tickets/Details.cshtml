@@ -61,6 +61,11 @@
         <div class="alert alert-success border-0 shadow-sm">@successMessage</div>
     }
 
+    @if (TempData["WarningMessage"] is string warningMessage)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">@warningMessage</div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
         <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div>
@@ -225,10 +230,11 @@
                             <span class="badge rounded-pill text-bg-secondary">Pendiente</span>
                         }
                     </div>
-                    <form asp-action="IndexTicket" method="post">
+                    <form asp-action="IndexTicket" method="post" id="indexTicketForm">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@Model.Id" />
-                        <button type="submit" class="btn btn-success w-100">
+                        <input type="hidden" name="processImages" id="processImagesInput" value="true" />
+                        <button type="submit" class="btn btn-success w-100" id="indexTicketButton">
                             <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
                         </button>
                     </form>
@@ -243,3 +249,88 @@
         </div>
     </div>
 </div>
+
+@if (Model.PromptImageProcessingOnIndex)
+{
+    <div class="modal fade" id="imageProcessingModal" tabindex="-1" aria-labelledby="imageProcessingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageProcessingModalLabel">
+                        <i class="bi bi-image me-2"></i>Imágenes en el comentario
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        El primer comentario del ticket incluye
+                        <strong>@Model.FirstCommentImageCount imagen@(Model.FirstCommentImageCount == 1 ? string.Empty : "es")</strong>.
+                    </p>
+                    <p class="mb-0 text-muted">
+                        Extraer el texto de esas capturas utiliza tokens de OpenAI (visión).
+                        ¿Cómo desea continuar con la indexación?
+                    </p>
+                </div>
+                <div class="modal-footer flex-column flex-sm-row gap-2">
+                    <button type="button" class="btn btn-success w-100 w-sm-auto" id="confirmProcessImagesButton">
+                        Procesar con tokens
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto" id="skipProcessImagesButton">
+                        Indexar sin procesar imágenes
+                    </button>
+                    <button type="button" class="btn btn-link text-decoration-none w-100 w-sm-auto" data-bs-dismiss="modal" id="cancelIndexButton">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.PromptImageProcessingOnIndex)
+    {
+        <script>
+            (function () {
+                const form = document.getElementById('indexTicketForm');
+                const processImagesInput = document.getElementById('processImagesInput');
+                const modalElement = document.getElementById('imageProcessingModal');
+                const modal = new bootstrap.Modal(modalElement);
+                let confirmedSubmit = false;
+
+                form.addEventListener('submit', function (event) {
+                    if (confirmedSubmit) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    modal.show();
+                });
+
+                document.getElementById('confirmProcessImagesButton').addEventListener('click', function () {
+                    processImagesInput.value = 'true';
+                    confirmedSubmit = true;
+                    modal.hide();
+                    form.submit();
+                });
+
+                document.getElementById('skipProcessImagesButton').addEventListener('click', function () {
+                    processImagesInput.value = 'false';
+                    confirmedSubmit = true;
+                    modal.hide();
+                    form.submit();
+                });
+
+                document.getElementById('cancelIndexButton').addEventListener('click', function () {
+                    confirmedSubmit = false;
+                });
+
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    if (!confirmedSubmit) {
+                        processImagesInput.value = 'true';
+                    }
+                });
+            })();
+        </script>
+    }
+}

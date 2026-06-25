@@ -1,7 +1,10 @@
 using MoneyPenny.Data.Repositories;
+using MoneyPenny.Helpers;
 using MoneyPenny.Models.Tickets;
+using MoneyPenny.Options;
 using MoneyPenny.ViewModels.Tickets;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace MoneyPenny.Services.Tickets;
@@ -11,6 +14,7 @@ public class TicketService : ITicketService
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
     private readonly IMemoryCache _cache;
+    private readonly RagOptions _ragOptions;
     private readonly ILogger<TicketService> _logger;
 
     private const string FilterOptionsCacheKey = "tickets-filter-options";
@@ -19,11 +23,13 @@ public class TicketService : ITicketService
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
         IMemoryCache cache,
+        IOptions<RagOptions> ragOptions,
         ILogger<TicketService> logger)
     {
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
         _cache = cache;
+        _ragOptions = ragOptions.Value;
         _logger = logger;
     }
 
@@ -116,6 +122,10 @@ public class TicketService : ITicketService
 
             var isIndexed = await IsTicketIndexedSafeAsync(id, cancellationToken);
             var actions = await _ticketRepository.GetActionsByTicketIdAsync(id, cancellationToken);
+            var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(id, cancellationToken);
+            var firstCommentImageCount = oldestComment is null
+                ? 0
+                : TicketHtmlHelper.ExtractImageSources(oldestComment.Content).Count;
 
             return new TicketDetailViewModel
             {
@@ -133,6 +143,8 @@ public class TicketService : ITicketService
                 CreatedAt = ticket.CreatedAt,
                 UpdatedAt = ticket.UpdatedAt,
                 IsIndexed = isIndexed,
+                FirstCommentImageCount = firstCommentImageCount,
+                PromptImageProcessingOnIndex = firstCommentImageCount > 0 && _ragOptions.EnableImageTextExtraction,
                 Comments = actions.Select(MapAction).ToList()
             };
         }

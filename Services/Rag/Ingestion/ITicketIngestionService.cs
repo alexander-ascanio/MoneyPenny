@@ -4,6 +4,13 @@ namespace MoneyPenny.Services.Rag.Ingestion;
 
 public interface ITicketIngestionService
 {
-    Task<string> BuildTicketDocumentAsync(Ticket ticket, CancellationToken cancellationToken = default);
-    Task IndexTicketAsync(int ticketId, CancellationToken cancellationToken = default);
+    Task<string> BuildTicketDocumentAsync(
+        Ticket ticket,
+        bool processImages = true,
+        CancellationToken cancellationToken = default);
+
+    Task<TicketIndexResult> IndexTicketAsync(
+        int ticketId,
+        bool processImages = true,
+        CancellationToken cancellationToken = default);
 }

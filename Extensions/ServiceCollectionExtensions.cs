@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(VectorDatabaseOptions.SectionName));
         services.Configure<RagOptions>(
             configuration.GetSection(RagOptions.SectionName));
+        services.Configure<TeamSupportApiOptions>(
+            configuration.GetSection(TeamSupportApiOptions.SectionName));
 
         var appDb = configuration.GetSection(ApplicationDatabaseOptions.SectionName).Get<ApplicationDatabaseOptions>()
             ?? new ApplicationDatabaseOptions();
@@ -58,6 +60,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVectorRepository, VectorRepository>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IChunkingService, ChunkingService>();
+        services.AddScoped<IImageTextExtractionService, OpenAiImageTextExtractionService>();
+        services.AddScoped<ICommentContentService, CommentContentService>();
         services.AddScoped<ITicketIngestionService, TicketIngestionService>();
         services.AddScoped<IEmbeddingService, OpenAiEmbeddingService>();
         services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
@@ -80,6 +84,16 @@ public static class ServiceCollectionExtensions
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
+
+        services.AddHttpClient(OpenAiImageTextExtractionService.ImageDownloadHttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MoneyPenny/1.0");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = false
         });
     }
 }

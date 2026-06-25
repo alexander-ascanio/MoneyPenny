@@ -16,6 +16,8 @@ public class TicketDetailViewModel
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public bool IsIndexed { get; init; }
+    public int FirstCommentImageCount { get; init; }
+    public bool PromptImageProcessingOnIndex { get; init; }
     public string? ErrorMessage { get; init; }
     public IReadOnlyList<TicketActionViewModel> Comments { get; init; } = [];
 }

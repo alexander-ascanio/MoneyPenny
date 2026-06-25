@@ -15,6 +15,21 @@ public class VectorRepository : IVectorRepository
         _context = context;
     }
 
+    public async Task DeleteTicketIndexAsync(int ticketId, CancellationToken cancellationToken = default)
+    {
+        var chunks = await _context.DocumentChunks
+            .Where(c => c.TicketId == ticketId)
+            .ToListAsync(cancellationToken);
+
+        if (chunks.Count == 0)
+        {
+            return;
+        }
+
+        _context.DocumentChunks.RemoveRange(chunks);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public Task<bool> IsTicketIndexedAsync(int ticketId, CancellationToken cancellationToken = default)
     {
         return _context.DocumentChunks

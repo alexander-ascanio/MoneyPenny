@@ -115,6 +115,129 @@ public static class TicketHtmlHelper
         return SanitizeForIndexing(html.Trim());
     }
 
+    public static IReadOnlyList<string> ExtractImageSources(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return [];
+        }
+
+        var html = PrepareCommentHtml(content);
+        var footerIndex = FindHtmlFooterStartIndex(html);
+        var matches = ImageSourceRegex.Matches(html);
+        var sources = new List<string>();
+
+        foreach (Match match in matches)
+        {
+            if (footerIndex.HasValue && match.Index >= footerIndex.Value)
+            {
+                continue;
+            }
+
+            var source = match.Groups[1].Success ? match.Groups[1].Value
+                : match.Groups[2].Success ? match.Groups[2].Value
+                : match.Groups[3].Value;
+            source = SanitizeImageSource(source);
+            if (!string.IsNullOrWhiteSpace(source))
+            {
+                sources.Add(source);
+            }
+        }
+
+        return sources.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public static string SanitizeImageSource(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = System.Net.WebUtility.HtmlDecode(source).Trim().Trim('"', '\'');
+        cleaned = cleaned.Replace("&quot;", string.Empty, StringComparison.OrdinalIgnoreCase);
+        return cleaned.Trim();
+    }
+
+    private static string TruncateHtmlBeforeFooter(string html)
+    {
+        var footerIndex = FindHtmlFooterStartIndex(html);
+        return footerIndex.HasValue ? html[..footerIndex.Value] : html;
+    }
+
+    private static int? FindHtmlFooterStartIndex(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return null;
+        }
+
+        const int minBodyChars = 15;
+        int? earliest = null;
+
+        foreach (var anchor in PrivacyDisclaimerPrefixes.Concat(PrivacyTextAnchors).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var index = html.IndexOf(anchor, StringComparison.OrdinalIgnoreCase);
+            if (index >= minBodyChars)
+            {
+                earliest = earliest.HasValue ? Math.Min(earliest.Value, index) : index;
+            }
+        }
+
+        foreach (var marker in HtmlFooterStartMarkers)
+        {
+            var index = html.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index >= minBodyChars)
+            {
+                earliest = earliest.HasValue ? Math.Min(earliest.Value, index) : index;
+            }
+        }
+
+        return earliest;
+    }
+
+    private static readonly string[] HtmlFooterStartMarkers =
+    [
+        ">Saludos,",
+        ">Saludos<",
+        ">Saludos cordiales",
+        ">Atentamente,",
+        ">Atentamente<",
+        ">Cordialmente,",
+        ">Un saludo,",
+        ">Un saludo<",
+        ">Best regards,",
+        ">Kind regards,",
+        "<br>Saludos,",
+        "<br/>Saludos,",
+        "<br />Saludos,",
+        "<br>Atentamente,",
+        "<br/>Atentamente,",
+        "<br />Atentamente,",
+        "<br>Cordialmente,",
+        "<br/>Cordialmente,",
+        "<br />Cordialmente,",
+        ">Teléfono:",
+        ">Telefono:",
+        ">Fax:",
+        ">Tlf.:",
+        ">Móvil:",
+        ">Mobil:",
+        "\nSaludos,",
+        "\r\nSaludos,",
+        " Saludos,",
+        "\nAtentamente,",
+        "\r\nAtentamente,",
+        "\nCordialmente,",
+        "\r\nCordialmente,",
+        "\nUn saludo,",
+        "\r\nUn saludo,"
+    ];
+
+    private static readonly Regex ImageSourceRegex = new(
+        @"<img\b[^>]*\bsrc\s*=\s*(?:""([^""]+)""|'([^']+)'|([^\s>]+))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static string SanitizeForIndexing(string text)
     {
         if (string.IsNullOrWhiteSpace(text))

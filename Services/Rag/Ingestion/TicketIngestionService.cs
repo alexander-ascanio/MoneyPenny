@@ -15,6 +15,7 @@ public class TicketIngestionService : ITicketIngestionService
     private readonly IVectorRepository _vectorRepository;
     private readonly IChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
+    private readonly ICommentContentService _commentContentService;
     private readonly ILogger<TicketIngestionService> _logger;
 
     public TicketIngestionService(
@@ -22,57 +23,41 @@ public class TicketIngestionService : ITicketIngestionService
         IVectorRepository vectorRepository,
         IChunkingService chunkingService,
         IEmbeddingService embeddingService,
+        ICommentContentService commentContentService,
         ILogger<TicketIngestionService> logger)
     {
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
         _chunkingService = chunkingService;
         _embeddingService = embeddingService;
+        _commentContentService = commentContentService;
         _logger = logger;
     }
 
-    public async Task<string> BuildTicketDocumentAsync(Ticket ticket, CancellationToken cancellationToken = default)
+    public async Task<string> BuildTicketDocumentAsync(
+        Ticket ticket,
+        bool processImages = true,
+        CancellationToken cancellationToken = default)
     {
-        var document = new StringBuilder();
-        document.AppendLine($"Ticket: {ticket.Number}");
-        document.AppendLine($"Título: {ticket.Title}");
-        document.AppendLine($"Estado: {ticket.Status}");
-        document.AppendLine($"Prioridad: {ticket.Priority}");
-        document.AppendLine($"Asignado: {ticket.Assignee ?? "Sin asignar"}");
-        document.AppendLine("Descripción:");
-        document.AppendLine(TicketHtmlHelper.ToPlainText(ticket.Description));
-
-        var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
-            ticket.Id,
-            cancellationToken);
-
-        if (oldestComment is not null)
-        {
-            var plainComment = TicketHtmlHelper.ToPlainText(oldestComment.Content);
-            if (!string.IsNullOrWhiteSpace(plainComment))
-            {
-                var author = oldestComment.CreatedByName
-                    ?? oldestComment.ModifierName
-                    ?? oldestComment.AssignedUsername
-                    ?? "Desconocido";
-
-                document.AppendLine();
-                document.AppendLine("Primer comentario:");
-                document.AppendLine($"Autor: {author}");
-                document.AppendLine($"Fecha: {oldestComment.CreatedAt:yyyy-MM-dd HH:mm} UTC");
-                document.AppendLine(plainComment);
-            }
-        }
-
-        return document.ToString();
+        var (document, _) = await BuildTicketDocumentInternalAsync(ticket, processImages, cancellationToken);
+        return document;
     }
 
-    public async Task IndexTicketAsync(int ticketId, CancellationToken cancellationToken = default)
+    public async Task<TicketIndexResult> IndexTicketAsync(
+        int ticketId,
+        bool processImages = true,
+        CancellationToken cancellationToken = default)
     {
         var ticket = await _ticketRepository.GetByIdAsync(ticketId, cancellationToken)
             ?? throw new InvalidOperationException($"Ticket {ticketId} no encontrado.");
 
-        var document = await BuildTicketDocumentAsync(ticket, cancellationToken);
+        var (document, commentContent) = await BuildTicketDocumentInternalAsync(
+            ticket,
+            processImages,
+            cancellationToken);
+
+        await _vectorRepository.DeleteTicketIndexAsync(ticketId, cancellationToken);
+
         var chunks = _chunkingService.SplitIntoChunks(document, ticket.Id, ticket.Number);
         await _vectorRepository.SaveChunksAsync(chunks, cancellationToken);
 
@@ -90,6 +75,65 @@ public class TicketIngestionService : ITicketIngestionService
         }
 
         await _vectorRepository.SaveEmbeddingsAsync(embeddings, cancellationToken);
-        _logger.LogInformation("Ticket {TicketId} indexado con {ChunkCount} chunks.", ticketId, chunks.Count);
+        _logger.LogInformation(
+            "Ticket {TicketId} indexado con {ChunkCount} chunks (processImages={ProcessImages}, images={ImagesExtracted}/{ImagesDetected}).",
+            ticketId,
+            chunks.Count,
+            processImages,
+            commentContent.ImagesExtracted,
+            commentContent.ImagesDetected);
+
+        return new TicketIndexResult
+        {
+            ChunkCount = chunks.Count,
+            ProcessImages = processImages,
+            ImagesDetected = commentContent.ImagesDetected,
+            ImagesExtracted = commentContent.ImagesExtracted,
+            ImageExtractionWarning = commentContent.ImageExtractionWarning
+        };
+    }
+
+    private async Task<(string Document, CommentIndexableContent CommentContent)> BuildTicketDocumentInternalAsync(
+        Ticket ticket,
+        bool processImages,
+        CancellationToken cancellationToken)
+    {
+        var document = new StringBuilder();
+        document.AppendLine($"Ticket: {ticket.Number}");
+        document.AppendLine($"Título: {ticket.Title}");
+        document.AppendLine($"Estado: {ticket.Status}");
+        document.AppendLine($"Prioridad: {ticket.Priority}");
+        document.AppendLine($"Asignado: {ticket.Assignee ?? "Sin asignar"}");
+        document.AppendLine("Descripción:");
+        document.AppendLine(TicketHtmlHelper.ToPlainText(ticket.Description));
+
+        var commentContent = new CommentIndexableContent();
+        var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
+            ticket.Id,
+            cancellationToken);
+
+        if (oldestComment is not null)
+        {
+            commentContent = await _commentContentService.ToIndexableContentAsync(
+                oldestComment.Content,
+                processImages,
+                cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(commentContent.Text))
+            {
+                var author = oldestComment.CreatedByName
+                    ?? oldestComment.ModifierName
+                    ?? oldestComment.AssignedUsername
+                    ?? "Desconocido";
+
+                document.AppendLine();
+                document.AppendLine("Primer comentario:");
+                document.AppendLine($"Autor: {author}");
+                document.AppendLine($"Fecha: {oldestComment.CreatedAt:yyyy-MM-dd HH:mm} UTC");
+                document.AppendLine(commentContent.Text);
+            }
+        }
+
+        return (document.ToString(), commentContent);
     }
 }
