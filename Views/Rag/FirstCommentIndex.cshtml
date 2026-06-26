@@ -36,9 +36,16 @@
     </p>
     @if (Model.CorpusSampleSize > 0)
     {
-        <p class="text-muted small mb-0 mt-2">
+        <p class="text-muted small mb-0 mt-2" data-corpus-info>
             Muestra de @Model.CorpusSampleSize ticket(s): media ~@Model.AverageCommentCharCount.ToString("N0") caracteres/comentario,
             ~@Model.AverageImagesPerTicket.ToString("0.##") imagen(es)/ticket.
+        </p>
+    }
+    else
+    {
+        <p class="text-muted small mb-0 mt-2" data-corpus-info>
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+            Cargando estadísticas del corpus…
         </p>
     }
 </div>
@@ -82,7 +89,10 @@
     </div>
 </div>
 
-<div data-bulk-index-estimate data-pricing="@pricingJson" data-corpus="@corpusJson">
+<div data-bulk-index-estimate
+     data-pricing="@pricingJson"
+     data-corpus="@corpusJson"
+     data-corpus-url="@Url.Action("FirstCommentCorpusStats")">
     <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm">
         <div class="card-header rag-section-header">Ejecutar indexación masiva</div>
         <div class="card-body">

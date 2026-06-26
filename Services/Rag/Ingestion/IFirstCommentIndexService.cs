@@ -1,8 +1,13 @@
 namespace MoneyPenny.Services.Rag.Ingestion;
 
+using MoneyPenny.Models.Tickets;
+
 public interface IFirstCommentIndexService
 {
-    Task<FirstCommentIndexStatus> GetStatusAsync(CancellationToken cancellationToken = default);
+    Task<FirstCommentIndexCounts> GetCountsAsync(CancellationToken cancellationToken = default);
+    Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
+        int sampleSize = 200,
+        CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
         CancellationToken cancellationToken = default);

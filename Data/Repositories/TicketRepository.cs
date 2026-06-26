@@ -136,27 +136,34 @@ public class TicketRepository : ITicketRepository
             return Array.Empty<TicketFirstCommentRow>();
         }
 
-        const string sql = """
-            SELECT
-                t."Id",
+        const string firstCommentsSql = """
+            SELECT DISTINCT ON (ta."TicketId")
+                t."Id" AS ticket_id,
                 t."TicketNumber",
                 t."Subject",
                 t."ProductName",
-                ta."Id",
+                ta."Id" AS action_id,
                 ta."Content",
                 ta."CreatedAt"
             FROM ticket_actions ta
             INNER JOIN tickets t ON t."Id" = ta."TicketId"
-            WHERE ta."Content" IS NOT NULL AND TRIM(ta."Content") <> ''
-              AND ta."Id" = (
-                  SELECT ta2."Id"
-                  FROM ticket_actions ta2
-                  WHERE ta2."TicketId" = ta."TicketId"
-                    AND ta2."Content" IS NOT NULL AND TRIM(ta2."Content") <> ''
-                  ORDER BY ta2."CreatedAt" ASC, ta2."Id" ASC
-                  LIMIT 1
-              )
-            ORDER BY t."Id"
+            WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+            ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
+            """;
+
+        var sql = $"""
+            SELECT
+                fc.ticket_id,
+                fc."TicketNumber",
+                fc."Subject",
+                fc."ProductName",
+                fc.action_id,
+                fc."Content",
+                fc."CreatedAt"
+            FROM (
+                {firstCommentsSql}
+            ) fc
+            ORDER BY fc.ticket_id
             OFFSET @skip LIMIT @take
             """;
 
@@ -246,26 +253,111 @@ public class TicketRepository : ITicketRepository
         CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(sampleSize, 1, 500);
-        var sample = await GetFirstCommentsPageAsync(0, take, cancellationToken);
-        if (sample.Count == 0)
+        var charStats = await GetFirstCommentCorpusCharStatsAsync(take, cancellationToken);
+        if (charStats.SampleSize == 0)
         {
             return new FirstCommentCorpusStats();
         }
 
-        var totalChars = 0;
-        var totalImages = 0;
-        foreach (var row in sample)
-        {
-            totalChars += row.Content.Length;
-            totalImages += TicketHtmlHelper.ExtractImageSources(row.Content).Count;
-        }
+        var imageSampleSize = Math.Min(50, take);
+        var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, cancellationToken);
+        var totalImages = imageContents.Sum(content => TicketHtmlHelper.ExtractImageSources(content).Count);
 
         return new FirstCommentCorpusStats
         {
-            SampleSize = sample.Count,
-            AverageCharCount = (int)Math.Round(totalChars / (double)sample.Count),
-            AverageImagesPerTicket = totalImages / (double)sample.Count
+            SampleSize = charStats.SampleSize,
+            AverageCharCount = charStats.AverageCharCount,
+            AverageImagesPerTicket = imageContents.Count > 0
+                ? totalImages / (double)imageContents.Count
+                : 0
         };
+    }
+
+    private async Task<(int SampleSize, int AverageCharCount)> GetFirstCommentCorpusCharStatsAsync(
+        int take,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT
+                COUNT(*)::int,
+                COALESCE(AVG(LENGTH(sample."Content"))::int, 0)
+            FROM (
+                SELECT fc."Content"
+                FROM (
+                    SELECT DISTINCT ON (ta."TicketId")
+                        ta."Content"
+                    FROM ticket_actions ta
+                    WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+                    ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
+                ) fc
+                LIMIT @take
+            ) sample
+            """;
+
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+
+        try
+        {
+            await using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("take", take));
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return (0, 0);
+            }
+
+            return (reader.GetInt32(0), reader.GetInt32(1));
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> GetFirstCommentContentsSampleAsync(
+        int take,
+        CancellationToken cancellationToken)
+    {
+        if (take <= 0)
+        {
+            return [];
+        }
+
+        const string sql = """
+            SELECT fc."Content"
+            FROM (
+                SELECT DISTINCT ON (ta."TicketId")
+                    ta."Content"
+                FROM ticket_actions ta
+                WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+                ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
+            ) fc
+            LIMIT @take
+            """;
+
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+
+        try
+        {
+            await using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("take", take));
+
+            var contents = new List<string>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                contents.Add(reader.GetString(0));
+            }
+
+            return contents;
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
     }
 
     private static string NormalizeTicketNumber(string? ticketNumber)

@@ -43,23 +43,24 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         _logger = logger;
     }
 
-    public async Task<FirstCommentIndexStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+    public async Task<FirstCommentIndexCounts> GetCountsAsync(CancellationToken cancellationToken = default)
     {
         var total = await _ticketRepository.CountTicketsWithFirstCommentAsync(cancellationToken);
         var indexed = await _vectorRepository.CountIndexedTicketsBySourceAsync(
             DocumentChunkSource.ClientFirstComment,
             cancellationToken);
-        var corpus = await _ticketRepository.GetFirstCommentCorpusStatsAsync(200, cancellationToken);
 
-        return new FirstCommentIndexStatus
+        return new FirstCommentIndexCounts
         {
             TotalTicketsWithFirstComment = total,
-            IndexedTickets = indexed,
-            AverageCommentCharCount = corpus.AverageCharCount,
-            AverageImagesPerTicket = corpus.AverageImagesPerTicket,
-            CorpusSampleSize = corpus.SampleSize
+            IndexedTickets = indexed
         };
     }
+
+    public Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
+        int sampleSize = 200,
+        CancellationToken cancellationToken = default) =>
+        _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, cancellationToken);
 
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,

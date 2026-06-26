@@ -45,7 +45,9 @@
     function initFirstCommentBulkEstimate(root) {
         const config = JSON.parse(root.dataset.pricing || '{}');
         const corpus = JSON.parse(root.dataset.corpus || '{}');
+        const corpusUrl = root.dataset.corpusUrl;
         const output = root.querySelector('[data-bulk-estimate-output]');
+        const corpusInfo = document.querySelector('[data-corpus-info]');
         const rebuild = root.querySelector('[data-bulk-rebuild]');
         const skipIndexed = root.querySelector('[data-bulk-skip-indexed]');
         const processImages = root.querySelector('[data-bulk-process-images]');
@@ -53,6 +55,17 @@
         if (!output) {
             return;
         }
+
+        const updateCorpusInfo = () => {
+            if (!corpusInfo || !corpus.corpusSampleSize) {
+                return;
+            }
+
+            const avgChars = Number(corpus.averageCommentCharCount || 0).toLocaleString();
+            const avgImages = Number(corpus.averageImagesPerTicket || 0).toFixed(2).replace(/\.?0+$/, '');
+            corpusInfo.innerHTML =
+                `Muestra de ${corpus.corpusSampleSize} ticket(s): media ~${avgChars} caracteres/comentario, ~${avgImages} imagen(es)/ticket.`;
+        };
 
         const update = () => {
             const total = Number(corpus.totalTickets || 0);
@@ -71,6 +84,16 @@
 
             if (tickets <= 0) {
                 renderEstimate(output, ['No hay tickets que procesar.'], {
+                    embeddingTokens: 0,
+                    visionTokens: 0,
+                    chatTokens: 0,
+                    cost: 0
+                });
+                return;
+            }
+
+            if (!corpus.corpusSampleSize) {
+                renderEstimate(output, ['Cargando estadísticas del corpus…'], {
                     embeddingTokens: 0,
                     visionTokens: 0,
                     chatTokens: 0,
@@ -120,7 +143,44 @@
                 el.addEventListener('input', update);
             }
         });
-        update();
+
+        if (corpusUrl && !corpus.corpusSampleSize) {
+            renderEstimate(output, ['Cargando estadísticas del corpus…'], {
+                embeddingTokens: 0,
+                visionTokens: 0,
+                chatTokens: 0,
+                cost: 0
+            });
+
+            fetch(corpusUrl, { headers: { Accept: 'application/json' } })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    corpus.averageCommentCharCount = data.averageCommentCharCount;
+                    corpus.averageImagesPerTicket = data.averageImagesPerTicket;
+                    corpus.corpusSampleSize = data.corpusSampleSize;
+                    updateCorpusInfo();
+                    update();
+                })
+                .catch(() => {
+                    if (corpusInfo) {
+                        corpusInfo.textContent = 'No se pudieron cargar las estadísticas del corpus.';
+                    }
+                    renderEstimate(output, ['No se pudieron cargar las estadísticas del corpus.'], {
+                        embeddingTokens: 0,
+                        visionTokens: 0,
+                        chatTokens: 0,
+                        cost: 0
+                    });
+                });
+        } else {
+            updateCorpusInfo();
+            update();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

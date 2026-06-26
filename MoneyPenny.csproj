@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <Compile Remove="scripts\**" />
+    <Compile Remove="_tmp_bench\**" />
+    <Compile Remove="_build_verify\**" />
+    <Compile Remove="_build_tmp\**" />
   </ItemGroup>
 
   <ItemGroup>

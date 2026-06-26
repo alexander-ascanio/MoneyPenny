@@ -101,19 +101,28 @@ public class RagController : Controller
     [HttpGet]
     public async Task<IActionResult> FirstCommentIndex(CancellationToken cancellationToken)
     {
-        var status = await _firstCommentIndexService.GetStatusAsync(cancellationToken);
+        var counts = await _firstCommentIndexService.GetCountsAsync(cancellationToken);
         var model = new FirstCommentIndexViewModel
         {
-            TotalTicketsWithFirstComment = status.TotalTicketsWithFirstComment,
-            IndexedTickets = status.IndexedTickets,
-            PendingTickets = status.PendingTickets,
-            AverageCommentCharCount = status.AverageCommentCharCount,
-            AverageImagesPerTicket = status.AverageImagesPerTicket,
-            CorpusSampleSize = status.CorpusSampleSize,
+            TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment,
+            IndexedTickets = counts.IndexedTickets,
+            PendingTickets = counts.PendingTickets,
             PricingConfig = BuildPricingConfig()
         };
-        model.RunEstimate = BuildFirstCommentRunEstimate(model);
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FirstCommentCorpusStats(CancellationToken cancellationToken)
+    {
+        const int sampleSize = 200;
+        var corpus = await _firstCommentIndexService.GetCorpusStatsAsync(sampleSize, cancellationToken);
+        return Json(new
+        {
+            averageCommentCharCount = corpus.AverageCharCount,
+            averageImagesPerTicket = corpus.AverageImagesPerTicket,
+            corpusSampleSize = corpus.SampleSize
+        });
     }
 
     [HttpPost]
@@ -226,15 +235,11 @@ public class RagController : Controller
         FirstCommentIndexViewModel model,
         CancellationToken cancellationToken)
     {
-        var refreshed = await _firstCommentIndexService.GetStatusAsync(cancellationToken);
-        model.TotalTicketsWithFirstComment = refreshed.TotalTicketsWithFirstComment;
-        model.IndexedTickets = refreshed.IndexedTickets;
-        model.PendingTickets = refreshed.PendingTickets;
-        model.AverageCommentCharCount = refreshed.AverageCommentCharCount;
-        model.AverageImagesPerTicket = refreshed.AverageImagesPerTicket;
-        model.CorpusSampleSize = refreshed.CorpusSampleSize;
+        var counts = await _firstCommentIndexService.GetCountsAsync(cancellationToken);
+        model.TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment;
+        model.IndexedTickets = counts.IndexedTickets;
+        model.PendingTickets = counts.PendingTickets;
         model.PricingConfig = BuildPricingConfig();
-        model.RunEstimate = BuildFirstCommentRunEstimate(model);
     }
 
     private RagTokenPricingConfigViewModel BuildPricingConfig() => new()
@@ -256,34 +261,4 @@ public class RagController : Controller
         ChatModel = _ragOptions.ChatModel,
         VisionModel = _ragOptions.VisionModel
     };
-
-    private TokenUsageEstimateViewModel BuildFirstCommentRunEstimate(FirstCommentIndexViewModel model)
-    {
-        var ticketsToProcess = ResolveTicketsToProcess(model);
-        var estimate = _tokenEstimateService.EstimateFirstCommentBulkIndex(
-            ticketsToProcess,
-            model.AverageCommentCharCount,
-            model.ProcessImages,
-            model.AverageImagesPerTicket);
-
-        return TokenUsageEstimateViewModel.FromEstimate(
-            estimate,
-            "Estimación antes de ejecutar");
-    }
-
-    private static int ResolveTicketsToProcess(FirstCommentIndexViewModel model)
-    {
-        var pending = model.RebuildAll
-            ? model.TotalTicketsWithFirstComment
-            : model.SkipAlreadyIndexed
-                ? model.PendingTickets
-                : model.TotalTicketsWithFirstComment;
-
-        if (model.MaxTickets is > 0)
-        {
-            return Math.Min(pending, model.MaxTickets.Value);
-        }
-
-        return pending;
-    }
 }
