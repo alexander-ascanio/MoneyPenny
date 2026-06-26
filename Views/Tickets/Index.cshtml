@@ -242,6 +242,7 @@
                     <col data-col="priority" style="width: 8rem;" />
                     <col data-col="created" style="width: 10rem;" />
                     <col data-col="modified" style="width: 10rem;" />
+                    <col data-col="indexed" style="width: 5rem;" />
                     <col data-col="rag" style="width: 4rem;" />
                     <col data-col="actions" style="width: 6rem;" />
                 </colgroup>
@@ -275,6 +276,10 @@
                             <span class="tickets-th-label">Modificado</span>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Modificado" tabindex="0"></span>
                         </th>
+                        <th class="tickets-th-resizable text-center" data-col="indexed">
+                            <span class="tickets-th-label">Indexado</span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Indexado" tabindex="0"></span>
+                        </th>
                         <th class="tickets-th-resizable text-center" data-col="rag">
                             <span class="tickets-th-label">RAG</span>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna RAG" tabindex="0"></span>
@@ -289,7 +294,7 @@
                     @if (!Model.Tickets.Any())
                     {
                         <tr>
-                            <td colspan="9" class="tickets-empty text-center">
+                            <td colspan="10" class="tickets-empty text-center">
                                 @if (string.IsNullOrWhiteSpace(Model.ErrorMessage))
                                 {
                                     <i class="bi bi-inbox display-6 d-block mb-2 text-muted"></i>
@@ -344,15 +349,29 @@
                                 }
                             </td>
                             <td class="text-center">
-                                @if (ticket.IsIndexed)
+                                @if (ticket.IsFirstCommentIndexed)
                                 {
-                                    <span class="ticket-indexed-yes" title="Indexado para RAG">
+                                    <span class="ticket-indexed-yes" title="Comentario #1 indexado (Índice #1)">
                                         <i class="bi bi-check-circle-fill"></i>
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="ticket-indexed-no" title="Sin indexar">
+                                    <span class="ticket-indexed-no" title="Comentario #1 sin indexar">
+                                        <i class="bi bi-circle"></i>
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (ticket.IsIndexed)
+                                {
+                                    <span class="ticket-indexed-yes" title="Documento del ticket indexado para RAG">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="ticket-indexed-no" title="Documento del ticket sin indexar">
                                         <i class="bi bi-circle"></i>
                                     </span>
                                 }

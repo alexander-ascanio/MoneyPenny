@@ -1,5 +1,6 @@
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
+using MoneyPenny.Models.Rag;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Ingestion;
@@ -52,7 +53,12 @@ public class TicketService : ITicketService
         {
             var filterOptions = await GetFilterOptionsAsync(cancellationToken);
             var tickets = await _ticketRepository.GetAllAsync(filters, cancellationToken);
-            var indexedIds = (await GetIndexedTicketIdsSafeAsync(cancellationToken)).ToHashSet();
+            var indexedIds = (await GetIndexedTicketIdsBySourceSafeAsync(
+                DocumentChunkSource.TicketDocument,
+                cancellationToken)).ToHashSet();
+            var firstCommentIndexedIds = (await GetIndexedTicketIdsBySourceSafeAsync(
+                DocumentChunkSource.ClientFirstComment,
+                cancellationToken)).ToHashSet();
 
             return new TicketListViewModel
             {
@@ -73,6 +79,7 @@ public class TicketService : ITicketService
                     CodigoTelegestion = t.CodigoTelegestion,
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
+                    IsFirstCommentIndexed = firstCommentIndexedIds.Contains(t.Id),
                     IsIndexed = indexedIds.Contains(t.Id)
                 }).ToList()
             };
@@ -232,18 +239,20 @@ public class TicketService : ITicketService
             + $"Detalle: {detail}";
     }
 
-    private async Task<IReadOnlyList<int>> GetIndexedTicketIdsSafeAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<int>> GetIndexedTicketIdsBySourceSafeAsync(
+        DocumentChunkSource source,
+        CancellationToken cancellationToken)
     {
         try
         {
-            return await _vectorRepository.GetIndexedTicketIdsAsync(cancellationToken);
+            return await _vectorRepository.GetIndexedTicketIdsBySourceAsync(source, cancellationToken);
         }
         catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
             or PostgresErrorCodes.UndefinedTable
             or PostgresErrorCodes.UndefinedColumn)
         {
             _logger.LogWarning(
-                "Base vectorial no disponible o desactualizada ({SqlState}). Columna Indexado mostrará No para todos los tickets.",
+                "Base vectorial no disponible o desactualizada ({SqlState}). Columnas de indexado mostrarán No para todos los tickets.",
                 ex.SqlState);
             return [];
         }

@@ -24,5 +24,6 @@ public class TicketListItemViewModel
     public string? CodigoTelegestion { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
+    public bool IsFirstCommentIndexed { get; init; }
     public bool IsIndexed { get; init; }
 }
