@@ -31,7 +31,10 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Tickets" asp-action="Index">Tickets</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Rag" asp-action="Ask">RAG</a>
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Tickets" asp-action="Index">RAG</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Rag" asp-action="FirstCommentIndex">Índice #1</a>
                         </li>
                         @if (User.IsInRole("Admin"))
                         {

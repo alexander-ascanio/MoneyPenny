@@ -18,4 +18,17 @@ public class RagOptions
     public int MaxImagesPerComment { get; set; } = 3;
     public string SystemPromptFile { get; set; } = "Prompts/system.txt";
     public string TicketQaPromptFile { get; set; } = "Prompts/ticket-qa.txt";
+    public int FirstCommentIndexBatchSize { get; set; } = 25;
+
+    public int CharsPerTokenEstimate { get; set; } = 4;
+    public decimal EmbeddingPricePerMillionTokens { get; set; } = 0.02m;
+    public decimal ChatInputPricePerMillionTokens { get; set; } = 0.15m;
+    public decimal ChatOutputPricePerMillionTokens { get; set; } = 0.60m;
+    public decimal VisionInputPricePerMillionTokens { get; set; } = 0.15m;
+    public decimal VisionOutputPricePerMillionTokens { get; set; } = 0.60m;
+    public int VisionEstimatedInputTokensPerImage { get; set; } = 1200;
+    public int VisionEstimatedOutputTokensPerImage { get; set; } = 200;
+    public int ChatEstimatedOutputTokens { get; set; } = 400;
+    public int RagAskEstimatedContextTokens { get; set; } = 2500;
+    public int RagAskEstimatedSystemTokens { get; set; } = 150;
 }

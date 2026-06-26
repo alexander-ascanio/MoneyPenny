@@ -88,6 +88,14 @@ namespace MoneyPenny.Migrations.Vector
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Source")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int?>("TicketActionId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("TicketId")
                         .HasColumnType("integer");
 
@@ -98,7 +106,11 @@ namespace MoneyPenny.Migrations.Vector
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Source");
+
                     b.HasIndex("TicketId");
+
+                    b.HasIndex("TicketId", "Source");
 
                     b.ToTable("document_chunks", (string)null);
                 });

@@ -56,6 +56,11 @@
         <div class="alert alert-success border-0 shadow-sm">@successMessage</div>
     }
 
+    @if (TempData["WarningMessage"] is string warningMessage)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">@warningMessage</div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
         <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div>
@@ -361,8 +366,8 @@
                                     <a asp-controller="Rag" asp-action="Ask"
                                        asp-route-ticketId="@ticket.Id"
                                        asp-route-ticketNumber="@ticket.Number"
-                                       class="btn btn-ticket-rag" title="Preguntar con RAG">
-                                        <i class="bi bi-chat-dots"></i>
+                                       class="btn btn-ticket-rag" title="Ver respuesta RAG">
+                                        <i class="bi bi-robot"></i>
                                     </a>
                                 </div>
                             </td>

@@ -608,6 +608,29 @@ body.tickets-col-resizing * {
   }
 }
 
+.rag-section-header {
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #cbd5e1;
+  padding: 0.75rem 1rem;
+}
+
+.rag-ask-page .rag-section-header,
+.rag-response-page .rag-section-header {
+  letter-spacing: 0.01em;
+}
+
+.rag-context-item-header {
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.65rem;
+}
+
 .rag-answer {
   white-space: pre-wrap;
   line-height: 1.6;
@@ -638,7 +661,7 @@ body.tickets-col-resizing * {
   margin-bottom: 0;
 }
 
-.rag-context-item-header {
+.rag-context-item .rag-context-item-header {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;

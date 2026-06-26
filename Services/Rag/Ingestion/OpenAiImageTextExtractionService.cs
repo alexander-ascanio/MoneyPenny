@@ -55,6 +55,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
         {
             return new ImageTextExtractionResult
             {
+                Texts = Enumerable.Repeat(string.Empty, imageSources.Count).ToList(),
                 Warning =
                     "Falta ExternalApis:TeamSupport:AttachmentCookie en appsettings.Development.json."
             };
@@ -72,6 +73,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
                 if (dataUrl is null)
                 {
                     warnings.Add($"No se pudo descargar la imagen: {TruncateForLog(source)}");
+                    results.Add(string.Empty);
                     continue;
                 }
 
@@ -81,6 +83,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
                     warnings.Add(
                         $"OpenAI Vision no devolvió texto para: {TruncateForLog(source)}. " +
                         "Revisa los logs de la aplicación para el detalle de la respuesta.");
+                    results.Add(string.Empty);
                     continue;
                 }
 
@@ -93,7 +96,13 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
                     "No se pudo extraer texto de la imagen {ImageSource}.",
                     TruncateForLog(source));
                 warnings.Add($"Error al procesar imagen: {ex.Message}");
+                results.Add(string.Empty);
             }
+        }
+
+        if (imageSources.Count > sources.Count)
+        {
+            results.AddRange(Enumerable.Repeat(string.Empty, imageSources.Count - sources.Count));
         }
 
         return new ImageTextExtractionResult

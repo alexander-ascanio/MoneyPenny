@@ -1,0 +1,32 @@
+@model MoneyPenny.ViewModels.Shared.TokenUsageEstimateViewModel
+
+@if (Model.Lines.Count > 0 || Model.EstimatedCostUsd > 0 || Model.EmbeddingApiCalls > 0)
+{
+    <div class="token-usage-estimate alert alert-info @(Model.Compact ? "py-2 mb-0" : "mb-3")">
+        <div class="@(Model.Compact ? "small fw-semibold" : "fw-semibold") mb-1">
+            <i class="bi bi-coin me-1"></i>@(Model.Title ?? "Estimación de consumo OpenAI")
+        </div>
+        @if (Model.Lines.Count > 0)
+        {
+            <ul class="mb-1 @(Model.Compact ? "small" : "small") ps-3">
+                @foreach (var line in Model.Lines)
+                {
+                    <li>@line</li>
+                }
+            </ul>
+        }
+        <div class="small text-muted mb-0">
+            Coste orientativo: <strong>~$@Model.EstimatedCostUsd.ToString("0.0000") USD</strong>
+            · Embeddings: ~@Model.EmbeddingInputTokens.ToString("N0") tok
+            @if (Model.VisionApiCalls > 0)
+            {
+                <span> · Vision: ~@(Model.VisionInputTokens + Model.VisionOutputTokens).ToString("N0") tok</span>
+            }
+            @if (Model.ChatApiCalls > 0)
+            {
+                <span> · Chat: ~@(Model.ChatInputTokens + Model.ChatOutputTokens).ToString("N0") tok</span>
+            }
+        </div>
+        <div class="small text-muted fst-italic mt-1 mb-0">Aproximación; el consumo real puede variar.</div>
+    </div>
+}

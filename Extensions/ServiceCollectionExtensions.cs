@@ -6,6 +6,7 @@ using MoneyPenny.Services.Rag;
 using MoneyPenny.Services.Rag.Embeddings;
 using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Ingestion;
+using MoneyPenny.Services.Rag.Pricing;
 using MoneyPenny.Services.Rag.Retrieval;
 using MoneyPenny.Services.Tickets;
 using Microsoft.EntityFrameworkCore;
@@ -63,7 +64,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChunkingService, ChunkingService>();
         services.AddScoped<IImageTextExtractionService, OpenAiImageTextExtractionService>();
         services.AddScoped<ICommentContentService, CommentContentService>();
+        services.AddScoped<IRagTokenEstimateService, RagTokenEstimateService>();
         services.AddScoped<ITicketIngestionService, TicketIngestionService>();
+        services.AddScoped<IFirstCommentIndexService, FirstCommentIndexService>();
         services.AddScoped<IEmbeddingService, OpenAiEmbeddingService>();
         services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
         services.AddScoped<IGenerationService, OpenAiGenerationService>();

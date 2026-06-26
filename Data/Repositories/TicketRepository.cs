@@ -1,3 +1,4 @@
+using MoneyPenny.Helpers;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.ViewModels.Tickets;
 using Microsoft.EntityFrameworkCore;
@@ -114,6 +115,173 @@ public class TicketRepository : ITicketRepository
             .Where(a => a.TicketId == ticketId && a.Content != null && a.Content != "")
             .OrderBy(a => a.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<int> CountTicketsWithFirstCommentAsync(CancellationToken cancellationToken = default)
+    {
+        return _context.TicketActions
+            .AsNoTracking()
+            .Where(a => a.Content != null && a.Content != "")
+            .GroupBy(a => a.TicketId)
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        if (take <= 0)
+        {
+            return Array.Empty<TicketFirstCommentRow>();
+        }
+
+        const string sql = """
+            SELECT
+                t."Id",
+                t."TicketNumber",
+                t."Subject",
+                t."ProductName",
+                ta."Id",
+                ta."Content",
+                ta."CreatedAt"
+            FROM ticket_actions ta
+            INNER JOIN tickets t ON t."Id" = ta."TicketId"
+            WHERE ta."Content" IS NOT NULL AND TRIM(ta."Content") <> ''
+              AND ta."Id" = (
+                  SELECT ta2."Id"
+                  FROM ticket_actions ta2
+                  WHERE ta2."TicketId" = ta."TicketId"
+                    AND ta2."Content" IS NOT NULL AND TRIM(ta2."Content") <> ''
+                  ORDER BY ta2."CreatedAt" ASC, ta2."Id" ASC
+                  LIMIT 1
+              )
+            ORDER BY t."Id"
+            OFFSET @skip LIMIT @take
+            """;
+
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+
+        try
+        {
+            await using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("skip", skip));
+            command.Parameters.Add(new Npgsql.NpgsqlParameter("take", take));
+
+            var rows = new List<TicketFirstCommentRow>();
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(new TicketFirstCommentRow
+                {
+                    TicketId = reader.GetInt32(0),
+                    TicketNumber = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                    Title = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
+                    Product = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    TicketActionId = reader.GetInt32(4),
+                    Content = reader.GetString(5),
+                    ActionCreatedAt = reader.GetDateTime(6)
+                });
+            }
+
+            return rows;
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+    }
+
+    public async Task<TicketFirstCommentRow?> GetFirstCommentByTicketNumberAsync(
+        string ticketNumber,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeTicketNumber(ticketNumber);
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return null;
+        }
+
+        var ticket = await GetByNumberAsync(normalized, cancellationToken);
+        return ticket is null
+            ? null
+            : await BuildFirstCommentRowAsync(ticket, cancellationToken);
+    }
+
+    public async Task<TicketFirstCommentRow?> GetFirstCommentByTicketIdAsync(
+        int ticketId,
+        CancellationToken cancellationToken = default)
+    {
+        var ticket = await GetByIdAsync(ticketId, cancellationToken);
+        return ticket is null
+            ? null
+            : await BuildFirstCommentRowAsync(ticket, cancellationToken);
+    }
+
+    private async Task<TicketFirstCommentRow?> BuildFirstCommentRowAsync(
+        Ticket ticket,
+        CancellationToken cancellationToken)
+    {
+        var action = await GetOldestActionWithContentByTicketIdAsync(ticket.Id, cancellationToken);
+        if (action is null || string.IsNullOrWhiteSpace(action.Content))
+        {
+            return null;
+        }
+
+        return new TicketFirstCommentRow
+        {
+            TicketId = ticket.Id,
+            TicketNumber = ticket.Number,
+            Title = ticket.Title,
+            Product = ticket.Product,
+            TicketActionId = action.Id,
+            Content = action.Content,
+            ActionCreatedAt = action.CreatedAt
+        };
+    }
+
+    public async Task<FirstCommentCorpusStats> GetFirstCommentCorpusStatsAsync(
+        int sampleSize,
+        CancellationToken cancellationToken = default)
+    {
+        var take = Math.Clamp(sampleSize, 1, 500);
+        var sample = await GetFirstCommentsPageAsync(0, take, cancellationToken);
+        if (sample.Count == 0)
+        {
+            return new FirstCommentCorpusStats();
+        }
+
+        var totalChars = 0;
+        var totalImages = 0;
+        foreach (var row in sample)
+        {
+            totalChars += row.Content.Length;
+            totalImages += TicketHtmlHelper.ExtractImageSources(row.Content).Count;
+        }
+
+        return new FirstCommentCorpusStats
+        {
+            SampleSize = sample.Count,
+            AverageCharCount = (int)Math.Round(totalChars / (double)sample.Count),
+            AverageImagesPerTicket = totalImages / (double)sample.Count
+        };
+    }
+
+    private static string NormalizeTicketNumber(string? ticketNumber)
+    {
+        if (string.IsNullOrWhiteSpace(ticketNumber))
+        {
+            return string.Empty;
+        }
+
+        var normalized = ticketNumber.Trim();
+        if (normalized.StartsWith('#'))
+        {
+            normalized = normalized[1..].Trim();
+        }
+
+        return normalized;
     }
 
     private async Task<IReadOnlyList<string>> GetDistinctAsync(

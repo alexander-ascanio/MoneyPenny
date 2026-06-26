@@ -16,6 +16,7 @@ public class TicketIngestionService : ITicketIngestionService
     private readonly IChunkingService _chunkingService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ICommentContentService _commentContentService;
+    private readonly IFirstCommentIndexService _firstCommentIndexService;
     private readonly ILogger<TicketIngestionService> _logger;
 
     public TicketIngestionService(
@@ -24,6 +25,7 @@ public class TicketIngestionService : ITicketIngestionService
         IChunkingService chunkingService,
         IEmbeddingService embeddingService,
         ICommentContentService commentContentService,
+        IFirstCommentIndexService firstCommentIndexService,
         ILogger<TicketIngestionService> logger)
     {
         _ticketRepository = ticketRepository;
@@ -31,6 +33,7 @@ public class TicketIngestionService : ITicketIngestionService
         _chunkingService = chunkingService;
         _embeddingService = embeddingService;
         _commentContentService = commentContentService;
+        _firstCommentIndexService = firstCommentIndexService;
         _logger = logger;
     }
 
@@ -75,6 +78,9 @@ public class TicketIngestionService : ITicketIngestionService
         }
 
         await _vectorRepository.SaveEmbeddingsAsync(embeddings, cancellationToken);
+
+        await SyncFirstCommentIndexAsync(ticket, processImages, cancellationToken);
+
         _logger.LogInformation(
             "Ticket {TicketId} indexado con {ChunkCount} chunks (processImages={ProcessImages}, images={ImagesExtracted}/{ImagesDetected}).",
             ticketId,
@@ -141,5 +147,38 @@ public class TicketIngestionService : ITicketIngestionService
         }
 
         return (document.ToString(), commentContent);
+    }
+
+    private async Task SyncFirstCommentIndexAsync(
+        Ticket ticket,
+        bool processImages,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var syncResult = await _firstCommentIndexService.IndexTicketAsync(
+                ticket.Number,
+                new FirstCommentIndexOptions
+                {
+                    ProcessImages = processImages,
+                    SkipAlreadyIndexed = false
+                },
+                cancellationToken);
+
+            if (syncResult.TicketsFailed > 0)
+            {
+                _logger.LogWarning(
+                    "Ticket {TicketId} indexado en TicketDocument, pero falló la sync del índice #1: {Error}",
+                    ticket.Id,
+                    syncResult.Errors.FirstOrDefault() ?? "error desconocido");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Ticket {TicketId} indexado en TicketDocument, pero falló la sync del índice #1.",
+                ticket.Id);
+        }
     }
 }

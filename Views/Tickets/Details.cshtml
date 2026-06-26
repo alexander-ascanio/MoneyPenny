@@ -234,6 +234,17 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@Model.Id" />
                         <input type="hidden" name="processImages" id="processImagesInput" value="true" />
+                        @if (Model.PromptImageProcessingOnIndex)
+                        {
+                            <p class="text-muted small mb-3">
+                                El comentario #1 incluye @Model.FirstCommentImageCount imagen(es).
+                                Al indexar se preguntará si desea procesarlas con Vision.
+                            </p>
+                        }
+                        else if (Model.IndexWithoutImagesEstimate is not null)
+                        {
+                            <partial name="_TokenUsageEstimate" model="Model.IndexWithoutImagesEstimate" />
+                        }
                         <button type="submit" class="btn btn-success w-100" id="indexTicketButton">
                             <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
                         </button>
@@ -242,7 +253,7 @@
                        asp-route-ticketId="@Model.Id"
                        asp-route-ticketNumber="@Model.Number"
                        class="btn btn-primary w-100">
-                        <i class="bi bi-chat-dots me-1"></i> Preguntar sobre este ticket
+                        <i class="bi bi-eye me-1"></i> Ver respuesta
                     </a>
                 </div>
             </div>
@@ -266,17 +277,42 @@
                         El primer comentario del ticket incluye
                         <strong>@Model.FirstCommentImageCount imagen@(Model.FirstCommentImageCount == 1 ? string.Empty : "es")</strong>.
                     </p>
-                    <p class="mb-0 text-muted">
+                    <p class="mb-2 text-muted">
                         Extraer el texto de esas capturas utiliza tokens de OpenAI (visión).
-                        ¿Cómo desea continuar con la indexación?
+                        Elige cómo desea continuar con la indexación:
                     </p>
+                    <div class="vstack gap-2 mb-3">
+                        <label class="border rounded p-3 mb-0 d-flex gap-2 align-items-start">
+                            <input class="form-check-input mt-1" type="radio" name="imageProcessingChoice" id="choiceWithVision" value="withVision" checked />
+                            <span>
+                                <strong>Procesar imágenes con Vision</strong>
+                                <span class="d-block text-muted small">Incluye el texto extraído de las capturas en el índice RAG.</span>
+                            </span>
+                        </label>
+                        <label class="border rounded p-3 mb-0 d-flex gap-2 align-items-start">
+                            <input class="form-check-input mt-1" type="radio" name="imageProcessingChoice" id="choiceWithoutVision" value="withoutVision" />
+                            <span>
+                                <strong>Indexar sin procesar imágenes</strong>
+                                <span class="d-block text-muted small">Solo texto HTML del comentario (sin Vision).</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div id="estimateWithVision" class="mb-2">
+                        @if (Model.IndexWithImagesEstimate is not null)
+                        {
+                            <partial name="_TokenUsageEstimate" model="Model.IndexWithImagesEstimate" />
+                        }
+                    </div>
+                    <div id="estimateWithoutVision" class="mb-2 d-none">
+                        @if (Model.IndexWithoutImagesEstimate is not null)
+                        {
+                            <partial name="_TokenUsageEstimate" model="Model.IndexWithoutImagesEstimate" />
+                        }
+                    </div>
                 </div>
                 <div class="modal-footer flex-column flex-sm-row gap-2">
                     <button type="button" class="btn btn-success w-100 w-sm-auto" id="confirmProcessImagesButton">
-                        Procesar con tokens
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary w-100 w-sm-auto" id="skipProcessImagesButton">
-                        Indexar sin procesar imágenes
+                        Confirmar e indexar
                     </button>
                     <button type="button" class="btn btn-link text-decoration-none w-100 w-sm-auto" data-bs-dismiss="modal" id="cancelIndexButton">
                         Cancelar
@@ -296,7 +332,21 @@
                 const processImagesInput = document.getElementById('processImagesInput');
                 const modalElement = document.getElementById('imageProcessingModal');
                 const modal = new bootstrap.Modal(modalElement);
+                const choiceWithVision = document.getElementById('choiceWithVision');
+                const choiceWithoutVision = document.getElementById('choiceWithoutVision');
+                const estimateWithVision = document.getElementById('estimateWithVision');
+                const estimateWithoutVision = document.getElementById('estimateWithoutVision');
                 let confirmedSubmit = false;
+
+                function syncEstimateVisibility() {
+                    const withVision = choiceWithVision.checked;
+                    estimateWithVision.classList.toggle('d-none', !withVision);
+                    estimateWithoutVision.classList.toggle('d-none', withVision);
+                }
+
+                choiceWithVision.addEventListener('change', syncEstimateVisibility);
+                choiceWithoutVision.addEventListener('change', syncEstimateVisibility);
+                syncEstimateVisibility();
 
                 form.addEventListener('submit', function (event) {
                     if (confirmedSubmit) {
@@ -308,14 +358,7 @@
                 });
 
                 document.getElementById('confirmProcessImagesButton').addEventListener('click', function () {
-                    processImagesInput.value = 'true';
-                    confirmedSubmit = true;
-                    modal.hide();
-                    form.submit();
-                });
-
-                document.getElementById('skipProcessImagesButton').addEventListener('click', function () {
-                    processImagesInput.value = 'false';
+                    processImagesInput.value = choiceWithVision.checked ? 'true' : 'false';
                     confirmedSubmit = true;
                     modal.hide();
                     form.submit();

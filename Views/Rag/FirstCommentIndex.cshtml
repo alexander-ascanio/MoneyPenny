@@ -1,0 +1,223 @@
+@using System.Text.Json
+@model MoneyPenny.ViewModels.Rag.FirstCommentIndexViewModel
+
+@{
+    ViewData["Title"] = "Índice de comentarios #1";
+    var pricingJson = JsonSerializer.Serialize(new
+    {
+        charsPerToken = Model.PricingConfig.CharsPerToken,
+        chunkSize = Model.PricingConfig.ChunkSize,
+        chunkOverlap = Model.PricingConfig.ChunkOverlap,
+        embeddingPricePerMillion = Model.PricingConfig.EmbeddingPricePerMillion,
+        visionInputPricePerMillion = Model.PricingConfig.VisionInputPricePerMillion,
+        visionOutputPricePerMillion = Model.PricingConfig.VisionOutputPricePerMillion,
+        visionInputTokensPerImage = Model.PricingConfig.VisionInputTokensPerImage,
+        visionOutputTokensPerImage = Model.PricingConfig.VisionOutputTokensPerImage,
+        embeddingModel = Model.PricingConfig.EmbeddingModel,
+        visionModel = Model.PricingConfig.VisionModel
+    });
+    var corpusJson = JsonSerializer.Serialize(new
+    {
+        totalTickets = Model.TotalTicketsWithFirstComment,
+        pendingTickets = Model.PendingTickets,
+        averageCommentCharCount = Model.AverageCommentCharCount,
+        averageImagesPerTicket = Model.AverageImagesPerTicket,
+        corpusSampleSize = Model.CorpusSampleSize
+    });
+}
+
+<div class="mb-4">
+    <h2 class="mb-2">
+        <i class="bi bi-database-gear me-2 text-primary"></i>
+        Índice masivo — comentario #1
+    </h2>
+    <p class="text-muted mb-0">
+        Indexa el primer comentario (cliente) de cada ticket en la BD vectorial para búsqueda de casos similares.
+    </p>
+    @if (Model.CorpusSampleSize > 0)
+    {
+        <p class="text-muted small mb-0 mt-2">
+            Muestra de @Model.CorpusSampleSize ticket(s): media ~@Model.AverageCommentCharCount.ToString("N0") caracteres/comentario,
+            ~@Model.AverageImagesPerTicket.ToString("0.##") imagen(es)/ticket.
+        </p>
+    }
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    var alertClass = Model.LastResult?.TicketsFailed > 0
+        ? "alert-danger"
+        : !string.IsNullOrWhiteSpace(Model.LastResult?.ImageExtractionWarning)
+            ? "alert-warning"
+            : Model.LastResult?.TicketsIndexed > 0
+                ? "alert-success"
+                : "alert-warning";
+    <div class="alert @alertClass">@Model.SuccessMessage</div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Tickets con comentario #1</div>
+                <div class="display-6">@Model.TotalTicketsWithFirstComment</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-success">
+            <div class="card-body">
+                <div class="text-muted small">Ya indexados</div>
+                <div class="display-6 text-success">@Model.IndexedTickets</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-warning">
+            <div class="card-body">
+                <div class="text-muted small">Pendientes</div>
+                <div class="display-6 text-warning">@Model.PendingTickets</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div data-bulk-index-estimate data-pricing="@pricingJson" data-corpus="@corpusJson">
+    <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm">
+        <div class="card-header rag-section-header">Ejecutar indexación masiva</div>
+        <div class="card-body">
+            @Html.AntiForgeryToken()
+
+            <div class="alert alert-info token-usage-estimate mb-3" data-bulk-estimate-output data-title="Estimación antes de ejecutar"></div>
+
+            <div class="form-check mb-3">
+                <input asp-for="SkipAlreadyIndexed" class="form-check-input" type="checkbox" id="skipAlreadyIndexed" data-bulk-skip-indexed />
+                <label class="form-check-label" for="skipAlreadyIndexed">
+                    Omitir tickets ya indexados
+                </label>
+                <div class="form-text">Recomendado para continuar una indexación interrumpida.</div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="RebuildAll" class="form-check-input" type="checkbox" id="rebuildAll" data-bulk-rebuild />
+                <label class="form-check-label" for="rebuildAll">
+                    Reconstruir índice completo
+                </label>
+                <div class="form-text">Borra todos los chunks de comentarios #1 antes de indexar de nuevo.</div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="ProcessImages" class="form-check-input" type="checkbox" id="processImages" data-bulk-process-images />
+                <label class="form-check-label" for="processImages">
+                    Procesar imágenes con Vision (lento y consume tokens)
+                </label>
+                <div class="form-text">Por defecto solo texto HTML. Usa caché Vision si está disponible.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MaxTickets" class="form-label">Límite de tickets (pruebas)</label>
+                <input asp-for="MaxTickets" class="form-control" type="number" min="1" placeholder="Vacío = todos" data-bulk-max-tickets />
+                <div class="form-text">Útil para probar con pocos tickets antes del volcado completo.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-play-fill me-1"></i>Iniciar indexación
+            </button>
+            <a asp-controller="Tickets" asp-action="Index" class="btn btn-outline-secondary ms-2">Ver tickets</a>
+        </div>
+    </form>
+</div>
+
+<form asp-action="IndexFirstCommentTicket" method="post" class="card shadow-sm mt-4">
+    <div class="card-header rag-section-header">
+        <i class="bi bi-ticket-detailed me-2"></i>Indexar un ticket concreto
+    </div>
+    <div class="card-body">
+        @Html.AntiForgeryToken()
+
+        <p class="text-muted small">
+            Indexa solo el comentario #1 del ticket indicado. Acepta el número con o sin <code>#</code> (ej. <code>142172</code>).
+        </p>
+
+        <div class="mb-3">
+            <label asp-for="TargetTicketNumber" class="form-label"></label>
+            <input asp-for="TargetTicketNumber" class="form-control" placeholder="Ej. 142172" />
+            <span asp-validation-for="TargetTicketNumber" class="text-danger"></span>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="SkipAlreadyIndexedSingle" class="form-check-input" type="checkbox" id="skipAlreadyIndexedSingle" />
+            <label class="form-check-label" for="skipAlreadyIndexedSingle">
+                Omitir si ya está indexado
+            </label>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="ProcessImagesSingle" class="form-check-input" type="checkbox" id="processImagesSingle" />
+            <label class="form-check-label" for="processImagesSingle">
+                Procesar imágenes con Vision (lento y consume tokens)
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-repeat me-1"></i>Indexar ticket
+        </button>
+    </div>
+</form>
+
+@if (Model.LastRunEstimate is not null)
+{
+    <div class="mt-4">
+        <partial name="_TokenUsageEstimate" model="Model.LastRunEstimate" />
+    </div>
+}
+
+@if (Model.LastResult is not null)
+{
+    <div class="card shadow-sm mt-4">
+        <div class="card-header">Resultado de la última ejecución</div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Procesados: <strong>@Model.LastResult.TicketsProcessed</strong></li>
+                <li>Indexados: <strong>@Model.LastResult.TicketsIndexed</strong></li>
+                <li>Omitidos: <strong>@Model.LastResult.TicketsSkipped</strong></li>
+                <li>Errores: <strong>@Model.LastResult.TicketsFailed</strong></li>
+                <li>Chunks creados: <strong>@Model.LastResult.ChunksCreated</strong></li>
+                <li>Embeddings creados: <strong>@Model.LastResult.EmbeddingsCreated</strong></li>
+                @if (Model.LastResult.ProcessImages)
+                {
+                    <li>Imágenes detectadas: <strong>@Model.LastResult.ImagesDetected</strong></li>
+                    <li>Imágenes con texto extraído: <strong>@Model.LastResult.ImagesExtracted</strong></li>
+                }
+            </ul>
+
+            @if (!string.IsNullOrWhiteSpace(Model.LastResult.ImageExtractionWarning))
+            {
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong>Vision:</strong> @Model.LastResult.ImageExtractionWarning
+                </div>
+            }
+
+            @if (Model.LastResult.Errors.Any())
+            {
+                <div class="alert alert-danger mt-3 mb-0">
+                    <ul class="mb-0 small">
+                        @foreach (var error in Model.LastResult.Errors.Take(20))
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                    @if (Model.LastResult.Errors.Count > 20)
+                    {
+                        <div class="small mt-2">… y @(Model.LastResult.Errors.Count - 20) error(es) más.</div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/rag-token-estimate.js" asp-append-version="true"></script>
+}

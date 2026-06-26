@@ -27,7 +27,12 @@ public class VectorDbContext : DbContext
             entity.ToTable("document_chunks");
             entity.HasKey(c => c.Id);
             entity.Property(c => c.TicketNumber).HasMaxLength(50);
+            entity.Property(c => c.Source)
+                .HasConversion<int>()
+                .HasDefaultValue(DocumentChunkSource.TicketDocument);
             entity.HasIndex(c => c.TicketId);
+            entity.HasIndex(c => c.Source);
+            entity.HasIndex(c => new { c.TicketId, c.Source });
         });
 
         modelBuilder.Entity<TicketEmbedding>(entity =>

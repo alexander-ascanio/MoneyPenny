@@ -18,6 +18,8 @@ public class TicketDetailViewModel
     public bool IsIndexed { get; init; }
     public int FirstCommentImageCount { get; init; }
     public bool PromptImageProcessingOnIndex { get; init; }
+    public ViewModels.Shared.TokenUsageEstimateViewModel? IndexWithoutImagesEstimate { get; init; }
+    public ViewModels.Shared.TokenUsageEstimateViewModel? IndexWithImagesEstimate { get; init; }
     public string? ErrorMessage { get; init; }
     public IReadOnlyList<TicketActionViewModel> Comments { get; init; } = [];
 }

@@ -67,14 +67,21 @@ public class CommentContentService : ICommentContentService
             .Where(source => !textsBySource.ContainsKey(source))
             .ToArray();
 
+        string? extractionWarning = null;
         if (missingSources.Length > 0
             && request.ImageCacheMode == ImageExtractionCacheMode.UseAndRefresh)
         {
             var extraction = await _imageTextExtractionService.ExtractAsync(missingSources, cancellationToken);
-            for (var i = 0; i < missingSources.Length && i < extraction.Texts.Count; i++)
+            extractionWarning = extraction.Warning;
+            for (var i = 0; i < missingSources.Length; i++)
             {
+                var extractedText = i < extraction.Texts.Count ? extraction.Texts[i] : string.Empty;
+                if (string.IsNullOrWhiteSpace(extractedText))
+                {
+                    continue;
+                }
+
                 var source = missingSources[i];
-                var extractedText = extraction.Texts[i];
                 textsBySource[source] = extractedText;
 
                 if (request.TicketId is not null && request.TicketActionId is not null)
@@ -89,7 +96,7 @@ public class CommentContentService : ICommentContentService
                 }
             }
 
-            if (extraction.Texts.Count == 0 && !string.IsNullOrWhiteSpace(extraction.Warning))
+            if (textsBySource.Count == 0 && !string.IsNullOrWhiteSpace(extraction.Warning))
             {
                 return BuildResult(
                     plainText,
@@ -105,6 +112,13 @@ public class CommentContentService : ICommentContentService
             warning = missingSources.Length == normalizedSources.Length
                 ? "El texto de la imagen no está en caché. Indexa el ticket con 'Procesar con tokens' para extraerlo."
                 : $"Faltan {missingSources.Length} imagen(es) en caché. Indexa el ticket con 'Procesar con tokens' para extraerlas.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(extractionWarning))
+        {
+            warning = string.IsNullOrWhiteSpace(warning)
+                ? extractionWarning
+                : $"{warning} {extractionWarning}";
         }
 
         if (textsBySource.Count > 0)

@@ -2,6 +2,9 @@ using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
+using MoneyPenny.Services.Rag.Ingestion;
+using MoneyPenny.Services.Rag.Pricing;
+using MoneyPenny.ViewModels.Shared;
 using MoneyPenny.ViewModels.Tickets;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -14,6 +17,8 @@ public class TicketService : ITicketService
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
     private readonly IMemoryCache _cache;
+    private readonly ITicketIngestionService _ingestionService;
+    private readonly IRagTokenEstimateService _tokenEstimateService;
     private readonly RagOptions _ragOptions;
     private readonly ILogger<TicketService> _logger;
 
@@ -23,12 +28,16 @@ public class TicketService : ITicketService
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
         IMemoryCache cache,
+        ITicketIngestionService ingestionService,
+        IRagTokenEstimateService tokenEstimateService,
         IOptions<RagOptions> ragOptions,
         ILogger<TicketService> logger)
     {
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
         _cache = cache;
+        _ingestionService = ingestionService;
+        _tokenEstimateService = tokenEstimateService;
         _ragOptions = ragOptions.Value;
         _logger = logger;
     }
@@ -127,6 +136,25 @@ public class TicketService : ITicketService
                 ? 0
                 : TicketHtmlHelper.ExtractImageSources(oldestComment.Content).Count;
 
+            TokenUsageEstimateViewModel? indexWithoutImagesEstimate = null;
+            TokenUsageEstimateViewModel? indexWithImagesEstimate = null;
+            try
+            {
+                var document = await _ingestionService.BuildTicketDocumentAsync(ticket, processImages: false, cancellationToken);
+                indexWithoutImagesEstimate = TokenUsageEstimateViewModel.FromEstimate(
+                    _tokenEstimateService.EstimateTicketIndex(document, firstCommentImageCount, processImages: false),
+                    "Indexar sin imágenes",
+                    compact: true);
+                indexWithImagesEstimate = TokenUsageEstimateViewModel.FromEstimate(
+                    _tokenEstimateService.EstimateTicketIndex(document, firstCommentImageCount, processImages: true),
+                    "Indexar con Vision",
+                    compact: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo calcular la estimación de tokens para el ticket {TicketId}.", id);
+            }
+
             return new TicketDetailViewModel
             {
                 Id = ticket.Id,
@@ -145,6 +173,8 @@ public class TicketService : ITicketService
                 IsIndexed = isIndexed,
                 FirstCommentImageCount = firstCommentImageCount,
                 PromptImageProcessingOnIndex = firstCommentImageCount > 0 && _ragOptions.EnableImageTextExtraction,
+                IndexWithoutImagesEstimate = indexWithoutImagesEstimate,
+                IndexWithImagesEstimate = indexWithImagesEstimate,
                 Comments = actions.Select(MapAction).ToList()
             };
         }
@@ -208,9 +238,13 @@ public class TicketService : ITicketService
         {
             return await _vectorRepository.GetIndexedTicketIdsAsync(cancellationToken);
         }
-        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName or PostgresErrorCodes.UndefinedTable)
+        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
+            or PostgresErrorCodes.UndefinedTable
+            or PostgresErrorCodes.UndefinedColumn)
         {
-            _logger.LogWarning("Base vectorial no disponible aún. Columna Indexado mostrará No para todos los tickets.");
+            _logger.LogWarning(
+                "Base vectorial no disponible o desactualizada ({SqlState}). Columna Indexado mostrará No para todos los tickets.",
+                ex.SqlState);
             return [];
         }
         catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
@@ -225,7 +259,9 @@ public class TicketService : ITicketService
         {
             return await _vectorRepository.IsTicketIndexedAsync(id, cancellationToken);
         }
-        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName or PostgresErrorCodes.UndefinedTable)
+        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
+            or PostgresErrorCodes.UndefinedTable
+            or PostgresErrorCodes.UndefinedColumn)
         {
             return false;
         }

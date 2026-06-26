@@ -1,16 +1,8 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace MoneyPenny.ViewModels.Rag;
 
 public class AskTicketViewModel
 {
-    public int? TicketId { get; set; }
+    public int TicketId { get; set; }
     public string? TicketNumber { get; set; }
-
-    [Required(ErrorMessage = "La pregunta es obligatoria.")]
-    [Display(Name = "Pregunta")]
-    public string Question { get; set; } = string.Empty;
-
-    [Display(Name = "Solo previsualizar contexto (sin respuesta GPT)")]
-    public bool PreviewContextOnly { get; set; } = true;
+    public bool GenerateGptAnswer { get; set; }
 }

@@ -26,41 +26,65 @@ public class PgVectorRetrievalService : IRetrievalService
         _logger = logger;
     }
 
-    public async Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveContextAsync(
-        string question,
-        int? ticketId = null,
+    public async Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveSimilarFirstCommentsAsync(
+        string firstCommentText,
+        int excludeTicketId,
         CancellationToken cancellationToken = default)
     {
-        var queryVector = await _embeddingService.CreateEmbeddingAsync(question, cancellationToken);
-        var minScore = ticketId is not null ? _options.TicketScopedMinScore : _options.MinScore;
-        var results = await _vectorRepository.SearchSimilarAsync(
+        var queryVector = await _embeddingService.CreateEmbeddingAsync(firstCommentText, cancellationToken);
+        var fetchLimit = Math.Max(_options.TopK * 5, _options.TopK);
+        var results = await SearchAndDedupeAsync(
             queryVector,
-            _options.TopK,
-            minScore,
-            ticketId,
+            fetchLimit,
+            _options.MinScore,
+            excludeTicketId,
             cancellationToken);
 
-        if (results.Count == 0 && ticketId is not null && minScore > 0)
+        if (results.Count == 0 && _options.MinScore > 0)
         {
             _logger.LogInformation(
-                "Sin resultados para ticket {TicketId} con minScore={MinScore}. Reintentando sin umbral.",
-                ticketId,
-                minScore);
+                "Sin tickets similares para ticket {TicketId} con minScore={MinScore}. Reintentando sin umbral.",
+                excludeTicketId,
+                _options.MinScore);
 
-            results = await _vectorRepository.SearchSimilarAsync(
+            results = await SearchAndDedupeAsync(
                 queryVector,
-                _options.TopK,
+                fetchLimit,
                 minScore: 0,
-                ticketId,
+                excludeTicketId,
                 cancellationToken);
         }
 
         _logger.LogInformation(
-            "Recuperados {Count} chunks para la pregunta (ticketId={TicketId}, minScore={MinScore}).",
+            "Recuperados {Count} ticket(s) similares por comentario #1 (excluyendo ticket {TicketId}, minScore={MinScore}).",
             results.Count,
-            ticketId,
-            minScore);
+            excludeTicketId,
+            _options.MinScore);
 
         return results;
+    }
+
+    private async Task<IReadOnlyList<SimilarDocumentChunk>> SearchAndDedupeAsync(
+        float[] queryVector,
+        int fetchLimit,
+        double minScore,
+        int excludeTicketId,
+        CancellationToken cancellationToken)
+    {
+        var raw = await _vectorRepository.SearchSimilarAsync(
+            queryVector,
+            fetchLimit,
+            minScore,
+            ticketId: null,
+            excludeTicketId: excludeTicketId,
+            source: DocumentChunkSource.ClientFirstComment,
+            cancellationToken);
+
+        return raw
+            .GroupBy(item => item.Chunk.TicketId)
+            .Select(group => group.OrderByDescending(item => item.Score).First())
+            .OrderByDescending(item => item.Score)
+            .Take(_options.TopK)
+            .ToList();
     }
 }

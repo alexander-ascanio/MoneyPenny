@@ -1,43 +1,130 @@
-@model MoneyPenny.ViewModels.Rag.AskTicketViewModel
+@model MoneyPenny.ViewModels.Rag.RagResponseViewModel
 
 @{
-    ViewData["Title"] = "Consulta RAG";
+    ViewData["Title"] = "Respuesta RAG";
 }
 
-<h2 class="mb-4">
-    <i class="bi bi-robot me-2"></i>
-    Consulta RAG
-</h2>
+<div class="rag-response-page">
+    <h2 class="mb-2">
+        <i class="bi bi-robot me-2 text-success"></i>
+        Respuesta RAG
+    </h2>
 
-@if (!string.IsNullOrWhiteSpace(Model.TicketNumber))
-{
-    <p class="text-muted">Contexto del ticket: <strong>@Model.TicketNumber</strong></p>
-}
+    @if (!string.IsNullOrWhiteSpace(Model.TicketNumber))
+    {
+        <p class="text-muted mb-4">Ticket: <strong>#@Model.TicketNumber</strong></p>
+    }
 
-<form asp-action="Ask" method="post" class="card shadow-sm">
-    <div class="card-body">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="TicketId" />
-        <input type="hidden" asp-for="TicketNumber" />
-        <div class="mb-3">
-            <label asp-for="Question" class="form-label"></label>
-            <textarea asp-for="Question" class="form-control" rows="4" placeholder="Escribe tu pregunta sobre los tickets indexados..."></textarea>
-            <span asp-validation-for="Question" class="text-danger"></span>
-        </div>
-        <div class="form-check mb-3">
-            <input asp-for="PreviewContextOnly" class="form-check-input" type="checkbox" id="previewContextOnly" />
-            <label class="form-check-label" for="previewContextOnly">
-                Solo previsualizar contexto (sin respuesta GPT)
-            </label>
-            <div class="form-text">
-                Útil para revisar si el contexto recuperado coincide con el primer comentario del ticket antes de gastar tokens en la respuesta.
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-warning">@Model.ErrorMessage</div>
+        <a asp-controller="Tickets" asp-action="Details" asp-route-id="@Model.TicketId" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver al ticket
+        </a>
+    }
+    else
+    {
+        @if (Model.FirstComment is not null)
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-file-earmark-richtext me-2"></i>Comentario original</span>
+                    <span class="badge text-bg-secondary">Comentario #1</span>
+                </div>
+                <div class="card-body">
+                    <div class="rag-reference-meta text-muted small mb-2">
+                        @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                    <div class="ticket-comment-body ticket-comment-body-html">
+                        @Html.Raw(TicketHtmlHelper.PrepareCommentHtml(Model.FirstComment.OriginalContent))
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4 rag-reference-card">
+                <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-chat-left-quote me-2"></i>Primer comentario del ticket (indexado)</span>
+                    <span class="badge text-bg-secondary">Comentario #1</span>
+                </div>
+                <div class="card-body">
+                    <div class="rag-reference-meta text-muted small mb-2">
+                        @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.FirstComment.ImageExtractionWarning))
+                    {
+                        <div class="alert alert-warning py-2 small mb-2">@Model.FirstComment.ImageExtractionWarning</div>
+                    }
+                    <pre class="rag-context-snippet mb-0">@Model.FirstComment.Content</pre>
+                </div>
+            </div>
+        }
+
+        <div class="card shadow-sm mb-4 rag-context-card">
+            <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-diagram-3 me-2"></i>Contexto recuperado</span>
+                <span class="badge text-bg-primary">@Model.ContextItems.Count ticket(s) similar(es)</span>
+            </div>
+            <div class="card-body">
+                @if (!Model.ContextItems.Any())
+                {
+                    <div class="alert alert-warning mb-0">
+                        No se encontraron otros tickets con comentario #1 similar al actual.
+                        Indexa más tickets en <strong>Índice #1</strong> o prueba con un umbral menor (MinScore en configuración).
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small">
+                        Hasta @Model.ContextItems.Count ticket(s) distinto(s) con comentario #1 parecido al de este caso (excluye el ticket actual).
+                        La puntuación indica similitud coseno (más alto = más relevante).
+                    </p>
+                    @foreach (var item in Model.ContextItems)
+                    {
+                        <div class="rag-context-item">
+                            <div class="rag-context-item-header">
+                                <a asp-controller="Tickets" asp-action="Details" asp-route-id="@item.TicketId"
+                                   class="badge text-bg-light text-dark text-decoration-none">
+                                    Ticket #@item.TicketNumber
+                                </a>
+                                <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
+                            </div>
+                            <pre class="rag-context-snippet">@item.Content</pre>
+                        </div>
+                    }
+                }
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">Enviar pregunta</button>
-        <a asp-controller="Tickets" asp-action="Index" class="btn btn-outline-secondary ms-2">Ver tickets</a>
-    </div>
-</form>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+        @if (Model.GptEstimate is not null)
+        {
+            <partial name="_TokenUsageEstimate" model="Model.GptEstimate" />
+        }
+
+        <form asp-action="ConsultGptAnswer" method="post" class="mb-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ticketId" value="@Model.TicketId" />
+            <input type="hidden" name="ticketNumber" value="@Model.TicketNumber" />
+            <button type="submit" class="btn btn-primary" @(!Model.ContextItems.Any() ? "disabled" : null)>
+                <i class="bi bi-robot me-1"></i>Consultar respuesta GPT
+            </button>
+            <a asp-controller="Tickets" asp-action="Details" asp-route-id="@Model.TicketId" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-left me-1"></i>Volver al ticket
+            </a>
+        </form>
+
+        @if (Model.HasGptAnswer)
+        {
+            @if (Model.LastRunEstimate is not null)
+            {
+                <partial name="_TokenUsageEstimate" model="Model.LastRunEstimate" />
+            }
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header rag-section-header">
+                    <i class="bi bi-robot me-2"></i>Respuesta GPT
+                </div>
+                <div class="card-body rag-answer">@Model.Answer</div>
+            </div>
+        }
+    }
+</div>

@@ -17,8 +17,36 @@ public class VectorRepository : IVectorRepository
 
     public async Task DeleteTicketIndexAsync(int ticketId, CancellationToken cancellationToken = default)
     {
+        await DeleteChunksByTicketAndSourceAsync(
+            ticketId,
+            DocumentChunkSource.TicketDocument,
+            cancellationToken);
+    }
+
+    public async Task DeleteChunksBySourceAsync(
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
         var chunks = await _context.DocumentChunks
-            .Where(c => c.TicketId == ticketId)
+            .Where(c => c.Source == source)
+            .ToListAsync(cancellationToken);
+
+        if (chunks.Count == 0)
+        {
+            return;
+        }
+
+        _context.DocumentChunks.RemoveRange(chunks);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteChunksByTicketAndSourceAsync(
+        int ticketId,
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
+        var chunks = await _context.DocumentChunks
+            .Where(c => c.TicketId == ticketId && c.Source == source)
             .ToListAsync(cancellationToken);
 
         if (chunks.Count == 0)
@@ -32,18 +60,46 @@ public class VectorRepository : IVectorRepository
 
     public Task<bool> IsTicketIndexedAsync(int ticketId, CancellationToken cancellationToken = default)
     {
+        return IsTicketIndexedBySourceAsync(ticketId, DocumentChunkSource.TicketDocument, cancellationToken);
+    }
+
+    public Task<bool> IsTicketIndexedBySourceAsync(
+        int ticketId,
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
         return _context.DocumentChunks
             .AsNoTracking()
-            .AnyAsync(c => c.TicketId == ticketId, cancellationToken);
+            .AnyAsync(c => c.TicketId == ticketId && c.Source == source, cancellationToken);
     }
 
     public async Task<IReadOnlyList<int>> GetIndexedTicketIdsAsync(CancellationToken cancellationToken = default)
     {
+        return await GetIndexedTicketIdsBySourceAsync(DocumentChunkSource.TicketDocument, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<int>> GetIndexedTicketIdsBySourceAsync(
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
         return await _context.DocumentChunks
             .AsNoTracking()
+            .Where(c => c.Source == source)
             .Select(c => c.TicketId)
             .Distinct()
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountIndexedTicketsBySourceAsync(
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.DocumentChunks
+            .AsNoTracking()
+            .Where(c => c.Source == source)
+            .Select(c => c.TicketId)
+            .Distinct()
+            .CountAsync(cancellationToken);
     }
 
     public async Task SaveChunksAsync(IEnumerable<DocumentChunk> chunks, CancellationToken cancellationToken = default)
@@ -63,6 +119,8 @@ public class VectorRepository : IVectorRepository
         int topK,
         double minScore,
         int? ticketId = null,
+        int? excludeTicketId = null,
+        DocumentChunkSource? source = null,
         CancellationToken cancellationToken = default)
     {
         if (queryVector.Length == 0)
@@ -92,6 +150,22 @@ public class VectorRepository : IVectorRepository
                 """;
         }
 
+        if (excludeTicketId is not null)
+        {
+            sql += """
+                
+                AND te."TicketId" <> @excludeTicketId
+                """;
+        }
+
+        if (source is not null)
+        {
+            sql += """
+                
+                AND dc."Source" = @source
+                """;
+        }
+
         sql += """
             
             ORDER BY te."Vector" <=> @query
@@ -105,14 +179,23 @@ public class VectorRepository : IVectorRepository
             await using var command = _context.Database.GetDbConnection().CreateCommand();
             command.CommandText = sql;
 
-            var queryParam = new NpgsqlParameter("query", new Vector(queryVector));
-            command.Parameters.Add(queryParam);
+            command.Parameters.Add(new NpgsqlParameter("query", new Vector(queryVector)));
             command.Parameters.Add(new NpgsqlParameter("minScore", NpgsqlDbType.Double) { Value = minScore });
             command.Parameters.Add(new NpgsqlParameter("topK", NpgsqlDbType.Integer) { Value = topK });
 
             if (ticketId is not null)
             {
                 command.Parameters.Add(new NpgsqlParameter("ticketId", NpgsqlDbType.Integer) { Value = ticketId.Value });
+            }
+
+            if (excludeTicketId is not null)
+            {
+                command.Parameters.Add(new NpgsqlParameter("excludeTicketId", NpgsqlDbType.Integer) { Value = excludeTicketId.Value });
+            }
+
+            if (source is not null)
+            {
+                command.Parameters.Add(new NpgsqlParameter("source", NpgsqlDbType.Integer) { Value = (int)source.Value });
             }
 
             var results = new List<SimilarDocumentChunk>();
@@ -141,6 +224,18 @@ public class VectorRepository : IVectorRepository
         {
             await _context.Database.CloseConnectionAsync();
         }
+    }
+
+    public async Task<IReadOnlyList<DocumentChunk>> GetChunksByTicketAndSourceAsync(
+        int ticketId,
+        DocumentChunkSource source,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.DocumentChunks
+            .AsNoTracking()
+            .Where(c => c.TicketId == ticketId && c.Source == source)
+            .OrderBy(c => c.ChunkIndex)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task SaveQueryLogAsync(RagQueryLog log, CancellationToken cancellationToken = default)

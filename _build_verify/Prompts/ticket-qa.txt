@@ -1,0 +1,10 @@
+Contexto recuperado:
+{{context}}
+
+Pregunta del usuario:
+{{question}}
+
+Instrucciones:
+- Responde basándote solo en el contexto.
+- Cita el número de ticket cuando sea relevante.
+- Si la respuesta no está en el contexto, di que no hay información suficiente.

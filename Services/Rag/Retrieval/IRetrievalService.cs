@@ -4,8 +4,8 @@ namespace MoneyPenny.Services.Rag.Retrieval;
 
 public interface IRetrievalService
 {
-    Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveContextAsync(
-        string question,
-        int? ticketId = null,
+    Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveSimilarFirstCommentsAsync(
+        string firstCommentText,
+        int excludeTicketId,
         CancellationToken cancellationToken = default);
 }

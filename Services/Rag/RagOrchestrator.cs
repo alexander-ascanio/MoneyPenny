@@ -1,103 +1,145 @@
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Models.Rag;
+using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Retrieval;
 using MoneyPenny.ViewModels.Rag;
+using Microsoft.Extensions.Options;
 
 namespace MoneyPenny.Services.Rag;
 
 public interface IRagOrchestrator
 {
-    Task<RagResponseViewModel> AskAsync(AskTicketViewModel request, string userId, CancellationToken cancellationToken = default);
+    Task<RagResponseViewModel> ProcessTicketAsync(
+        AskTicketViewModel request,
+        string userId,
+        CancellationToken cancellationToken = default);
 }
 
 public class RagOrchestrator : IRagOrchestrator
 {
+    public const string DefaultGenerationQuestion =
+        "Propón una solución o pasos de resolución para el problema descrito en el comentario del cliente.";
+
     private readonly IRetrievalService _retrievalService;
     private readonly IGenerationService _generationService;
     private readonly IVectorRepository _vectorRepository;
     private readonly ITicketRepository _ticketRepository;
     private readonly ICommentContentService _commentContentService;
+    private readonly RagOptions _options;
 
     public RagOrchestrator(
         IRetrievalService retrievalService,
         IGenerationService generationService,
         IVectorRepository vectorRepository,
         ITicketRepository ticketRepository,
-        ICommentContentService commentContentService)
+        ICommentContentService commentContentService,
+        IOptions<RagOptions> options)
     {
         _retrievalService = retrievalService;
         _generationService = generationService;
         _vectorRepository = vectorRepository;
         _ticketRepository = ticketRepository;
         _commentContentService = commentContentService;
+        _options = options.Value;
     }
 
-    public async Task<RagResponseViewModel> AskAsync(
+    public async Task<RagResponseViewModel> ProcessTicketAsync(
         AskTicketViewModel request,
         string userId,
         CancellationToken cancellationToken = default)
     {
-        var retrieved = await _retrievalService.RetrieveContextAsync(
-            request.Question,
+        var firstComment = await LoadFirstCommentAsync(request.TicketId, cancellationToken);
+        if (firstComment is null || string.IsNullOrWhiteSpace(firstComment.Content))
+        {
+            return new RagResponseViewModel
+            {
+                TicketId = request.TicketId,
+                TicketNumber = request.TicketNumber,
+                ErrorMessage = "Este ticket no tiene un comentario #1 con contenido indexable."
+            };
+        }
+
+        var retrieved = await _retrievalService.RetrieveSimilarFirstCommentsAsync(
+            firstComment.Content,
             request.TicketId,
             cancellationToken);
 
-        var contextItems = retrieved.Select(item => new RagContextItemViewModel
+        var contextItems = new List<RagContextItemViewModel>();
+        foreach (var item in retrieved)
         {
-            ChunkIndex = item.Chunk.ChunkIndex,
-            Score = item.Score,
-            Content = item.Chunk.Content
-        }).ToList();
+            var content = await GetRetrievedContextContentAsync(
+                item.Chunk.TicketId,
+                item.Chunk.Content,
+                cancellationToken);
 
-        var context = string.Join("\n---\n", contextItems.Select(c => c.Content));
-        var firstComment = await LoadFirstCommentAsync(request.TicketId, cancellationToken);
+            contextItems.Add(new RagContextItemViewModel
+            {
+                TicketId = item.Chunk.TicketId,
+                TicketNumber = item.Chunk.TicketNumber,
+                ChunkIndex = item.Chunk.ChunkIndex,
+                Score = item.Score,
+                Content = content
+            });
+        }
 
-        string answer;
-        if (request.PreviewContextOnly)
+        if (!request.GenerateGptAnswer)
         {
-            answer = "Modo previsualización: no se generó respuesta GPT. Revisa el contexto recuperado y compáralo con el primer comentario.";
+            return new RagResponseViewModel
+            {
+                ContextItems = contextItems,
+                FirstComment = firstComment,
+                TicketId = request.TicketId,
+                TicketNumber = request.TicketNumber
+            };
         }
-        else
-        {
-            answer = await _generationService.GenerateAnswerAsync(request.Question, context, cancellationToken);
-        }
+
+        var context = BuildGptContext(contextItems);
+        var answer = await _generationService.GenerateAnswerAsync(
+            DefaultGenerationQuestion,
+            context,
+            cancellationToken);
 
         await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
         {
             UserId = userId,
             TicketId = request.TicketId,
-            Question = request.Question,
+            Question = DefaultGenerationQuestion,
             Answer = answer,
-            PromptVersion = request.PreviewContextOnly
-                ? "preview-context-only"
-                : OpenAiGenerationService.PromptVersion
+            PromptVersion = OpenAiGenerationService.PromptVersion
         }, cancellationToken);
 
         return new RagResponseViewModel
         {
-            Question = request.Question,
             Answer = answer,
+            HasGptAnswer = true,
             ContextItems = contextItems,
             FirstComment = firstComment,
             TicketId = request.TicketId,
-            TicketNumber = request.TicketNumber,
-            PreviewContextOnly = request.PreviewContextOnly
+            TicketNumber = request.TicketNumber
         };
     }
 
-    private async Task<RagFirstCommentViewModel?> LoadFirstCommentAsync(
-        int? ticketId,
-        CancellationToken cancellationToken)
+    private static string BuildGptContext(IReadOnlyList<RagContextItemViewModel> contextItems)
     {
-        if (ticketId is null)
+        if (contextItems.Count == 0)
         {
-            return null;
+            return string.Empty;
         }
 
+        return string.Join(
+            "\n---\n",
+            contextItems.Select(item =>
+                $"Ticket #{item.TicketNumber} (similitud {item.Score:P0}):\n{item.Content}"));
+    }
+
+    private async Task<RagFirstCommentViewModel?> LoadFirstCommentAsync(
+        int ticketId,
+        CancellationToken cancellationToken)
+    {
         var action = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(
-            ticketId.Value,
+            ticketId,
             cancellationToken);
 
         if (action is null)
@@ -105,20 +147,34 @@ public class RagOrchestrator : IRagOrchestrator
             return null;
         }
 
-        var commentContent = await _commentContentService.ToIndexableContentAsync(
-            action.Content,
-            new CommentContentRequest
-            {
-                ProcessImages = true,
-                ImageCacheMode = ImageExtractionCacheMode.CacheOnly,
-                TicketId = ticketId,
-                TicketActionId = action.Id
-            },
-            cancellationToken);
+        var indexedText = await TryGetIndexedFirstCommentTextAsync(ticketId, cancellationToken);
+        string displayText;
+        string? warning = null;
 
-        if (string.IsNullOrWhiteSpace(commentContent.Text))
+        if (!string.IsNullOrWhiteSpace(indexedText))
         {
-            return null;
+            displayText = indexedText;
+        }
+        else
+        {
+            var commentContent = await _commentContentService.ToIndexableContentAsync(
+                action.Content,
+                new CommentContentRequest
+                {
+                    ProcessImages = false,
+                    ImageCacheMode = ImageExtractionCacheMode.CacheOnly,
+                    TicketId = ticketId,
+                    TicketActionId = action.Id
+                },
+                cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(commentContent.Text))
+            {
+                return null;
+            }
+
+            displayText = commentContent.Text;
+            warning = commentContent.ImageExtractionWarning;
         }
 
         return new RagFirstCommentViewModel
@@ -128,8 +184,55 @@ public class RagOrchestrator : IRagOrchestrator
                 ?? action.AssignedUsername
                 ?? "Desconocido",
             CreatedAt = action.CreatedAt,
-            Content = commentContent.Text,
-            ImageExtractionWarning = commentContent.ImageExtractionWarning
+            OriginalContent = action.Content ?? string.Empty,
+            Content = displayText,
+            ImageExtractionWarning = warning
         };
+    }
+
+    private async Task<string?> TryGetIndexedFirstCommentTextAsync(
+        int ticketId,
+        CancellationToken cancellationToken)
+    {
+        var firstCommentChunks = await _vectorRepository.GetChunksByTicketAndSourceAsync(
+            ticketId,
+            DocumentChunkSource.ClientFirstComment,
+            cancellationToken);
+
+        var fromFirstCommentIndex = IndexedCommentTextHelper.ExtractFromClientFirstCommentIndex(
+            firstCommentChunks.Select(c => c.Content));
+        if (!string.IsNullOrWhiteSpace(fromFirstCommentIndex))
+        {
+            return fromFirstCommentIndex;
+        }
+
+        var ticketDocumentChunks = await _vectorRepository.GetChunksByTicketAndSourceAsync(
+            ticketId,
+            DocumentChunkSource.TicketDocument,
+            cancellationToken);
+
+        return IndexedCommentTextHelper.ExtractFromTicketDocumentIndex(
+            ticketDocumentChunks.Select(c => c.Content));
+    }
+
+    private async Task<string> GetRetrievedContextContentAsync(
+        int ticketId,
+        string matchedChunkContent,
+        CancellationToken cancellationToken)
+    {
+        var chunks = await _vectorRepository.GetChunksByTicketAndSourceAsync(
+            ticketId,
+            DocumentChunkSource.ClientFirstComment,
+            cancellationToken);
+
+        if (chunks.Count <= 1)
+        {
+            return matchedChunkContent;
+        }
+
+        return ChunkingService.ReassembleChunkContents(
+            chunks,
+            _options.ChunkSize,
+            _options.ChunkOverlap);
     }
 }

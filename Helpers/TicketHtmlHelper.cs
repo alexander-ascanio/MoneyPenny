@@ -123,17 +123,11 @@ public static class TicketHtmlHelper
         }
 
         var html = PrepareCommentHtml(content);
-        var footerIndex = FindHtmlFooterStartIndex(html);
         var matches = ImageSourceRegex.Matches(html);
         var sources = new List<string>();
 
         foreach (Match match in matches)
         {
-            if (footerIndex.HasValue && match.Index >= footerIndex.Value)
-            {
-                continue;
-            }
-
             var source = match.Groups[1].Success ? match.Groups[1].Value
                 : match.Groups[2].Success ? match.Groups[2].Value
                 : match.Groups[3].Value;
