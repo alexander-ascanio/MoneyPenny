@@ -20,6 +20,14 @@ public class FirstCommentIndexViewModel
     public bool OnlyTicketsListScope { get; set; } = true;
     public int? MaxTickets { get; set; }
 
+    [Display(Name = "Fecha creación desde")]
+    [DataType(DataType.Date)]
+    public DateTime? TicketCreatedFrom { get; set; }
+
+    [Display(Name = "Fecha creación hasta")]
+    [DataType(DataType.Date)]
+    public DateTime? TicketCreatedTo { get; set; }
+
     [Display(Name = "Número de ticket")]
     public string? TargetTicketNumber { get; set; }
 

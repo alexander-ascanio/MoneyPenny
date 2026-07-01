@@ -151,6 +151,15 @@ public class RagController : Controller
         FirstCommentIndexViewModel model,
         CancellationToken cancellationToken)
     {
+        if (model.TicketCreatedFrom > model.TicketCreatedTo)
+        {
+            ModelState.AddModelError(
+                nameof(model.TicketCreatedTo),
+                "La fecha hasta debe ser igual o posterior a la fecha desde.");
+            await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
+            return View("FirstCommentIndex", model);
+        }
+
         var result = await _firstCommentIndexService.IndexAllAsync(
             new FirstCommentIndexOptions
             {
@@ -158,7 +167,9 @@ public class RagController : Controller
                 SkipAlreadyIndexed = model.SkipAlreadyIndexed,
                 ProcessImages = model.ProcessImages,
                 OnlyTicketsListScope = model.OnlyTicketsListScope,
-                MaxTickets = model.MaxTickets
+                MaxTickets = model.MaxTickets,
+                TicketCreatedFrom = model.TicketCreatedFrom,
+                TicketCreatedTo = model.TicketCreatedTo
             },
             cancellationToken);
 

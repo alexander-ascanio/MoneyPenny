@@ -161,6 +161,8 @@ public class TicketRepository : ITicketRepository
         int skip,
         int take,
         bool onlyTicketsListScope = true,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -169,6 +171,7 @@ public class TicketRepository : ITicketRepository
         }
 
         var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+        var dateFilter = BuildTicketCreatedAtSqlFilter(ticketCreatedFrom, ticketCreatedTo);
 
         var firstCommentsSql = $"""
             SELECT DISTINCT ON (ta."TicketId")
@@ -184,6 +187,7 @@ public class TicketRepository : ITicketRepository
             INNER JOIN tickets t ON t."Id" = ta."TicketId"
             WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
             {scopeFilter}
+            {dateFilter.Sql}
             ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
             """;
 
@@ -212,6 +216,10 @@ public class TicketRepository : ITicketRepository
             command.CommandText = sql;
             command.Parameters.Add(new Npgsql.NpgsqlParameter("skip", skip));
             command.Parameters.Add(new Npgsql.NpgsqlParameter("take", take));
+            foreach (var parameter in dateFilter.Parameters)
+            {
+                command.Parameters.Add(parameter);
+            }
 
             var rows = new List<TicketFirstCommentRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -417,6 +425,38 @@ public class TicketRepository : ITicketRepository
         {
             await _context.Database.CloseConnectionAsync();
         }
+    }
+
+    private sealed record TicketCreatedAtSqlFilter(string Sql, IReadOnlyList<Npgsql.NpgsqlParameter> Parameters);
+
+    private static TicketCreatedAtSqlFilter BuildTicketCreatedAtSqlFilter(
+        DateTime? ticketCreatedFrom,
+        DateTime? ticketCreatedTo)
+    {
+        var sqlParts = new List<string>();
+        var parameters = new List<Npgsql.NpgsqlParameter>();
+
+        if (ticketCreatedFrom.HasValue)
+        {
+            sqlParts.Add("""
+                 AND t."CreatedAt" >= @ticketCreatedFrom
+                """);
+            parameters.Add(new Npgsql.NpgsqlParameter(
+                "ticketCreatedFrom",
+                DateTime.SpecifyKind(ticketCreatedFrom.Value.Date, DateTimeKind.Utc)));
+        }
+
+        if (ticketCreatedTo.HasValue)
+        {
+            sqlParts.Add("""
+                 AND t."CreatedAt" < @ticketCreatedToExclusive
+                """);
+            parameters.Add(new Npgsql.NpgsqlParameter(
+                "ticketCreatedToExclusive",
+                DateTime.SpecifyKind(ticketCreatedTo.Value.Date.AddDays(1), DateTimeKind.Utc)));
+        }
+
+        return new TicketCreatedAtSqlFilter(string.Concat(sqlParts), parameters);
     }
 
     private static string NormalizeTicketNumber(string? ticketNumber)

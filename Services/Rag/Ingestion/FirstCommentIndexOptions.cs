@@ -7,4 +7,6 @@ public class FirstCommentIndexOptions
     public bool ProcessImages { get; init; }
     public bool OnlyTicketsListScope { get; init; } = true;
     public int? MaxTickets { get; init; }
+    public DateTime? TicketCreatedFrom { get; init; }
+    public DateTime? TicketCreatedTo { get; init; }
 }

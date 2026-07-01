@@ -121,6 +121,8 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 skip,
                 take,
                 options.OnlyTicketsListScope,
+                options.TicketCreatedFrom,
+                options.TicketCreatedTo,
                 cancellationToken);
             if (page.Count == 0)
             {

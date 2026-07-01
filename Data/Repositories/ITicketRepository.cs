@@ -20,6 +20,8 @@ public interface ITicketRepository
         int skip,
         int take,
         bool onlyTicketsListScope = true,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
         CancellationToken cancellationToken = default);
     Task<FirstCommentCorpusStats> GetFirstCommentCorpusStatsAsync(
         int sampleSize,
