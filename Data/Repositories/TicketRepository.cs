@@ -18,7 +18,7 @@ public class TicketRepository : ITicketRepository
         TicketFilters filters,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Tickets.AsNoTracking();
+        var query = TicketListScope.Apply(_context.Tickets.AsNoTracking());
 
         if (!string.IsNullOrWhiteSpace(filters.Search))
         {
@@ -71,13 +71,15 @@ public class TicketRepository : ITicketRepository
 
     public async Task<TicketFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
     {
+        var query = TicketListScope.Apply(_context.Tickets.AsNoTracking());
+
         return new TicketFilterOptions
         {
-            Groups = await GetDistinctAsync(t => t.Group, cancellationToken),
-            Customers = await GetDistinctAsync(t => t.Customer, cancellationToken),
-            Products = await GetDistinctAsync(t => t.Product, cancellationToken),
-            Statuses = await GetDistinctAsync(t => t.Status, cancellationToken),
-            Priorities = await GetDistinctAsync(t => t.Priority, cancellationToken)
+            Groups = await GetDistinctAsync(query, t => t.Group, cancellationToken),
+            Customers = await GetDistinctAsync(query, t => t.Customer, cancellationToken),
+            Products = await GetDistinctAsync(query, t => t.Product, cancellationToken),
+            Statuses = await GetDistinctAsync(query, t => t.Status, cancellationToken),
+            Priorities = await GetDistinctAsync(query, t => t.Priority, cancellationToken)
         };
     }
 
@@ -117,18 +119,48 @@ public class TicketRepository : ITicketRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<int> CountTicketsWithFirstCommentAsync(CancellationToken cancellationToken = default)
+    public async Task<int> CountTicketsWithFirstCommentAsync(
+        bool onlyTicketsListScope = true,
+        CancellationToken cancellationToken = default)
     {
-        return _context.TicketActions
+        var tickets = _context.Tickets.AsNoTracking();
+        if (onlyTicketsListScope)
+        {
+            tickets = TicketListScope.Apply(tickets);
+        }
+
+        var ticketIds = tickets.Select(t => t.Id);
+
+        return await _context.TicketActions
             .AsNoTracking()
             .Where(a => a.Content != null && a.Content != "")
-            .GroupBy(a => a.TicketId)
+            .Where(a => ticketIds.Contains(a.TicketId))
+            .Select(a => a.TicketId)
+            .Distinct()
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var ticketIds = _context.Tickets
+            .AsNoTracking()
+            .Where(t => t.IsKnowledgeBase)
+            .Select(t => t.Id);
+
+        return await _context.TicketActions
+            .AsNoTracking()
+            .Where(a => a.Content != null && a.Content != "")
+            .Where(a => ticketIds.Contains(a.TicketId))
+            .Select(a => a.TicketId)
+            .Distinct()
             .CountAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
         int skip,
         int take,
+        bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default)
     {
         if (take <= 0)
@@ -136,18 +168,22 @@ public class TicketRepository : ITicketRepository
             return Array.Empty<TicketFirstCommentRow>();
         }
 
-        const string firstCommentsSql = """
+        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+
+        var firstCommentsSql = $"""
             SELECT DISTINCT ON (ta."TicketId")
                 t."Id" AS ticket_id,
                 t."TicketNumber",
                 t."Subject",
                 t."ProductName",
+                t."IsKnowledgeBase",
                 ta."Id" AS action_id,
                 ta."Content",
                 ta."CreatedAt"
             FROM ticket_actions ta
             INNER JOIN tickets t ON t."Id" = ta."TicketId"
             WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+            {scopeFilter}
             ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
             """;
 
@@ -157,6 +193,7 @@ public class TicketRepository : ITicketRepository
                 fc."TicketNumber",
                 fc."Subject",
                 fc."ProductName",
+                fc."IsKnowledgeBase",
                 fc.action_id,
                 fc."Content",
                 fc."CreatedAt"
@@ -186,9 +223,10 @@ public class TicketRepository : ITicketRepository
                     TicketNumber = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
                     Title = reader.IsDBNull(2) ? string.Empty : reader.GetString(2),
                     Product = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    TicketActionId = reader.GetInt32(4),
-                    Content = reader.GetString(5),
-                    ActionCreatedAt = reader.GetDateTime(6)
+                    IsKnowledgeBase = !reader.IsDBNull(4) && reader.GetBoolean(4),
+                    TicketActionId = reader.GetInt32(5),
+                    Content = reader.GetString(6),
+                    ActionCreatedAt = reader.GetDateTime(7)
                 });
             }
 
@@ -202,6 +240,7 @@ public class TicketRepository : ITicketRepository
 
     public async Task<TicketFirstCommentRow?> GetFirstCommentByTicketNumberAsync(
         string ticketNumber,
+        bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default)
     {
         var normalized = NormalizeTicketNumber(ticketNumber);
@@ -211,9 +250,17 @@ public class TicketRepository : ITicketRepository
         }
 
         var ticket = await GetByNumberAsync(normalized, cancellationToken);
-        return ticket is null
-            ? null
-            : await BuildFirstCommentRowAsync(ticket, cancellationToken);
+        if (ticket is null)
+        {
+            return null;
+        }
+
+        if (onlyTicketsListScope && !TicketListScope.Matches(ticket))
+        {
+            return null;
+        }
+
+        return await BuildFirstCommentRowAsync(ticket, cancellationToken);
     }
 
     public async Task<TicketFirstCommentRow?> GetFirstCommentByTicketIdAsync(
@@ -242,6 +289,7 @@ public class TicketRepository : ITicketRepository
             TicketNumber = ticket.Number,
             Title = ticket.Title,
             Product = ticket.Product,
+            IsKnowledgeBase = ticket.IsKnowledgeBase,
             TicketActionId = action.Id,
             Content = action.Content,
             ActionCreatedAt = action.CreatedAt
@@ -250,17 +298,18 @@ public class TicketRepository : ITicketRepository
 
     public async Task<FirstCommentCorpusStats> GetFirstCommentCorpusStatsAsync(
         int sampleSize,
+        bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(sampleSize, 1, 500);
-        var charStats = await GetFirstCommentCorpusCharStatsAsync(take, cancellationToken);
+        var charStats = await GetFirstCommentCorpusCharStatsAsync(take, onlyTicketsListScope, cancellationToken);
         if (charStats.SampleSize == 0)
         {
             return new FirstCommentCorpusStats();
         }
 
         var imageSampleSize = Math.Min(50, take);
-        var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, cancellationToken);
+        var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, onlyTicketsListScope, cancellationToken);
         var totalImages = imageContents.Sum(content => TicketHtmlHelper.ExtractImageSources(content).Count);
 
         return new FirstCommentCorpusStats
@@ -275,9 +324,12 @@ public class TicketRepository : ITicketRepository
 
     private async Task<(int SampleSize, int AverageCharCount)> GetFirstCommentCorpusCharStatsAsync(
         int take,
+        bool onlyTicketsListScope,
         CancellationToken cancellationToken)
     {
-        const string sql = """
+        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+
+        var sql = $"""
             SELECT
                 COUNT(*)::int,
                 COALESCE(AVG(LENGTH(sample."Content"))::int, 0)
@@ -287,7 +339,9 @@ public class TicketRepository : ITicketRepository
                     SELECT DISTINCT ON (ta."TicketId")
                         ta."Content"
                     FROM ticket_actions ta
+                    INNER JOIN tickets t ON t."Id" = ta."TicketId"
                     WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+                    {scopeFilter}
                     ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
                 ) fc
                 LIMIT @take
@@ -318,6 +372,7 @@ public class TicketRepository : ITicketRepository
 
     private async Task<IReadOnlyList<string>> GetFirstCommentContentsSampleAsync(
         int take,
+        bool onlyTicketsListScope,
         CancellationToken cancellationToken)
     {
         if (take <= 0)
@@ -325,13 +380,17 @@ public class TicketRepository : ITicketRepository
             return [];
         }
 
-        const string sql = """
+        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+
+        var sql = $"""
             SELECT fc."Content"
             FROM (
                 SELECT DISTINCT ON (ta."TicketId")
                     ta."Content"
                 FROM ticket_actions ta
+                INNER JOIN tickets t ON t."Id" = ta."TicketId"
                 WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+                {scopeFilter}
                 ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
             ) fc
             LIMIT @take
@@ -376,12 +435,15 @@ public class TicketRepository : ITicketRepository
         return normalized;
     }
 
+    private static IQueryable<Ticket> ApplyTicketsListBaseFilters(IQueryable<Ticket> query) =>
+        TicketListScope.Apply(query);
+
     private async Task<IReadOnlyList<string>> GetDistinctAsync(
+        IQueryable<Ticket> query,
         System.Linq.Expressions.Expression<Func<Ticket, string?>> selector,
         CancellationToken cancellationToken)
     {
-        return await _context.Tickets
-            .AsNoTracking()
+        return await query
             .Select(selector)
             .Where(value => value != null && value != "")
             .Distinct()

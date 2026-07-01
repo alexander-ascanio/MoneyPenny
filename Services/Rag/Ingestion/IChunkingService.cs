@@ -9,5 +9,6 @@ public interface IChunkingService
         int ticketId,
         string ticketNumber,
         DocumentChunkSource source = DocumentChunkSource.TicketDocument,
-        int? ticketActionId = null);
+        int? ticketActionId = null,
+        bool isKnowledgeBase = false);
 }

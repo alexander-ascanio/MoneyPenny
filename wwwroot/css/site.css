@@ -649,23 +649,71 @@ body.tickets-col-resizing * {
   font-size: 0.85rem;
 }
 
+.rag-context-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .rag-context-item {
   border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
-  padding: 0.85rem 1rem;
-  margin-bottom: 0.85rem;
   background: #f8fafc;
+  overflow: hidden;
 }
 
-.rag-context-item:last-child {
-  margin-bottom: 0;
-}
-
-.rag-context-item .rag-context-item-header {
+.rag-context-item-summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  background: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #334155;
+  user-select: none;
+}
+
+.rag-context-item-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rag-context-summary-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.rag-context-chevron {
+  color: #64748b;
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.rag-context-item[open] .rag-context-chevron {
+  transform: rotate(90deg);
+}
+
+.rag-context-ticket-link {
+  color: #1e293b;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.rag-context-ticket-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.rag-context-item-body {
+  padding: 0.75rem 0.85rem 0.85rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .rag-score-badge {

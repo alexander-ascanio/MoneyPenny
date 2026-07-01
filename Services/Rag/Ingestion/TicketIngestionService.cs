@@ -61,7 +61,11 @@ public class TicketIngestionService : ITicketIngestionService
 
         await _vectorRepository.DeleteTicketIndexAsync(ticketId, cancellationToken);
 
-        var chunks = _chunkingService.SplitIntoChunks(document, ticket.Id, ticket.Number);
+        var chunks = _chunkingService.SplitIntoChunks(
+            document,
+            ticket.Id,
+            ticket.Number,
+            isKnowledgeBase: ticket.IsKnowledgeBase);
         await _vectorRepository.SaveChunksAsync(chunks, cancellationToken);
 
         var embeddings = new List<TicketEmbedding>();
@@ -161,7 +165,9 @@ public class TicketIngestionService : ITicketIngestionService
                 new FirstCommentIndexOptions
                 {
                     ProcessImages = processImages,
-                    SkipAlreadyIndexed = false
+                    SkipAlreadyIndexed = false,
+                    OnlyTicketsListScope = false,
+                    RebuildAll = true
                 },
                 cancellationToken);
 

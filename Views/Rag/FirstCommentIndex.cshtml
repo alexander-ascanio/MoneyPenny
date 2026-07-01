@@ -62,28 +62,70 @@
     <div class="alert @alertClass">@Model.SuccessMessage</div>
 }
 
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-muted small">Tickets con comentario #1</div>
-                <div class="display-6">@Model.TotalTicketsWithFirstComment</div>
+<div class="mb-4">
+    <h5 class="text-muted mb-3">
+        <i class="bi bi-ticket-perforated me-1"></i>
+        Tickets del listado
+    </h5>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Con comentario #1</div>
+                    <div class="display-6">@Model.TotalTicketsWithFirstComment</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <div class="text-muted small">Ya indexados</div>
+                    <div class="display-6 text-success">@Model.IndexedTickets</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Pendientes</div>
+                    <div class="display-6 text-warning">@Model.PendingTickets</div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100 border-success">
-            <div class="card-body">
-                <div class="text-muted small">Ya indexados</div>
-                <div class="display-6 text-success">@Model.IndexedTickets</div>
+</div>
+
+<div class="mb-4">
+    <h5 class="text-muted mb-3">
+        <i class="bi bi-book me-1"></i>
+        Knowledge Base
+    </h5>
+    <p class="text-muted small mb-3">
+        Tickets con <code>IsKnowledgeBase = true</code> en TeamSupport. Los indexados se cuentan por la columna homónima en la BD vectorial.
+    </p>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body">
+                    <div class="text-muted small">Con comentario #1</div>
+                    <div class="display-6 text-info">@Model.KnowledgeBaseTotalTicketsWithFirstComment</div>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100 border-warning">
-            <div class="card-body">
-                <div class="text-muted small">Pendientes</div>
-                <div class="display-6 text-warning">@Model.PendingTickets</div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <div class="text-muted small">Ya indexados</div>
+                    <div class="display-6 text-success">@Model.KnowledgeBaseIndexedTickets</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-warning">
+                <div class="card-body">
+                    <div class="text-muted small">Pendientes</div>
+                    <div class="display-6 text-warning">@Model.KnowledgeBasePendingTickets</div>
+                </div>
             </div>
         </div>
     </div>
@@ -113,7 +155,15 @@
                 <label class="form-check-label" for="rebuildAll">
                     Reconstruir índice completo
                 </label>
-                <div class="form-text">Borra todos los chunks de comentarios #1 antes de indexar de nuevo.</div>
+                <div class="form-text">Borra todos los chunks de comentarios #1 antes de indexar de nuevo. Si está marcado, se ignoran los tickets ya indexados.</div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="OnlyTicketsListScope" class="form-check-input" type="checkbox" id="onlyTicketsListScope" data-bulk-only-tickets-list-scope />
+                <label class="form-check-label" for="onlyTicketsListScope">
+                    Solo Tickets de la KnowledgeBase
+                </label>
+                <div class="form-text">Si está marcado, aplica el mismo filtro que el listado de Tickets (excluye artículos KB, TELEMATEL INTERNO y grupo Knowledge Base).</div>
             </div>
 
             <div class="form-check mb-3">
@@ -160,6 +210,23 @@
             <label class="form-check-label" for="skipAlreadyIndexedSingle">
                 Omitir si ya está indexado
             </label>
+            <div class="form-text">Solo aplica si no está marcada la reconstrucción del índice del ticket.</div>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="RebuildAllSingle" class="form-check-input" type="checkbox" id="rebuildAllSingle" />
+            <label class="form-check-label" for="rebuildAllSingle">
+                Reconstruir índice completo
+            </label>
+            <div class="form-text">Borra los chunks de comentario #1 de este ticket y lo indexa de nuevo (aunque ya existiera).</div>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="OnlyTicketsListScopeSingle" class="form-check-input" type="checkbox" id="onlyTicketsListScopeSingle" />
+            <label class="form-check-label" for="onlyTicketsListScopeSingle">
+                Solo Tickets de la KnowledgeBase
+            </label>
+            <div class="form-text">Si está marcado, aplica el mismo filtro que el listado de Tickets (excluye artículos KB, TELEMATEL INTERNO y grupo Knowledge Base).</div>
         </div>
 
         <div class="form-check mb-3">

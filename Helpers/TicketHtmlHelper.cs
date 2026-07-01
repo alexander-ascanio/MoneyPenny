@@ -7,7 +7,11 @@ public static class TicketHtmlHelper
     private static readonly string[] NoiseLinePrefixes =
     [
         "Ticket created via",
-        "CAUTION: This email originated from outside of the organization"
+        "CAUTION: This email originated from outside of the organization",
+        "ADVERTENCIA: Este correo electr?nico procede de fuera de la organizaci?n",
+        "ADVERTENCIA: Este correo procede de fuera de la organizaci?n",
+        "These people were on the To line of the email",
+        "These people were on the CC line of the email"
     ];
 
     private static readonly string[] SignatureClosingPrefixes =
@@ -30,34 +34,34 @@ public static class TicketHtmlHelper
 
     private static readonly string[] PrivacyDisclaimerPrefixes =
     [
-        "La información incluida en el presente correo",
-        "La información contenida en este correo",
-        "La información contenida en el presente",
-        "La información contenida en este mensaje",
+        "La informaci?n incluida en el presente correo",
+        "La informaci?n contenida en este correo",
+        "La informaci?n contenida en el presente",
+        "La informaci?n contenida en este mensaje",
         "Este mensaje y sus adjuntos",
-        "Este correo electrónico y cualquier",
-        "Este correo electrónico, junto",
-        "Este correo electrónico contiene",
+        "Este correo electr?nico y cualquier",
+        "Este correo electr?nico, junto",
+        "Este correo electr?nico contiene",
         "AVISO LEGAL",
         "CONFIDENCIALIDAD",
         "Asimismo, le informamos de que trataremos",
         "Asimismo, le informamos de que",
-        "De conformidad con la Ley Orgánica",
-        "De conformidad con la ley orgánica",
+        "De conformidad con la Ley Org?nica",
+        "De conformidad con la ley org?nica",
         "En cumplimiento de lo dispuesto en",
         "En cumplimiento de la normativa",
         "Le informamos que los datos personales",
-        "Sus datos personales serán tratados"
+        "Sus datos personales ser?n tratados"
     ];
 
     private static readonly string[] PrivacyTextAnchors =
     [
-        "La información incluida en el presente correo electrónico",
-        "La información contenida en este mensaje de correo",
-        "están dirigidos exclusivamente a su destinatario",
-        "trataremos de forma confidencial su dirección de correo",
-        "derechos de acceso, rectificación, cancelación y oposición",
-        "protección de datos de carácter personal"
+        "La informaci?n incluida en el presente correo electr?nico",
+        "La informaci?n contenida en este mensaje de correo",
+        "est?n dirigidos exclusivamente a su destinatario",
+        "trataremos de forma confidencial su direcci?n de correo",
+        "derechos de acceso, rectificaci?n, cancelaci?n y oposici?n",
+        "protecci?n de datos de car?cter personal"
     ];
 
     private static readonly string[] SignatureTextAnchors =
@@ -73,7 +77,7 @@ public static class TicketHtmlHelper
     ];
 
     private static readonly Regex ContactSignatureLineRegex = new(
-        @"^(Tel[eé]fono|Telefono|Fax|Tlf\.?|Móvil|Mobil|Phone)\s*:",
+        @"^(Tel[e?]fono|Telefono|Fax|Tlf\.?|M?vil|Mobil|Phone)\s*:",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex StandaloneEmailLineRegex = new(
@@ -96,23 +100,36 @@ public static class TicketHtmlHelper
         return html;
     }
 
-    public static string ToPlainText(string? content)
+    public static string PrepareCommentHtmlForIndexing(string? content)
     {
         var html = PrepareCommentHtml(content);
+        return string.IsNullOrWhiteSpace(html) ? string.Empty : TruncateHtmlBeforeFooter(html);
+    }
+
+    public static string ToPlainText(string? content)
+    {
+        var html = PrepareCommentHtmlForIndexing(content);
         if (string.IsNullOrWhiteSpace(html))
         {
             return string.Empty;
         }
 
+        html = System.Net.WebUtility.HtmlDecode(html);
         html = Regex.Replace(html, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
         html = Regex.Replace(html, @"</p>", "\n", RegexOptions.IgnoreCase);
         html = Regex.Replace(html, @"</div>", "\n", RegexOptions.IgnoreCase);
-        html = Regex.Replace(html, "<[^>]+>", " ");
-        html = System.Net.WebUtility.HtmlDecode(html);
+        html = StripHtmlTags(html);
         html = Regex.Replace(html, @"[ \t]+", " ");
         html = Regex.Replace(html, @"\n\s*\n+", "\n\n");
 
         return SanitizeForIndexing(html.Trim());
+    }
+
+    private static string StripHtmlTags(string html)
+    {
+        html = Regex.Replace(html, @"<[^>]*>", " ", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        html = Regex.Replace(html, @"<[^>]*", " ", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        return html;
     }
 
     public static IReadOnlyList<string> ExtractImageSources(string? content)
@@ -122,7 +139,7 @@ public static class TicketHtmlHelper
             return [];
         }
 
-        var html = PrepareCommentHtml(content);
+        var html = PrepareCommentHtmlForIndexing(content);
         var matches = ImageSourceRegex.Matches(html);
         var sources = new List<string>();
 
@@ -156,8 +173,17 @@ public static class TicketHtmlHelper
     private static string TruncateHtmlBeforeFooter(string html)
     {
         var footerIndex = FindHtmlFooterStartIndex(html);
-        return footerIndex.HasValue ? html[..footerIndex.Value] : html;
+        if (!footerIndex.HasValue)
+        {
+            return html;
+        }
+
+        var truncated = html[..footerIndex.Value];
+        return RemoveIncompleteTrailingHtmlTag(truncated);
     }
+
+    private static string RemoveIncompleteTrailingHtmlTag(string html) =>
+        Regex.Replace(html, @"<[^>]*\z", string.Empty, RegexOptions.Singleline);
 
     private static int? FindHtmlFooterStartIndex(string html)
     {
@@ -193,6 +219,7 @@ public static class TicketHtmlHelper
     private static readonly string[] HtmlFooterStartMarkers =
     [
         ">Saludos,",
+        ">Saludos.",
         ">Saludos<",
         ">Saludos cordiales",
         ">Atentamente,",
@@ -211,11 +238,11 @@ public static class TicketHtmlHelper
         "<br>Cordialmente,",
         "<br/>Cordialmente,",
         "<br />Cordialmente,",
-        ">Teléfono:",
+        ">Tel?fono:",
         ">Telefono:",
         ">Fax:",
         ">Tlf.:",
-        ">Móvil:",
+        ">M?vil:",
         ">Mobil:",
         "\nSaludos,",
         "\r\nSaludos,",
@@ -241,7 +268,35 @@ public static class TicketHtmlHelper
 
         text = RemoveNoiseLines(text);
         text = RemoveEmailFooter(text);
+        text = RemoveResidualHtmlLines(text);
         return text.Trim();
+    }
+
+    private static string RemoveResidualHtmlLines(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var filtered = text
+            .Split('\n')
+            .Where(line => !IsResidualHtmlLine(line.Trim()))
+            .ToArray();
+
+        return string.Join('\n', filtered);
+    }
+
+    private static bool IsResidualHtmlLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line) || !line.StartsWith('<'))
+        {
+            return false;
+        }
+
+        return line.Contains("style=", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("</", StringComparison.Ordinal)
+            || Regex.IsMatch(line, @"^</?\w+", RegexOptions.IgnoreCase);
     }
 
     public static string RemoveNoiseLines(string text)

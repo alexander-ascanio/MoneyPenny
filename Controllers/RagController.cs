@@ -101,22 +101,32 @@ public class RagController : Controller
     [HttpGet]
     public async Task<IActionResult> FirstCommentIndex(CancellationToken cancellationToken)
     {
-        var counts = await _firstCommentIndexService.GetCountsAsync(cancellationToken);
+        var counts = await _firstCommentIndexService.GetCountsAsync(
+            onlyTicketsListScope: true,
+            cancellationToken);
         var model = new FirstCommentIndexViewModel
         {
             TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment,
             IndexedTickets = counts.IndexedTickets,
             PendingTickets = counts.PendingTickets,
+            KnowledgeBaseTotalTicketsWithFirstComment = counts.KnowledgeBaseTotalTicketsWithFirstComment,
+            KnowledgeBaseIndexedTickets = counts.KnowledgeBaseIndexedTickets,
+            KnowledgeBasePendingTickets = counts.KnowledgeBasePendingTickets,
             PricingConfig = BuildPricingConfig()
         };
         return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> FirstCommentCorpusStats(CancellationToken cancellationToken)
+    public async Task<IActionResult> FirstCommentCorpusStats(
+        CancellationToken cancellationToken,
+        bool onlyTicketsListScope = true)
     {
         const int sampleSize = 200;
-        var corpus = await _firstCommentIndexService.GetCorpusStatsAsync(sampleSize, cancellationToken);
+        var corpus = await _firstCommentIndexService.GetCorpusStatsAsync(
+            sampleSize,
+            onlyTicketsListScope,
+            cancellationToken);
         return Json(new
         {
             averageCommentCharCount = corpus.AverageCharCount,
@@ -137,6 +147,7 @@ public class RagController : Controller
                 RebuildAll = model.RebuildAll,
                 SkipAlreadyIndexed = model.SkipAlreadyIndexed,
                 ProcessImages = model.ProcessImages,
+                OnlyTicketsListScope = model.OnlyTicketsListScope,
                 MaxTickets = model.MaxTickets
             },
             cancellationToken);
@@ -162,7 +173,9 @@ public class RagController : Controller
             new FirstCommentIndexOptions
             {
                 SkipAlreadyIndexed = model.SkipAlreadyIndexedSingle,
-                ProcessImages = model.ProcessImagesSingle
+                ProcessImages = model.ProcessImagesSingle,
+                OnlyTicketsListScope = model.OnlyTicketsListScopeSingle,
+                RebuildAll = model.RebuildAllSingle
             },
             cancellationToken);
 
@@ -235,10 +248,15 @@ public class RagController : Controller
         FirstCommentIndexViewModel model,
         CancellationToken cancellationToken)
     {
-        var counts = await _firstCommentIndexService.GetCountsAsync(cancellationToken);
+        var counts = await _firstCommentIndexService.GetCountsAsync(
+            onlyTicketsListScope: true,
+            cancellationToken);
         model.TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment;
         model.IndexedTickets = counts.IndexedTickets;
         model.PendingTickets = counts.PendingTickets;
+        model.KnowledgeBaseTotalTicketsWithFirstComment = counts.KnowledgeBaseTotalTicketsWithFirstComment;
+        model.KnowledgeBaseIndexedTickets = counts.KnowledgeBaseIndexedTickets;
+        model.KnowledgeBasePendingTickets = counts.KnowledgeBasePendingTickets;
         model.PricingConfig = BuildPricingConfig();
     }
 

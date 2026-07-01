@@ -43,24 +43,38 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         _logger = logger;
     }
 
-    public async Task<FirstCommentIndexCounts> GetCountsAsync(CancellationToken cancellationToken = default)
+    public async Task<FirstCommentIndexCounts> GetCountsAsync(
+        bool onlyTicketsListScope = true,
+        CancellationToken cancellationToken = default)
     {
-        var total = await _ticketRepository.CountTicketsWithFirstCommentAsync(cancellationToken);
+        var total = await _ticketRepository.CountTicketsWithFirstCommentAsync(
+            onlyTicketsListScope,
+            cancellationToken);
+        var kbTotal = await _ticketRepository.CountKnowledgeBaseTicketsWithFirstCommentAsync(
+            cancellationToken);
         var indexed = await _vectorRepository.CountIndexedTicketsBySourceAsync(
             DocumentChunkSource.ClientFirstComment,
+            isKnowledgeBase: false,
+            cancellationToken);
+        var kbIndexed = await _vectorRepository.CountIndexedTicketsBySourceAsync(
+            DocumentChunkSource.ClientFirstComment,
+            isKnowledgeBase: true,
             cancellationToken);
 
         return new FirstCommentIndexCounts
         {
             TotalTicketsWithFirstComment = total,
-            IndexedTickets = indexed
+            IndexedTickets = indexed,
+            KnowledgeBaseTotalTicketsWithFirstComment = kbTotal,
+            KnowledgeBaseIndexedTickets = kbIndexed
         };
     }
 
     public Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
         int sampleSize = 200,
+        bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default) =>
-        _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, cancellationToken);
+        _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, onlyTicketsListScope, cancellationToken);
 
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
@@ -103,7 +117,11 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 ? Math.Min(batchSize, maxTickets.Value - processed)
                 : batchSize;
 
-            var page = await _ticketRepository.GetFirstCommentsPageAsync(skip, take, cancellationToken);
+            var page = await _ticketRepository.GetFirstCommentsPageAsync(
+                skip,
+                take,
+                options.OnlyTicketsListScope,
+                cancellationToken);
             if (page.Count == 0)
             {
                 break;
@@ -200,7 +218,10 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             return SingleTicketError("Indica un número de ticket.");
         }
 
-        var row = await _ticketRepository.GetFirstCommentByTicketNumberAsync(ticketNumber, cancellationToken);
+        var row = await _ticketRepository.GetFirstCommentByTicketNumberAsync(
+            ticketNumber,
+            options.OnlyTicketsListScope,
+            cancellationToken);
         if (row is null)
         {
             var normalized = ticketNumber.Trim().TrimStart('#');
@@ -210,10 +231,16 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 return SingleTicketError($"No se encontró el ticket #{normalized}.");
             }
 
+            if (options.OnlyTicketsListScope && !Helpers.TicketListScope.Matches(ticket))
+            {
+                return SingleTicketError(
+                    $"El ticket #{normalized} queda fuera del filtro de Knowledge Base (mismo criterio que el listado de Tickets).");
+            }
+
             return SingleTicketError($"El ticket #{normalized} no tiene comentario #1 con contenido indexable.");
         }
 
-        if (options.SkipAlreadyIndexed)
+        if (options.SkipAlreadyIndexed && !options.RebuildAll)
         {
             var alreadyIndexed = await _vectorRepository.IsTicketIndexedBySourceAsync(
                 row.TicketId,
@@ -227,6 +254,13 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                     TicketsSkipped = 1
                 };
             }
+        }
+
+        if (options.RebuildAll)
+        {
+            _logger.LogInformation(
+                "Reindexando comentario #1 del ticket {TicketId} (reconstrucción del índice del ticket).",
+                row.TicketId);
         }
 
         try
@@ -325,7 +359,8 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             row.TicketId,
             row.TicketNumber,
             DocumentChunkSource.ClientFirstComment,
-            row.TicketActionId);
+            row.TicketActionId,
+            row.IsKnowledgeBase);
 
         if (chunks.Count == 0)
         {

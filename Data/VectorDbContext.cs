@@ -30,6 +30,8 @@ public class VectorDbContext : DbContext
             entity.Property(c => c.Source)
                 .HasConversion<int>()
                 .HasDefaultValue(DocumentChunkSource.TicketDocument);
+            entity.Property(c => c.IsKnowledgeBase)
+                .HasDefaultValue(false);
             entity.HasIndex(c => c.TicketId);
             entity.HasIndex(c => c.Source);
             entity.HasIndex(c => new { c.TicketId, c.Source });

@@ -4,9 +4,12 @@ using MoneyPenny.Models.Tickets;
 
 public interface IFirstCommentIndexService
 {
-    Task<FirstCommentIndexCounts> GetCountsAsync(CancellationToken cancellationToken = default);
+    Task<FirstCommentIndexCounts> GetCountsAsync(
+        bool onlyTicketsListScope = true,
+        CancellationToken cancellationToken = default);
     Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
         int sampleSize = 200,
+        bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,

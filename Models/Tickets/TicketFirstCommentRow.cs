@@ -9,4 +9,5 @@ public class TicketFirstCommentRow
     public int TicketActionId { get; init; }
     public string Content { get; init; } = string.Empty;
     public DateTime ActionCreatedAt { get; init; }
+    public bool IsKnowledgeBase { get; init; }
 }

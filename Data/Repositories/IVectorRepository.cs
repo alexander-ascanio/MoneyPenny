@@ -21,6 +21,7 @@ public interface IVectorRepository
         CancellationToken cancellationToken = default);
     Task<int> CountIndexedTicketsBySourceAsync(
         DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default);
     Task SaveChunksAsync(IEnumerable<DocumentChunk> chunks, CancellationToken cancellationToken = default);
     Task SaveEmbeddingsAsync(IEnumerable<TicketEmbedding> embeddings, CancellationToken cancellationToken = default);

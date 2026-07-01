@@ -92,11 +92,19 @@ public class VectorRepository : IVectorRepository
 
     public Task<int> CountIndexedTicketsBySourceAsync(
         DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default)
     {
-        return _context.DocumentChunks
+        var query = _context.DocumentChunks
             .AsNoTracking()
-            .Where(c => c.Source == source)
+            .Where(c => c.Source == source);
+
+        if (isKnowledgeBase is not null)
+        {
+            query = query.Where(c => c.IsKnowledgeBase == isKnowledgeBase.Value);
+        }
+
+        return query
             .Select(c => c.TicketId)
             .Distinct()
             .CountAsync(cancellationToken);

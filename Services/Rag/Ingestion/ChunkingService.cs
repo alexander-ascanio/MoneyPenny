@@ -18,7 +18,8 @@ public class ChunkingService : IChunkingService
         int ticketId,
         string ticketNumber,
         DocumentChunkSource source = DocumentChunkSource.TicketDocument,
-        int? ticketActionId = null)
+        int? ticketActionId = null,
+        bool isKnowledgeBase = false)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -39,6 +40,7 @@ public class ChunkingService : IChunkingService
                 TicketNumber = ticketNumber,
                 TicketActionId = ticketActionId,
                 Source = source,
+                IsKnowledgeBase = isKnowledgeBase,
                 ChunkIndex = index++,
                 Content = text.Substring(start, length),
                 CreatedAt = DateTime.UtcNow

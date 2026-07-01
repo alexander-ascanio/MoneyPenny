@@ -51,6 +51,7 @@
         const rebuild = root.querySelector('[data-bulk-rebuild]');
         const skipIndexed = root.querySelector('[data-bulk-skip-indexed]');
         const processImages = root.querySelector('[data-bulk-process-images]');
+        const onlyTicketsListScope = root.querySelector('[data-bulk-only-tickets-list-scope]');
         const maxTickets = root.querySelector('[data-bulk-max-tickets]');
         if (!output) {
             return;
@@ -72,7 +73,7 @@
             const pending = Number(corpus.pendingTickets || 0);
             const avgChars = Number(corpus.averageCommentCharCount || 0);
             const avgImages = Number(corpus.averageImagesPerTicket || 0);
-            const rebuildAll = rebuild?.checked;
+            const rebuildAll = rebuild?.checked ?? true;
             const skip = skipIndexed?.checked;
             const withImages = processImages?.checked;
             const limit = Number(maxTickets?.value || 0);
@@ -137,12 +138,48 @@
             });
         };
 
-        [rebuild, skipIndexed, processImages, maxTickets].forEach(el => {
+        [rebuild, skipIndexed, processImages, onlyTicketsListScope, maxTickets].forEach(el => {
             if (el) {
                 el.addEventListener('change', update);
                 el.addEventListener('input', update);
             }
         });
+
+        if (onlyTicketsListScope) {
+            onlyTicketsListScope.addEventListener('change', () => {
+                if (!corpus.corpusSampleSize) {
+                    return;
+                }
+
+                corpus.corpusSampleSize = 0;
+                renderEstimate(output, ['Cargando estadísticas del corpus…'], {
+                    embeddingTokens: 0,
+                    visionTokens: 0,
+                    chatTokens: 0,
+                    cost: 0
+                });
+
+                fetch(buildCorpusStatsUrl(corpusUrl, onlyTicketsListScope.checked), { headers: { Accept: 'application/json' } })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        corpus.averageCommentCharCount = data.averageCommentCharCount;
+                        corpus.averageImagesPerTicket = data.averageImagesPerTicket;
+                        corpus.corpusSampleSize = data.corpusSampleSize;
+                        updateCorpusInfo();
+                        update();
+                    })
+                    .catch(() => {
+                        if (corpusInfo) {
+                            corpusInfo.textContent = 'No se pudieron cargar las estadísticas del corpus.';
+                        }
+                    });
+            });
+        }
 
         if (corpusUrl && !corpus.corpusSampleSize) {
             renderEstimate(output, ['Cargando estadísticas del corpus…'], {
@@ -152,7 +189,7 @@
                 cost: 0
             });
 
-            fetch(corpusUrl, { headers: { Accept: 'application/json' } })
+            fetch(buildCorpusStatsUrl(corpusUrl, onlyTicketsListScope?.checked ?? true), { headers: { Accept: 'application/json' } })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}`);
@@ -181,6 +218,15 @@
             updateCorpusInfo();
             update();
         }
+    }
+
+    function buildCorpusStatsUrl(baseUrl, onlyTicketsListScope) {
+        if (!baseUrl) {
+            return '';
+        }
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        return `${baseUrl}${separator}onlyTicketsListScope=${onlyTicketsListScope ? 'true' : 'false'}`;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

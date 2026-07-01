@@ -75,7 +75,45 @@ await using (var history = new NpgsqlCommand(
         : $"Migración {migrationId} ya estaba en historial.");
 }
 
-static async Task ExecAsync(NpgsqlConnection conn, string sql, NpgsqlTransaction tx)
+const string kbMigrationId = "20260626120000_AddDocumentChunkIsKnowledgeBase";
+
+await using (var checkKb = new NpgsqlCommand(
+    """
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'document_chunks' AND column_name = 'IsKnowledgeBase'
+    """, conn))
+{
+    var exists = await checkKb.ExecuteScalarAsync() is not null;
+    if (!exists)
+    {
+        Console.WriteLine("Añadiendo columna IsKnowledgeBase...");
+        await ExecAsync(conn, """
+            ALTER TABLE document_chunks
+            ADD COLUMN "IsKnowledgeBase" boolean NOT NULL DEFAULT false
+            """, null);
+        Console.WriteLine("Columna IsKnowledgeBase creada.");
+    }
+    else
+    {
+        Console.WriteLine("La columna IsKnowledgeBase ya existe.");
+    }
+}
+
+await using (var historyKb = new NpgsqlCommand(
+    """
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES (@id, '10.0.3')
+    ON CONFLICT ("MigrationId") DO NOTHING
+    """, conn))
+{
+    historyKb.Parameters.AddWithValue("id", kbMigrationId);
+    var rows = await historyKb.ExecuteNonQueryAsync();
+    Console.WriteLine(rows > 0
+        ? $"Migración {kbMigrationId} registrada en historial."
+        : $"Migración {kbMigrationId} ya estaba en historial.");
+}
+
+static async Task ExecAsync(NpgsqlConnection conn, string sql, NpgsqlTransaction? tx)
 {
     await using var cmd = new NpgsqlCommand(sql, conn, tx);
     await cmd.ExecuteNonQueryAsync();

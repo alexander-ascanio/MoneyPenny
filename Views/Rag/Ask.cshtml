@@ -61,7 +61,7 @@
 
         <div class="card shadow-sm mb-4 rag-context-card">
             <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-diagram-3 me-2"></i>Contexto recuperado</span>
+                <span><i class="bi bi-diagram-3 me-2"></i>Contexto recuperado Tickets</span>
                 <span class="badge text-bg-primary">@Model.ContextItems.Count ticket(s) similar(es)</span>
             </div>
             <div class="card-body">
@@ -74,23 +74,32 @@
                 }
                 else
                 {
-                    <p class="text-muted small">
-                        Hasta @Model.ContextItems.Count ticket(s) distinto(s) con comentario #1 parecido al de este caso (excluye el ticket actual).
-                        La puntuación indica similitud coseno (más alto = más relevante).
+                    <p class="text-muted small mb-3">
+                        Lista de tickets con comentario #1 parecido al de este caso (excluye el ticket actual).
+                        Pulsa cada fila para ver el detalle. La puntuación indica similitud coseno (más alto = más relevante).
                     </p>
-                    @foreach (var item in Model.ContextItems)
-                    {
-                        <div class="rag-context-item">
-                            <div class="rag-context-item-header">
-                                <a asp-controller="Tickets" asp-action="Details" asp-route-id="@item.TicketId"
-                                   class="badge text-bg-light text-dark text-decoration-none">
-                                    Ticket #@item.TicketNumber
-                                </a>
-                                <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
-                            </div>
-                            <pre class="rag-context-snippet">@item.Content</pre>
-                        </div>
-                    }
+                    <div class="rag-context-list">
+                        @foreach (var item in Model.ContextItems)
+                        {
+                            <details class="rag-context-item">
+                                <summary class="rag-context-item-summary">
+                                    <span class="rag-context-summary-main">
+                                        <i class="bi bi-chevron-right rag-context-chevron" aria-hidden="true"></i>
+                                        <a asp-controller="Tickets" asp-action="Details" asp-route-id="@item.TicketId"
+                                           class="rag-context-ticket-link"
+                                           title="Abrir ticket en otra página"
+                                           onclick="event.stopPropagation();">
+                                            Ticket #@item.TicketNumber
+                                        </a>
+                                    </span>
+                                    <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
+                                </summary>
+                                <div class="rag-context-item-body">
+                                    <pre class="rag-context-snippet mb-0">@item.Content</pre>
+                                </div>
+                            </details>
+                        }
+                    </div>
                 }
             </div>
         </div>

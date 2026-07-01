@@ -10,16 +10,23 @@ public class FirstCommentIndexViewModel
     public int IndexedTickets { get; set; }
     public int PendingTickets { get; set; }
 
-    public bool RebuildAll { get; set; }
+    public int KnowledgeBaseTotalTicketsWithFirstComment { get; set; }
+    public int KnowledgeBaseIndexedTickets { get; set; }
+    public int KnowledgeBasePendingTickets { get; set; }
+
+    public bool RebuildAll { get; set; } = true;
     public bool SkipAlreadyIndexed { get; set; } = true;
     public bool ProcessImages { get; set; }
+    public bool OnlyTicketsListScope { get; set; } = true;
     public int? MaxTickets { get; set; }
 
     [Display(Name = "Número de ticket")]
     public string? TargetTicketNumber { get; set; }
 
     public bool SkipAlreadyIndexedSingle { get; set; }
+    public bool RebuildAllSingle { get; set; } = true;
     public bool ProcessImagesSingle { get; set; }
+    public bool OnlyTicketsListScopeSingle { get; set; } = true;
 
     public int AverageCommentCharCount { get; set; }
     public double AverageImagesPerTicket { get; set; }
