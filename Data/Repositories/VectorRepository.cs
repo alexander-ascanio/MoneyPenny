@@ -129,6 +129,7 @@ public class VectorRepository : IVectorRepository
         int? ticketId = null,
         int? excludeTicketId = null,
         DocumentChunkSource? source = null,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default)
     {
         if (queryVector.Length == 0)
@@ -174,6 +175,14 @@ public class VectorRepository : IVectorRepository
                 """;
         }
 
+        if (isKnowledgeBase is not null)
+        {
+            sql += """
+                
+                AND dc."IsKnowledgeBase" = @isKnowledgeBase
+                """;
+        }
+
         sql += """
             
             ORDER BY te."Vector" <=> @query
@@ -204,6 +213,11 @@ public class VectorRepository : IVectorRepository
             if (source is not null)
             {
                 command.Parameters.Add(new NpgsqlParameter("source", NpgsqlDbType.Integer) { Value = (int)source.Value });
+            }
+
+            if (isKnowledgeBase is not null)
+            {
+                command.Parameters.Add(new NpgsqlParameter("isKnowledgeBase", NpgsqlDbType.Boolean) { Value = isKnowledgeBase.Value });
             }
 
             var results = new List<SimilarDocumentChunk>();

@@ -36,22 +36,31 @@ public class RagController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Ask(int? ticketId, string? ticketNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> Ask(
+        int? ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly = false,
+        CancellationToken cancellationToken = default)
     {
-        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, cancellationToken);
+        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, knowledgeBaseOnly, cancellationToken);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConsultGptAnswer(int ticketId, string? ticketNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> ConsultGptAnswer(
+        int ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly = false,
+        CancellationToken cancellationToken = default)
     {
-        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: true, cancellationToken);
+        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: true, knowledgeBaseOnly, cancellationToken);
     }
 
     private async Task<IActionResult> RenderAskAsync(
         int? ticketId,
         string? ticketNumber,
         bool generateGptAnswer,
+        bool knowledgeBaseOnly,
         CancellationToken cancellationToken)
     {
         if (ticketId is null or <= 0)
@@ -72,7 +81,8 @@ public class RagController : Controller
             {
                 TicketId = ticketId.Value,
                 TicketNumber = ticketNumber,
-                GenerateGptAnswer = generateGptAnswer
+                GenerateGptAnswer = generateGptAnswer,
+                KnowledgeBaseOnly = knowledgeBaseOnly
             },
             userId,
             cancellationToken);

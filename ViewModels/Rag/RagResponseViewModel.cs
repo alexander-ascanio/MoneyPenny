@@ -28,6 +28,7 @@ public class RagResponseViewModel
     public RagFirstCommentViewModel? FirstComment { get; init; }
     public int TicketId { get; init; }
     public string? TicketNumber { get; init; }
+    public bool KnowledgeBaseOnly { get; init; }
     public string? ErrorMessage { get; init; }
     public TokenUsageEstimateViewModel? GptEstimate { get; set; }
     public TokenUsageEstimateViewModel? LastRunEstimate { get; set; }

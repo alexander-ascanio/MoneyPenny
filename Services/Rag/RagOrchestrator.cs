@@ -57,6 +57,7 @@ public class RagOrchestrator : IRagOrchestrator
             {
                 TicketId = request.TicketId,
                 TicketNumber = request.TicketNumber,
+                KnowledgeBaseOnly = request.KnowledgeBaseOnly,
                 ErrorMessage = "Este ticket no tiene un comentario #1 con contenido indexable."
             };
         }
@@ -64,6 +65,7 @@ public class RagOrchestrator : IRagOrchestrator
         var retrieved = await _retrievalService.RetrieveSimilarFirstCommentsAsync(
             firstComment.Content,
             request.TicketId,
+            request.KnowledgeBaseOnly,
             cancellationToken);
 
         var contextItems = new List<RagContextItemViewModel>();
@@ -91,7 +93,8 @@ public class RagOrchestrator : IRagOrchestrator
                 ContextItems = contextItems,
                 FirstComment = firstComment,
                 TicketId = request.TicketId,
-                TicketNumber = request.TicketNumber
+                TicketNumber = request.TicketNumber,
+                KnowledgeBaseOnly = request.KnowledgeBaseOnly
             };
         }
 
@@ -117,7 +120,8 @@ public class RagOrchestrator : IRagOrchestrator
             ContextItems = contextItems,
             FirstComment = firstComment,
             TicketId = request.TicketId,
-            TicketNumber = request.TicketNumber
+            TicketNumber = request.TicketNumber,
+            KnowledgeBaseOnly = request.KnowledgeBaseOnly
         };
     }
 

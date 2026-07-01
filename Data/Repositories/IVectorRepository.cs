@@ -32,6 +32,7 @@ public interface IVectorRepository
         int? ticketId = null,
         int? excludeTicketId = null,
         DocumentChunkSource? source = null,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DocumentChunk>> GetChunksByTicketAndSourceAsync(
         int ticketId,

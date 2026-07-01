@@ -29,6 +29,7 @@ public class PgVectorRetrievalService : IRetrievalService
     public async Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveSimilarFirstCommentsAsync(
         string firstCommentText,
         int excludeTicketId,
+        bool knowledgeBaseOnly = false,
         CancellationToken cancellationToken = default)
     {
         var queryVector = await _embeddingService.CreateEmbeddingAsync(firstCommentText, cancellationToken);
@@ -38,28 +39,32 @@ public class PgVectorRetrievalService : IRetrievalService
             fetchLimit,
             _options.MinScore,
             excludeTicketId,
+            knowledgeBaseOnly,
             cancellationToken);
 
         if (results.Count == 0 && _options.MinScore > 0)
         {
             _logger.LogInformation(
-                "Sin tickets similares para ticket {TicketId} con minScore={MinScore}. Reintentando sin umbral.",
+                "Sin tickets similares para ticket {TicketId} con minScore={MinScore} (KB only={KnowledgeBaseOnly}). Reintentando sin umbral.",
                 excludeTicketId,
-                _options.MinScore);
+                _options.MinScore,
+                knowledgeBaseOnly);
 
             results = await SearchAndDedupeAsync(
                 queryVector,
                 fetchLimit,
                 minScore: 0,
                 excludeTicketId,
+                knowledgeBaseOnly,
                 cancellationToken);
         }
 
         _logger.LogInformation(
-            "Recuperados {Count} ticket(s) similares por comentario #1 (excluyendo ticket {TicketId}, minScore={MinScore}).",
+            "Recuperados {Count} ticket(s) similares por comentario #1 (excluyendo ticket {TicketId}, minScore={MinScore}, KB only={KnowledgeBaseOnly}).",
             results.Count,
             excludeTicketId,
-            _options.MinScore);
+            _options.MinScore,
+            knowledgeBaseOnly);
 
         return results;
     }
@@ -69,6 +74,7 @@ public class PgVectorRetrievalService : IRetrievalService
         int fetchLimit,
         double minScore,
         int excludeTicketId,
+        bool knowledgeBaseOnly,
         CancellationToken cancellationToken)
     {
         var raw = await _vectorRepository.SearchSimilarAsync(
@@ -78,6 +84,7 @@ public class PgVectorRetrievalService : IRetrievalService
             ticketId: null,
             excludeTicketId: excludeTicketId,
             source: DocumentChunkSource.ClientFirstComment,
+            isKnowledgeBase: knowledgeBaseOnly ? true : null,
             cancellationToken);
 
         return raw

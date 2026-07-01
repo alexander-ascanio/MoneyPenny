@@ -61,22 +61,49 @@
 
         <div class="card shadow-sm mb-4 rag-context-card">
             <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-diagram-3 me-2"></i>Contexto recuperado Tickets</span>
+                <span>
+                    <i class="bi @(Model.KnowledgeBaseOnly ? "bi-book" : "bi-diagram-3") me-2"></i>
+                    @(Model.KnowledgeBaseOnly ? "Contexto recuperado Knowledge Base" : "Contexto recuperado Tickets")
+                </span>
                 <span class="badge text-bg-primary">@Model.ContextItems.Count ticket(s) similar(es)</span>
             </div>
             <div class="card-body">
                 @if (!Model.ContextItems.Any())
                 {
                     <div class="alert alert-warning mb-0">
-                        No se encontraron otros tickets con comentario #1 similar al actual.
-                        Indexa más tickets en <strong>Índice #1</strong> o prueba con un umbral menor (MinScore en configuración).
+                        @if (Model.KnowledgeBaseOnly)
+                        {
+                            <text>
+                                No se encontraron tickets de Knowledge Base con comentario #1 similar al actual.
+                                Indexa artículos KB en <strong>Índice #1</strong> (sin filtro de listado) o prueba con un umbral menor (MinScore en configuración).
+                            </text>
+                        }
+                        else
+                        {
+                            <text>
+                                No se encontraron otros tickets con comentario #1 similar al actual.
+                                Indexa más tickets en <strong>Índice #1</strong> o prueba con un umbral menor (MinScore en configuración).
+                            </text>
+                        }
                     </div>
                 }
                 else
                 {
                     <p class="text-muted small mb-3">
-                        Lista de tickets con comentario #1 parecido al de este caso (excluye el ticket actual).
-                        Pulsa cada fila para ver el detalle. La puntuación indica similitud coseno (más alto = más relevante).
+                        @if (Model.KnowledgeBaseOnly)
+                        {
+                            <text>
+                                Lista de tickets de Knowledge Base (<code>IsKnowledgeBase = true</code> en el índice #1) con comentario parecido al de este caso (excluye el ticket actual).
+                                Pulsa cada fila para ver el detalle. La puntuación indica similitud coseno (más alto = más relevante).
+                            </text>
+                        }
+                        else
+                        {
+                            <text>
+                                Lista de tickets con comentario #1 parecido al de este caso (excluye el ticket actual).
+                                Pulsa cada fila para ver el detalle. La puntuación indica similitud coseno (más alto = más relevante).
+                            </text>
+                        }
                     </p>
                     <div class="rag-context-list">
                         @foreach (var item in Model.ContextItems)
@@ -113,6 +140,10 @@
             @Html.AntiForgeryToken()
             <input type="hidden" name="ticketId" value="@Model.TicketId" />
             <input type="hidden" name="ticketNumber" value="@Model.TicketNumber" />
+            @if (Model.KnowledgeBaseOnly)
+            {
+                <input type="hidden" name="knowledgeBaseOnly" value="true" />
+            }
             <button type="submit" class="btn btn-primary" @(!Model.ContextItems.Any() ? "disabled" : null)>
                 <i class="bi bi-robot me-1"></i>Consultar respuesta GPT
             </button>
