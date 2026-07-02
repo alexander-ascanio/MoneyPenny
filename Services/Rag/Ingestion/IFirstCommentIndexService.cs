@@ -9,7 +9,7 @@ public interface IFirstCommentIndexService
         CancellationToken cancellationToken = default);
     Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
         int sampleSize = 200,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,

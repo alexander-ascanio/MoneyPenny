@@ -72,9 +72,9 @@ public class FirstCommentIndexService : IFirstCommentIndexService
 
     public Task<FirstCommentCorpusStats> GetCorpusStatsAsync(
         int sampleSize = 200,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default) =>
-        _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, onlyTicketsListScope, cancellationToken);
+        _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, onlyKnowledgeBaseScope, cancellationToken);
 
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
@@ -120,7 +120,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             var page = await _ticketRepository.GetFirstCommentsPageAsync(
                 skip,
                 take,
-                options.OnlyTicketsListScope,
+                options.OnlyKnowledgeBaseTickets ?? false,
                 options.TicketCreatedFrom,
                 options.TicketCreatedTo,
                 cancellationToken);
@@ -222,7 +222,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
 
         var row = await _ticketRepository.GetFirstCommentByTicketNumberAsync(
             ticketNumber,
-            options.OnlyTicketsListScope,
+            options.OnlyKnowledgeBaseTickets,
             cancellationToken);
         if (row is null)
         {
@@ -233,13 +233,27 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 return SingleTicketError($"No se encontró el ticket #{normalized}.");
             }
 
-            if (options.OnlyTicketsListScope && !Helpers.TicketListScope.Matches(ticket))
+            if (options.OnlyKnowledgeBaseTickets is true && !KnowledgeBaseScope.Matches(ticket))
             {
                 return SingleTicketError(
-                    $"El ticket #{normalized} queda fuera del filtro de Knowledge Base (mismo criterio que el listado de Tickets).");
+                    $"El ticket #{normalized} no pertenece al ámbito Knowledge Base (KB, TELEMATEL INTERNO o grupo Knowledge Base).");
             }
 
-            return SingleTicketError($"El ticket #{normalized} no tiene comentario #1 con contenido indexable.");
+            if (options.OnlyKnowledgeBaseTickets is false && !TicketListScope.Matches(ticket))
+            {
+                return SingleTicketError(
+                    $"El ticket #{normalized} queda fuera del ámbito del listado de Tickets.");
+            }
+
+            if (options.OnlyKnowledgeBaseTickets is null)
+            {
+                row = await _ticketRepository.GetFirstCommentByTicketIdAsync(ticket.Id, cancellationToken);
+            }
+
+            if (row is null)
+            {
+                return SingleTicketError($"El ticket #{normalized} no tiene comentario #1 con contenido indexable.");
+            }
         }
 
         if (options.SkipAlreadyIndexed && !options.RebuildAll)

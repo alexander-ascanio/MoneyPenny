@@ -20,6 +20,8 @@
     {
         totalTickets = Model.TotalTicketsWithFirstComment,
         pendingTickets = Model.PendingTickets,
+        knowledgeBaseTotalTickets = Model.KnowledgeBaseTotalTicketsWithFirstComment,
+        knowledgeBasePendingTickets = Model.KnowledgeBasePendingTickets,
         averageCommentCharCount = Model.AverageCommentCharCount,
         averageImagesPerTicket = Model.AverageImagesPerTicket,
         corpusSampleSize = Model.CorpusSampleSize
@@ -101,7 +103,7 @@
         Knowledge Base
     </h5>
     <p class="text-muted small mb-3">
-        Tickets con <code>IsKnowledgeBase = true</code> en TeamSupport. Los indexados se cuentan por la columna homónima en la BD vectorial.
+        Tickets con <code>IsKnowledgeBase = true</code>, cliente TELEMATEL INTERNO o grupo Knowledge Base en TeamSupport. Los indexados se cuentan por la columna homónima en la BD vectorial.
     </p>
     <div class="row g-4">
         <div class="col-md-4">
@@ -135,7 +137,7 @@
      data-pricing="@pricingJson"
      data-corpus="@corpusJson"
      data-corpus-url="@Url.Action("FirstCommentCorpusStats")">
-    <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm">
+    <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm" data-first-comment-bulk-form>
         <div class="card-header rag-section-header">Ejecutar indexación masiva</div>
         <div class="card-body">
             @Html.AntiForgeryToken()
@@ -159,11 +161,11 @@
             </div>
 
             <div class="form-check mb-3">
-                <input asp-for="OnlyTicketsListScope" class="form-check-input" type="checkbox" id="onlyTicketsListScope" data-bulk-only-tickets-list-scope />
-                <label class="form-check-label" for="onlyTicketsListScope">
+                <input asp-for="OnlyKnowledgeBaseTickets" class="form-check-input" type="checkbox" id="onlyKnowledgeBaseTickets" data-bulk-only-knowledge-base />
+                <label class="form-check-label" for="onlyKnowledgeBaseTickets">
                     Solo Tickets de la KnowledgeBase
                 </label>
-                <div class="form-text">Si está marcado, aplica el mismo filtro que el listado de Tickets (excluye artículos KB, TELEMATEL INTERNO y grupo Knowledge Base).</div>
+                <div class="form-text">Si está marcado, indexa solo tickets KB (<code>IsKnowledgeBase = true</code>), TELEMATEL INTERNO y grupo «Telematel – Knowledge Base». Si no está marcado, indexa el ámbito del listado de Tickets (excluye esos casos).</div>
             </div>
 
             <div class="form-check mb-3">
@@ -204,7 +206,7 @@
     </form>
 </div>
 
-<form asp-action="IndexFirstCommentTicket" method="post" class="card shadow-sm mt-4">
+<form asp-action="IndexFirstCommentTicket" method="post" class="card shadow-sm mt-4" data-first-comment-single-form>
     <div class="card-header rag-section-header">
         <i class="bi bi-ticket-detailed me-2"></i>Indexar un ticket concreto
     </div>
@@ -238,11 +240,11 @@
         </div>
 
         <div class="form-check mb-3">
-            <input asp-for="OnlyTicketsListScopeSingle" class="form-check-input" type="checkbox" id="onlyTicketsListScopeSingle" />
-            <label class="form-check-label" for="onlyTicketsListScopeSingle">
+            <input asp-for="OnlyKnowledgeBaseTicketsSingle" class="form-check-input" type="checkbox" id="onlyKnowledgeBaseTicketsSingle" />
+            <label class="form-check-label" for="onlyKnowledgeBaseTicketsSingle">
                 Solo Tickets de la KnowledgeBase
             </label>
-            <div class="form-text">Si está marcado, aplica el mismo filtro que el listado de Tickets (excluye artículos KB, TELEMATEL INTERNO y grupo Knowledge Base).</div>
+            <div class="form-text">Si está marcado, solo permite indexar tickets KB, TELEMATEL INTERNO o grupo Knowledge Base. Si no, solo tickets del listado habitual.</div>
         </div>
 
         <div class="form-check mb-3">
@@ -313,4 +315,64 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/rag-token-estimate.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const bulkForm = document.querySelector('[data-first-comment-bulk-form]');
+            if (bulkForm) {
+                bulkForm.addEventListener('submit', function (event) {
+                    const api = window.MoneyPennyFirstCommentIndex;
+                    const ticketCount = api?.getBulkTicketsToIndex?.() ?? 0;
+                    const formattedCount = api?.formatTicketCount?.(ticketCount) ?? String(ticketCount);
+                    const rebuild = document.getElementById('rebuildAll')?.checked;
+                    const maxTickets = document.querySelector('[data-bulk-max-tickets]')?.value?.trim();
+                    const fromDate = document.getElementById('TicketCreatedFrom')?.value;
+                    const toDate = document.getElementById('TicketCreatedTo')?.value;
+
+                    let message = '¿Iniciar la indexación masiva con la configuración actual?';
+                    if (rebuild) {
+                        message = '¿Iniciar la indexación masiva? Se borrará todo el índice #1 antes de indexar.';
+                    }
+
+                    message += `\n\nTickets a indexar: ${formattedCount}.`;
+                    if (fromDate || toDate) {
+                        message += '\n(El rango de fechas puede reducir el número real.)';
+                    }
+                    if (maxTickets) {
+                        message += `\n\nLímite configurado: ${maxTickets} ticket(s).`;
+                    }
+                    if (fromDate || toDate) {
+                        message += `\n\nRango de fechas: ${fromDate || '…'} → ${toDate || '…'}.`;
+                    }
+
+                    if (!window.confirm(message)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            const singleForm = document.querySelector('[data-first-comment-single-form]');
+            if (singleForm) {
+                singleForm.addEventListener('submit', function (event) {
+                    const api = window.MoneyPennyFirstCommentIndex;
+                    const single = api?.getSingleTicketsToIndex?.() ?? { count: 1, maySkip: false };
+                    const ticketInput = document.getElementById('TargetTicketNumber');
+                    const ticket = ticketInput?.value?.trim() || 'indicado';
+                    const rebuild = document.getElementById('rebuildAllSingle')?.checked;
+
+                    let message = `¿Indexar el comentario #1 del ticket ${ticket}?`;
+                    message += `\n\nTickets a indexar: ${api?.formatTicketCount?.(single.count) ?? '1'}.`;
+                    if (single.maySkip) {
+                        message += '\n(Puede omitirse si el ticket ya está indexado.)';
+                    }
+                    if (rebuild) {
+                        message += '\n\nSe eliminarán los chunks existentes de este ticket antes de indexar.';
+                    }
+
+                    if (!window.confirm(message)) {
+                        event.preventDefault();
+                    }
+                });
+            }
+        })();
+    </script>
 }

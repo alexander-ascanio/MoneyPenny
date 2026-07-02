@@ -17,7 +17,7 @@ public class FirstCommentIndexViewModel
     public bool RebuildAll { get; set; } = true;
     public bool SkipAlreadyIndexed { get; set; } = true;
     public bool ProcessImages { get; set; }
-    public bool OnlyTicketsListScope { get; set; } = true;
+    public bool OnlyKnowledgeBaseTickets { get; set; }
     public int? MaxTickets { get; set; }
 
     [Display(Name = "Fecha creación desde")]
@@ -34,7 +34,7 @@ public class FirstCommentIndexViewModel
     public bool SkipAlreadyIndexedSingle { get; set; }
     public bool RebuildAllSingle { get; set; } = true;
     public bool ProcessImagesSingle { get; set; }
-    public bool OnlyTicketsListScopeSingle { get; set; } = true;
+    public bool OnlyKnowledgeBaseTicketsSingle { get; set; }
 
     public int AverageCommentCharCount { get; set; }
     public double AverageImagesPerTicket { get; set; }

@@ -143,9 +143,7 @@ public class TicketRepository : ITicketRepository
     public async Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
         CancellationToken cancellationToken = default)
     {
-        var ticketIds = _context.Tickets
-            .AsNoTracking()
-            .Where(t => t.IsKnowledgeBase)
+        var ticketIds = KnowledgeBaseScope.Apply(_context.Tickets.AsNoTracking())
             .Select(t => t.Id);
 
         return await _context.TicketActions
@@ -160,7 +158,7 @@ public class TicketRepository : ITicketRepository
     public async Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
         int skip,
         int take,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         DateTime? ticketCreatedFrom = null,
         DateTime? ticketCreatedTo = null,
         CancellationToken cancellationToken = default)
@@ -170,7 +168,7 @@ public class TicketRepository : ITicketRepository
             return Array.Empty<TicketFirstCommentRow>();
         }
 
-        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+        var scopeFilter = GetFirstCommentScopeSqlFilter(onlyKnowledgeBaseScope);
         var dateFilter = BuildTicketCreatedAtSqlFilter(ticketCreatedFrom, ticketCreatedTo);
 
         var firstCommentsSql = $"""
@@ -248,7 +246,7 @@ public class TicketRepository : ITicketRepository
 
     public async Task<TicketFirstCommentRow?> GetFirstCommentByTicketNumberAsync(
         string ticketNumber,
-        bool onlyTicketsListScope = true,
+        bool? onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default)
     {
         var normalized = NormalizeTicketNumber(ticketNumber);
@@ -263,7 +261,7 @@ public class TicketRepository : ITicketRepository
             return null;
         }
 
-        if (onlyTicketsListScope && !TicketListScope.Matches(ticket))
+        if (onlyKnowledgeBaseScope is bool scope && !MatchesFirstCommentScope(ticket, scope))
         {
             return null;
         }
@@ -306,18 +304,18 @@ public class TicketRepository : ITicketRepository
 
     public async Task<FirstCommentCorpusStats> GetFirstCommentCorpusStatsAsync(
         int sampleSize,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default)
     {
         var take = Math.Clamp(sampleSize, 1, 500);
-        var charStats = await GetFirstCommentCorpusCharStatsAsync(take, onlyTicketsListScope, cancellationToken);
+        var charStats = await GetFirstCommentCorpusCharStatsAsync(take, onlyKnowledgeBaseScope, cancellationToken);
         if (charStats.SampleSize == 0)
         {
             return new FirstCommentCorpusStats();
         }
 
         var imageSampleSize = Math.Min(50, take);
-        var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, onlyTicketsListScope, cancellationToken);
+        var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, onlyKnowledgeBaseScope, cancellationToken);
         var totalImages = imageContents.Sum(content => TicketHtmlHelper.ExtractImageSources(content).Count);
 
         return new FirstCommentCorpusStats
@@ -332,10 +330,10 @@ public class TicketRepository : ITicketRepository
 
     private async Task<(int SampleSize, int AverageCharCount)> GetFirstCommentCorpusCharStatsAsync(
         int take,
-        bool onlyTicketsListScope,
+        bool onlyKnowledgeBaseScope,
         CancellationToken cancellationToken)
     {
-        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+        var scopeFilter = GetFirstCommentScopeSqlFilter(onlyKnowledgeBaseScope);
 
         var sql = $"""
             SELECT
@@ -380,7 +378,7 @@ public class TicketRepository : ITicketRepository
 
     private async Task<IReadOnlyList<string>> GetFirstCommentContentsSampleAsync(
         int take,
-        bool onlyTicketsListScope,
+        bool onlyKnowledgeBaseScope,
         CancellationToken cancellationToken)
     {
         if (take <= 0)
@@ -388,7 +386,7 @@ public class TicketRepository : ITicketRepository
             return [];
         }
 
-        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+        var scopeFilter = GetFirstCommentScopeSqlFilter(onlyKnowledgeBaseScope);
 
         var sql = $"""
             SELECT fc."Content"
@@ -428,6 +426,14 @@ public class TicketRepository : ITicketRepository
     }
 
     private sealed record TicketCreatedAtSqlFilter(string Sql, IReadOnlyList<Npgsql.NpgsqlParameter> Parameters);
+
+    private static string GetFirstCommentScopeSqlFilter(bool onlyKnowledgeBaseScope) =>
+        onlyKnowledgeBaseScope ? KnowledgeBaseScope.SqlFilter : TicketListScope.SqlFilter;
+
+    private static bool MatchesFirstCommentScope(Ticket ticket, bool onlyKnowledgeBaseScope) =>
+        onlyKnowledgeBaseScope
+            ? KnowledgeBaseScope.Matches(ticket)
+            : TicketListScope.Matches(ticket);
 
     private static TicketCreatedAtSqlFilter BuildTicketCreatedAtSqlFilter(
         DateTime? ticketCreatedFrom,

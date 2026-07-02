@@ -19,17 +19,17 @@ public interface ITicketRepository
     Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
         int skip,
         int take,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         DateTime? ticketCreatedFrom = null,
         DateTime? ticketCreatedTo = null,
         CancellationToken cancellationToken = default);
     Task<FirstCommentCorpusStats> GetFirstCommentCorpusStatsAsync(
         int sampleSize,
-        bool onlyTicketsListScope = true,
+        bool onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default);
     Task<TicketFirstCommentRow?> GetFirstCommentByTicketNumberAsync(
         string ticketNumber,
-        bool onlyTicketsListScope = true,
+        bool? onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default);
     Task<TicketFirstCommentRow?> GetFirstCommentByTicketIdAsync(
         int ticketId,

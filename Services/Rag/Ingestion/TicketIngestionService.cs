@@ -166,7 +166,7 @@ public class TicketIngestionService : ITicketIngestionService
                 {
                     ProcessImages = processImages,
                     SkipAlreadyIndexed = false,
-                    OnlyTicketsListScope = false,
+                    OnlyKnowledgeBaseTickets = null,
                     RebuildAll = true
                 },
                 cancellationToken);

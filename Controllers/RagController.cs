@@ -130,12 +130,12 @@ public class RagController : Controller
     [HttpGet]
     public async Task<IActionResult> FirstCommentCorpusStats(
         CancellationToken cancellationToken,
-        bool onlyTicketsListScope = true)
+        bool onlyKnowledgeBaseScope = false)
     {
         const int sampleSize = 200;
         var corpus = await _firstCommentIndexService.GetCorpusStatsAsync(
             sampleSize,
-            onlyTicketsListScope,
+            onlyKnowledgeBaseScope,
             cancellationToken);
         return Json(new
         {
@@ -166,7 +166,7 @@ public class RagController : Controller
                 RebuildAll = model.RebuildAll,
                 SkipAlreadyIndexed = model.SkipAlreadyIndexed,
                 ProcessImages = model.ProcessImages,
-                OnlyTicketsListScope = model.OnlyTicketsListScope,
+                OnlyKnowledgeBaseTickets = model.OnlyKnowledgeBaseTickets,
                 MaxTickets = model.MaxTickets,
                 TicketCreatedFrom = model.TicketCreatedFrom,
                 TicketCreatedTo = model.TicketCreatedTo
@@ -195,7 +195,7 @@ public class RagController : Controller
             {
                 SkipAlreadyIndexed = model.SkipAlreadyIndexedSingle,
                 ProcessImages = model.ProcessImagesSingle,
-                OnlyTicketsListScope = model.OnlyTicketsListScopeSingle,
+                OnlyKnowledgeBaseTickets = model.OnlyKnowledgeBaseTicketsSingle,
                 RebuildAll = model.RebuildAllSingle
             },
             cancellationToken);
