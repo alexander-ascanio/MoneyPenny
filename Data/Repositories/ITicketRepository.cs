@@ -34,4 +34,7 @@ public interface ITicketRepository
     Task<TicketFirstCommentRow?> GetFirstCommentByTicketIdAsync(
         int ticketId,
         CancellationToken cancellationToken = default);
+    Task<HashSet<int>> GetTicketIdsInNonKnowledgeBaseScopeAsync(
+        IEnumerable<int> ticketIds,
+        CancellationToken cancellationToken = default);
 }

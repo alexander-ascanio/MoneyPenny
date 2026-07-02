@@ -236,7 +236,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             if (options.OnlyKnowledgeBaseTickets is true && !KnowledgeBaseScope.Matches(ticket))
             {
                 return SingleTicketError(
-                    $"El ticket #{normalized} no pertenece al ámbito Knowledge Base (KB, TELEMATEL INTERNO o grupo Knowledge Base).");
+                    $"El ticket #{normalized} no pertenece al ámbito Knowledge Base (IsKnowledgeBase = true o grupo «Telematel – Knowledge Base»).");
             }
 
             if (options.OnlyKnowledgeBaseTickets is false && !TicketListScope.Matches(ticket))

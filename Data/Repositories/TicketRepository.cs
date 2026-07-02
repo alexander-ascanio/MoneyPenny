@@ -279,6 +279,24 @@ public class TicketRepository : ITicketRepository
             : await BuildFirstCommentRowAsync(ticket, cancellationToken);
     }
 
+    public async Task<HashSet<int>> GetTicketIdsInNonKnowledgeBaseScopeAsync(
+        IEnumerable<int> ticketIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = ticketIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return [];
+        }
+
+        var allowed = await NonKnowledgeBaseScope.Apply(_context.Tickets.AsNoTracking())
+            .Where(t => ids.Contains(t.Id))
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+
+        return allowed.ToHashSet();
+    }
+
     private async Task<TicketFirstCommentRow?> BuildFirstCommentRowAsync(
         Ticket ticket,
         CancellationToken cancellationToken)

@@ -11,17 +11,20 @@ public class PgVectorRetrievalService : IRetrievalService
 {
     private readonly IEmbeddingService _embeddingService;
     private readonly IVectorRepository _vectorRepository;
+    private readonly ITicketRepository _ticketRepository;
     private readonly RagOptions _options;
     private readonly ILogger<PgVectorRetrievalService> _logger;
 
     public PgVectorRetrievalService(
         IEmbeddingService embeddingService,
         IVectorRepository vectorRepository,
+        ITicketRepository ticketRepository,
         IOptions<RagOptions> options,
         ILogger<PgVectorRetrievalService> logger)
     {
         _embeddingService = embeddingService;
         _vectorRepository = vectorRepository;
+        _ticketRepository = ticketRepository;
         _options = options.Value;
         _logger = logger;
     }
@@ -33,7 +36,9 @@ public class PgVectorRetrievalService : IRetrievalService
         CancellationToken cancellationToken = default)
     {
         var queryVector = await _embeddingService.CreateEmbeddingAsync(firstCommentText, cancellationToken);
-        var fetchLimit = Math.Max(_options.TopK * 5, _options.TopK);
+        var fetchLimit = knowledgeBaseOnly
+            ? Math.Max(_options.TopK * 5, _options.TopK)
+            : Math.Max(_options.TopK * 20, _options.TopK);
         var results = await SearchAndDedupeAsync(
             queryVector,
             fetchLimit,
@@ -84,8 +89,19 @@ public class PgVectorRetrievalService : IRetrievalService
             ticketId: null,
             excludeTicketId: excludeTicketId,
             source: DocumentChunkSource.ClientFirstComment,
-            isKnowledgeBase: knowledgeBaseOnly ? true : null,
+            isKnowledgeBase: knowledgeBaseOnly,
             cancellationToken);
+
+        if (!knowledgeBaseOnly)
+        {
+            var allowedTicketIds = await _ticketRepository.GetTicketIdsInNonKnowledgeBaseScopeAsync(
+                raw.Select(item => item.Chunk.TicketId),
+                cancellationToken);
+
+            raw = raw
+                .Where(item => allowedTicketIds.Contains(item.Chunk.TicketId))
+                .ToList();
+        }
 
         return raw
             .GroupBy(item => item.Chunk.TicketId)
