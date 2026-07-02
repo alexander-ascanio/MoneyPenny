@@ -41,4 +41,6 @@ public class RagResponseViewModel
     public string? ErrorMessage { get; init; }
     public TokenUsageEstimateViewModel? GptEstimate { get; set; }
     public TokenUsageEstimateViewModel? LastRunEstimate { get; set; }
+    /// <summary>Texto enviado a GPT como contexto de tickets similares (si difiere del listado UI).</summary>
+    public string? GptContextText { get; init; }
 }

@@ -88,6 +88,10 @@ public class RagOrchestrator : IRagOrchestrator
         }
 
         var knowledgeBaseSolution = TryBuildKnowledgeBaseSolution(request.KnowledgeBaseOnly, contextItems);
+        var gptContextText = await BuildGptContextTextAsync(
+            request.KnowledgeBaseOnly,
+            contextItems,
+            cancellationToken);
 
         if (!request.GenerateGptAnswer)
         {
@@ -98,14 +102,14 @@ public class RagOrchestrator : IRagOrchestrator
                 TicketId = request.TicketId,
                 TicketNumber = request.TicketNumber,
                 KnowledgeBaseOnly = request.KnowledgeBaseOnly,
-                KnowledgeBaseSolution = knowledgeBaseSolution
+                KnowledgeBaseSolution = knowledgeBaseSolution,
+                GptContextText = gptContextText
             };
         }
 
-        var context = BuildGptContext(contextItems);
         var answer = await _generationService.GenerateAnswerAsync(
             DefaultGenerationQuestion,
-            context,
+            gptContextText,
             request.TicketNumber,
             firstComment.Content,
             cancellationToken);
@@ -128,8 +132,30 @@ public class RagOrchestrator : IRagOrchestrator
             TicketId = request.TicketId,
             TicketNumber = request.TicketNumber,
             KnowledgeBaseOnly = request.KnowledgeBaseOnly,
-            KnowledgeBaseSolution = knowledgeBaseSolution
+            KnowledgeBaseSolution = knowledgeBaseSolution,
+            GptContextText = gptContextText
         };
+    }
+
+    private async Task<string> BuildGptContextTextAsync(
+        bool knowledgeBaseOnly,
+        IReadOnlyList<RagContextItemViewModel> contextItems,
+        CancellationToken cancellationToken)
+    {
+        if (contextItems.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (knowledgeBaseOnly)
+        {
+            return BuildGptContext(contextItems);
+        }
+
+        return await SimilarTicketThreadContextBuilder.BuildAsync(
+            contextItems,
+            _ticketRepository,
+            cancellationToken);
     }
 
     private static RagKnowledgeBaseSolutionViewModel? TryBuildKnowledgeBaseSolution(

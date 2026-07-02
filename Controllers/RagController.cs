@@ -87,7 +87,8 @@ public class RagController : Controller
             userId,
             cancellationToken);
 
-        var contextText = string.Join("\n---\n", response.ContextItems.Select(c => c.Content));
+        var contextText = response.GptContextText
+            ?? string.Join("\n---\n", response.ContextItems.Select(c => c.Content));
         var contextLoadEstimate = _tokenEstimateService.EstimateRagContextLoad(response.FirstComment?.Content);
         var gptEstimate = _tokenEstimateService.EstimateRagGptAnswer(
             contextText,

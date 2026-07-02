@@ -8,7 +8,7 @@ namespace MoneyPenny.Services.Rag.Generation;
 
 public class OpenAiGenerationService : IGenerationService
 {
-    public const string PromptVersion = "v2-current-ticket-comment";
+    public const string PromptVersion = "v3-similar-ticket-threads";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly RagOptions _options;

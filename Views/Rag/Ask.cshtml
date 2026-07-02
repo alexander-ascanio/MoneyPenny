@@ -122,7 +122,12 @@
                                     <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
                                 </summary>
                                 <div class="rag-context-item-body">
-                                    <pre class="rag-context-snippet mb-0">@item.Content</pre>
+                                    @{
+                                        var contextSnippet = Model.KnowledgeBaseOnly
+                                            ? KnowledgeBaseContextDisplayHelper.Format(item.Content) ?? item.Content
+                                            : item.Content;
+                                    }
+                                    <pre class="rag-context-snippet mb-0">@contextSnippet</pre>
                                 </div>
                             </details>
                         }
