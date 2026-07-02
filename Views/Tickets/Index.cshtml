@@ -108,12 +108,42 @@
                     </div>
 
                     <div class="tickets-filter-item">
-                        <label class="tickets-filter-label" for="filter-group">Grupo:</label>
-                        <select id="filter-group" name="group" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                        <label class="tickets-filter-label" for="filter-is-knowledge-base">IsKnowledgeBase:</label>
+                        <select id="filter-is-knowledge-base" name="isKnowledgeBase" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, ""))
+                            {
+                                <option value="" selected>Listado habitual</option>
+                            }
+                            else
+                            {
+                                <option value="">Listado habitual</option>
+                            }
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "true"))
+                            {
+                                <option value="true" selected>Sí</option>
+                            }
+                            else
+                            {
+                                <option value="true">Sí</option>
+                            }
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "false"))
+                            {
+                                <option value="false" selected>No</option>
+                            }
+                            else
+                            {
+                                <option value="false">No</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-group-name">GroupName:</label>
+                        <select id="filter-group-name" name="groupName" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                             <option value="">Todos</option>
                             @foreach (var option in Model.FilterOptions.Groups)
                             {
-                                if (IsSelected(Model.Filters.Group, option))
+                                if (IsSelected(Model.Filters.GroupName, option))
                                 {
                                     <option value="@option" selected>@option</option>
                                 }

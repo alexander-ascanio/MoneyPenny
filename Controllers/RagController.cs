@@ -89,7 +89,9 @@ public class RagController : Controller
 
         var contextText = string.Join("\n---\n", response.ContextItems.Select(c => c.Content));
         var contextLoadEstimate = _tokenEstimateService.EstimateRagContextLoad(response.FirstComment?.Content);
-        var gptEstimate = _tokenEstimateService.EstimateRagGptAnswer(contextText);
+        var gptEstimate = _tokenEstimateService.EstimateRagGptAnswer(
+            contextText,
+            response.FirstComment?.Content);
         var combinedEstimate = _tokenEstimateService.Combine(contextLoadEstimate, gptEstimate);
 
         response.GptEstimate = TokenUsageEstimateViewModel.FromEstimate(

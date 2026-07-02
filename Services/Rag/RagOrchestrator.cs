@@ -1,4 +1,5 @@
 using MoneyPenny.Data.Repositories;
+using MoneyPenny.Helpers;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Generation;
@@ -86,6 +87,8 @@ public class RagOrchestrator : IRagOrchestrator
             });
         }
 
+        var knowledgeBaseSolution = TryBuildKnowledgeBaseSolution(request.KnowledgeBaseOnly, contextItems);
+
         if (!request.GenerateGptAnswer)
         {
             return new RagResponseViewModel
@@ -94,7 +97,8 @@ public class RagOrchestrator : IRagOrchestrator
                 FirstComment = firstComment,
                 TicketId = request.TicketId,
                 TicketNumber = request.TicketNumber,
-                KnowledgeBaseOnly = request.KnowledgeBaseOnly
+                KnowledgeBaseOnly = request.KnowledgeBaseOnly,
+                KnowledgeBaseSolution = knowledgeBaseSolution
             };
         }
 
@@ -102,13 +106,15 @@ public class RagOrchestrator : IRagOrchestrator
         var answer = await _generationService.GenerateAnswerAsync(
             DefaultGenerationQuestion,
             context,
+            request.TicketNumber,
+            firstComment.Content,
             cancellationToken);
 
         await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
         {
             UserId = userId,
             TicketId = request.TicketId,
-            Question = DefaultGenerationQuestion,
+            Question = $"{DefaultGenerationQuestion} (ticket #{request.TicketNumber})",
             Answer = answer,
             PromptVersion = OpenAiGenerationService.PromptVersion
         }, cancellationToken);
@@ -121,7 +127,33 @@ public class RagOrchestrator : IRagOrchestrator
             FirstComment = firstComment,
             TicketId = request.TicketId,
             TicketNumber = request.TicketNumber,
-            KnowledgeBaseOnly = request.KnowledgeBaseOnly
+            KnowledgeBaseOnly = request.KnowledgeBaseOnly,
+            KnowledgeBaseSolution = knowledgeBaseSolution
+        };
+    }
+
+    private static RagKnowledgeBaseSolutionViewModel? TryBuildKnowledgeBaseSolution(
+        bool knowledgeBaseOnly,
+        IReadOnlyList<RagContextItemViewModel> contextItems)
+    {
+        if (!knowledgeBaseOnly || contextItems.Count == 0)
+        {
+            return null;
+        }
+
+        var bestMatch = contextItems[0];
+        var solutionText = KnowledgeBaseSolutionExtractor.Extract(bestMatch.Content);
+        if (string.IsNullOrWhiteSpace(solutionText))
+        {
+            return null;
+        }
+
+        return new RagKnowledgeBaseSolutionViewModel
+        {
+            TicketId = bestMatch.TicketId,
+            TicketNumber = bestMatch.TicketNumber,
+            Score = bestMatch.Score,
+            Text = solutionText
         };
     }
 

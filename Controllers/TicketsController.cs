@@ -29,10 +29,12 @@ public class TicketsController : Controller
         string? search,
         string? status,
         string? group,
+        string? groupName,
         string? customer,
         string? product,
         string? estado,
         string? priority,
+        string? isKnowledgeBase,
         string? limit,
         CancellationToken cancellationToken)
     {
@@ -40,11 +42,12 @@ public class TicketsController : Controller
         {
             Search = search,
             StatusText = status,
-            Group = group,
+            GroupName = string.IsNullOrWhiteSpace(groupName) ? group : groupName,
             Customer = customer,
             Product = product,
             Status = estado,
             Priority = priority,
+            IsKnowledgeBase = isKnowledgeBase,
             ResultLimit = string.IsNullOrWhiteSpace(limit) ? "50" : limit
         };
 

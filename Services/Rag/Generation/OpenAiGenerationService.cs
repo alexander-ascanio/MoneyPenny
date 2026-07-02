@@ -8,7 +8,7 @@ namespace MoneyPenny.Services.Rag.Generation;
 
 public class OpenAiGenerationService : IGenerationService
 {
-    public const string PromptVersion = "v1-openai-chat";
+    public const string PromptVersion = "v2-current-ticket-comment";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly RagOptions _options;
@@ -30,6 +30,8 @@ public class OpenAiGenerationService : IGenerationService
     public async Task<string> GenerateAnswerAsync(
         string question,
         string context,
+        string? currentTicketNumber = null,
+        string? currentTicketFirstComment = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(question))
@@ -37,10 +39,19 @@ public class OpenAiGenerationService : IGenerationService
             throw new ArgumentException("La pregunta no puede estar vacía.", nameof(question));
         }
 
+        if (string.IsNullOrWhiteSpace(currentTicketFirstComment))
+        {
+            throw new ArgumentException(
+                "El comentario #1 indexado del ticket actual es obligatorio para generar la respuesta.",
+                nameof(currentTicketFirstComment));
+        }
+
         var systemPrompt = await LoadPromptFileAsync(_options.SystemPromptFile, cancellationToken);
         var userPromptTemplate = await LoadPromptFileAsync(_options.TicketQaPromptFile, cancellationToken);
         var userPrompt = userPromptTemplate
-            .Replace("{{context}}", string.IsNullOrWhiteSpace(context) ? "(Sin contexto recuperado)" : context, StringComparison.Ordinal)
+            .Replace("{{ticketNumber}}", string.IsNullOrWhiteSpace(currentTicketNumber) ? "N/D" : currentTicketNumber.Trim(), StringComparison.Ordinal)
+            .Replace("{{currentTicketComment}}", currentTicketFirstComment.Trim(), StringComparison.Ordinal)
+            .Replace("{{context}}", string.IsNullOrWhiteSpace(context) ? "(Sin tickets similares recuperados)" : context, StringComparison.Ordinal)
             .Replace("{{question}}", question.Trim(), StringComparison.Ordinal);
 
         var payload = new OpenAiChatRequest

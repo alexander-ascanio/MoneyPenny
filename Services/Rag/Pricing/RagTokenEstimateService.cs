@@ -156,13 +156,14 @@ public class RagTokenEstimateService : IRagTokenEstimateService
             ]);
     }
 
-    public TokenUsageEstimate EstimateRagGptAnswer(string? contextText)
+    public TokenUsageEstimate EstimateRagGptAnswer(string? contextText, string? currentTicketFirstComment = null)
     {
         var contextTokens = string.IsNullOrWhiteSpace(contextText)
             ? _options.RagAskEstimatedContextTokens
             : EstimateTokensFromText(contextText);
+        var currentTicketTokens = EstimateTokensFromText(currentTicketFirstComment);
         var questionTokens = EstimateTokensFromText(RagOrchestrator.DefaultGenerationQuestion);
-        var chatInput = questionTokens + contextTokens + _options.RagAskEstimatedSystemTokens;
+        var chatInput = questionTokens + contextTokens + currentTicketTokens + _options.RagAskEstimatedSystemTokens;
         var chatOutput = _options.ChatEstimatedOutputTokens;
 
         return BuildEstimate(

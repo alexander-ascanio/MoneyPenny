@@ -20,11 +20,20 @@ public class RagFirstCommentViewModel
     public string? ImageExtractionWarning { get; init; }
 }
 
+public class RagKnowledgeBaseSolutionViewModel
+{
+    public int TicketId { get; init; }
+    public string TicketNumber { get; init; } = string.Empty;
+    public double Score { get; init; }
+    public string Text { get; init; } = string.Empty;
+}
+
 public class RagResponseViewModel
 {
     public string Answer { get; init; } = string.Empty;
     public bool HasGptAnswer { get; init; }
     public IReadOnlyList<RagContextItemViewModel> ContextItems { get; init; } = [];
+    public RagKnowledgeBaseSolutionViewModel? KnowledgeBaseSolution { get; init; }
     public RagFirstCommentViewModel? FirstComment { get; init; }
     public int TicketId { get; init; }
     public string? TicketNumber { get; init; }

@@ -15,6 +15,6 @@ public interface IRagTokenEstimateService
         bool processImages,
         double averageImagesPerTicket = 0);
     TokenUsageEstimate EstimateRagContextLoad(string? firstCommentText);
-    TokenUsageEstimate EstimateRagGptAnswer(string? contextText);
+    TokenUsageEstimate EstimateRagGptAnswer(string? contextText, string? currentTicketFirstComment = null);
     TokenUsageEstimate Combine(params TokenUsageEstimate[] estimates);
 }

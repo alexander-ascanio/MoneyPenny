@@ -18,7 +18,7 @@ public class TicketRepository : ITicketRepository
         TicketFilters filters,
         CancellationToken cancellationToken = default)
     {
-        var query = TicketListScope.Apply(_context.Tickets.AsNoTracking());
+        var query = ApplyTicketScope(_context.Tickets.AsNoTracking(), filters.IsKnowledgeBaseFilter);
 
         if (!string.IsNullOrWhiteSpace(filters.Search))
         {
@@ -37,9 +37,9 @@ public class TicketRepository : ITicketRepository
             query = query.Where(t => t.Status == status);
         }
 
-        if (!string.IsNullOrWhiteSpace(filters.Group))
+        if (!string.IsNullOrWhiteSpace(filters.GroupName))
         {
-            query = query.Where(t => t.Group == filters.Group);
+            query = query.Where(t => t.Group == filters.GroupName);
         }
 
         if (!string.IsNullOrWhiteSpace(filters.Customer))
@@ -69,9 +69,11 @@ public class TicketRepository : ITicketRepository
         return await ordered.ToListAsync(cancellationToken);
     }
 
-    public async Task<TicketFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
+    public async Task<TicketFilterOptions> GetFilterOptionsAsync(
+        bool? isKnowledgeBase = null,
+        CancellationToken cancellationToken = default)
     {
-        var query = TicketListScope.Apply(_context.Tickets.AsNoTracking());
+        var query = ApplyTicketScope(_context.Tickets.AsNoTracking(), isKnowledgeBase);
 
         return new TicketFilterOptions
         {
@@ -82,6 +84,14 @@ public class TicketRepository : ITicketRepository
             Priorities = await GetDistinctAsync(query, t => t.Priority, cancellationToken)
         };
     }
+
+    private static IQueryable<Ticket> ApplyTicketScope(IQueryable<Ticket> query, bool? isKnowledgeBase) =>
+        isKnowledgeBase switch
+        {
+            true => KnowledgeBaseScope.Apply(query),
+            false => TicketListScope.Apply(query),
+            _ => TicketListScope.Apply(query)
+        };
 
     public Task<Ticket?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

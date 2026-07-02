@@ -1,10 +1,15 @@
-Contexto recuperado:
+Ticket actual (#{{ticketNumber}}) — comentario #1 indexado:
+{{currentTicketComment}}
+
+Contexto recuperado (tickets con problema similar):
 {{context}}
 
-Pregunta del usuario:
+Pregunta:
 {{question}}
 
 Instrucciones:
-- Responde basándote solo en el contexto.
+- El comentario #1 del ticket actual describe el problema a resolver.
+- Usa el contexto recuperado como referencia de casos similares.
+- Responde basándote en el ticket actual y en el contexto; no inventes pasos sin apoyo.
 - Cita el número de ticket cuando sea relevante.
-- Si la respuesta no está en el contexto, di que no hay información suficiente.
+- Si no hay información suficiente en el contexto para proponer una resolución concreta, indícalo explícitamente.

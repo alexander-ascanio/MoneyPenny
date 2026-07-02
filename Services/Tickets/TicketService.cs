@@ -23,7 +23,7 @@ public class TicketService : ITicketService
     private readonly RagOptions _ragOptions;
     private readonly ILogger<TicketService> _logger;
 
-    private const string FilterOptionsCacheKey = "tickets-filter-options";
+    private const string FilterOptionsCacheKeyPrefix = "tickets-filter-options";
 
     public TicketService(
         ITicketRepository ticketRepository,
@@ -51,7 +51,7 @@ public class TicketService : ITicketService
 
         try
         {
-            var filterOptions = await GetFilterOptionsAsync(cancellationToken);
+            var filterOptions = await GetFilterOptionsAsync(filters.IsKnowledgeBaseFilter, cancellationToken);
             var tickets = await _ticketRepository.GetAllAsync(filters, cancellationToken);
             var indexedIds = (await GetIndexedTicketIdsBySourceSafeAsync(
                 DocumentChunkSource.TicketDocument,
@@ -96,22 +96,26 @@ public class TicketService : ITicketService
         }
     }
 
-    private async Task<TicketFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken)
+    private async Task<TicketFilterOptions> GetFilterOptionsAsync(
+        bool? isKnowledgeBase,
+        CancellationToken cancellationToken)
     {
-        return await _cache.GetOrCreateAsync(FilterOptionsCacheKey, async entry =>
+        var cacheKey = $"{FilterOptionsCacheKeyPrefix}:{isKnowledgeBase?.ToString() ?? "default"}";
+        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-            return await _ticketRepository.GetFilterOptionsAsync(cancellationToken);
+            return await _ticketRepository.GetFilterOptionsAsync(isKnowledgeBase, cancellationToken);
         }) ?? new TicketFilterOptions();
     }
 
     private static TicketFilterSelections ToFilterSelections(TicketFilters filters) => new()
     {
-        Group = filters.Group,
+        GroupName = filters.GroupName,
         Customer = filters.Customer,
         Product = filters.Product,
         Status = filters.Status,
         Priority = filters.Priority,
+        IsKnowledgeBase = filters.IsKnowledgeBase,
         ResultLimit = filters.ResultLimit
     };
 
