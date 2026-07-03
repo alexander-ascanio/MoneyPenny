@@ -18,6 +18,8 @@ public interface ITicketRepository
         CancellationToken cancellationToken = default);
     Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
         CancellationToken cancellationToken = default);
+    Task<HashSet<int>> GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
         int skip,
         int take,

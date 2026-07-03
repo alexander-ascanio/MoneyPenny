@@ -8,6 +8,8 @@ public class TicketListViewModel
     public TicketFilterSelections Filters { get; init; } = new();
     public TicketFilterOptions FilterOptions { get; init; } = new();
     public string? ErrorMessage { get; init; }
+    public string? SortBy { get; init; }
+    public string SortDir { get; init; } = "desc";
     public int TotalCount => Tickets.Count;
 }
 

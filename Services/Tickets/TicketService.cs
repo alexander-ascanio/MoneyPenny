@@ -60,28 +60,37 @@ public class TicketService : ITicketService
                 DocumentChunkSource.ClientFirstComment,
                 cancellationToken)).ToHashSet();
 
+            var items = tickets.Select(t => new TicketListItemViewModel
+            {
+                Id = t.Id,
+                Number = t.Number,
+                Title = t.Title,
+                Status = t.Status,
+                Priority = t.Priority,
+                Customer = t.Customer,
+                Contacts = t.Contacts,
+                TeamSupportId = t.TeamSupportId,
+                CodigoTelegestion = t.CodigoTelegestion,
+                CreatedAt = t.CreatedAt,
+                UpdatedAt = t.UpdatedAt,
+                IsFirstCommentIndexed = firstCommentIndexedIds.Contains(t.Id),
+                IsIndexed = indexedIds.Contains(t.Id)
+            }).ToList();
+
+            if (TicketSort.IsInMemorySort(filters.SortBy))
+            {
+                items = ApplyInMemorySort(items, filters.SortBy!, filters.SortDescending);
+            }
+
             return new TicketListViewModel
             {
                 Search = filters.Search,
                 StatusFilter = filters.StatusText,
                 Filters = selections,
                 FilterOptions = filterOptions,
-                Tickets = tickets.Select(t => new TicketListItemViewModel
-                {
-                    Id = t.Id,
-                    Number = t.Number,
-                    Title = t.Title,
-                    Status = t.Status,
-                    Priority = t.Priority,
-                    Customer = t.Customer,
-                    Contacts = t.Contacts,
-                    TeamSupportId = t.TeamSupportId,
-                    CodigoTelegestion = t.CodigoTelegestion,
-                    CreatedAt = t.CreatedAt,
-                    UpdatedAt = t.UpdatedAt,
-                    IsFirstCommentIndexed = firstCommentIndexedIds.Contains(t.Id),
-                    IsIndexed = indexedIds.Contains(t.Id)
-                }).ToList()
+                SortBy = filters.SortBy,
+                SortDir = filters.SortDir,
+                Tickets = items
             };
         }
         catch (PostgresException ex)
@@ -116,8 +125,29 @@ public class TicketService : ITicketService
         Status = filters.Status,
         Priority = filters.Priority,
         IsKnowledgeBase = filters.IsKnowledgeBase,
-        ResultLimit = filters.ResultLimit
+        ResultLimit = filters.ResultLimit,
+        SortBy = filters.SortBy,
+        SortDir = filters.SortDir
     };
+
+    private static List<TicketListItemViewModel> ApplyInMemorySort(
+        List<TicketListItemViewModel> items,
+        string sortBy,
+        bool descending)
+    {
+        IEnumerable<TicketListItemViewModel> ordered = sortBy.ToLowerInvariant() switch
+        {
+            TicketSort.Indexed => descending
+                ? items.OrderByDescending(t => t.IsFirstCommentIndexed).ThenByDescending(t => t.CreatedAt)
+                : items.OrderBy(t => t.IsFirstCommentIndexed).ThenByDescending(t => t.CreatedAt),
+            TicketSort.Rag => descending
+                ? items.OrderByDescending(t => t.IsIndexed).ThenByDescending(t => t.CreatedAt)
+                : items.OrderBy(t => t.IsIndexed).ThenByDescending(t => t.CreatedAt),
+            _ => items
+        };
+
+        return ordered.ToList();
+    }
 
     private static TicketListViewModel BuildErrorViewModel(
         TicketFilters filters,
@@ -127,6 +157,8 @@ public class TicketService : ITicketService
         Search = filters.Search,
         StatusFilter = filters.StatusText,
         Filters = selections,
+        SortBy = filters.SortBy,
+        SortDir = filters.SortDir,
         ErrorMessage = errorMessage
     };
 
@@ -249,7 +281,9 @@ public class TicketService : ITicketService
     {
         try
         {
-            return await _vectorRepository.GetIndexedTicketIdsBySourceAsync(source, cancellationToken);
+            return await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
+                source,
+                cancellationToken: cancellationToken);
         }
         catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
             or PostgresErrorCodes.UndefinedTable

@@ -25,6 +25,18 @@
 
     bool IsSelected(string? current, string value) =>
         string.Equals(current, value, StringComparison.Ordinal);
+
+    var effectiveSortBy = string.IsNullOrWhiteSpace(Model.SortBy) ? TicketSort.Created : Model.SortBy!;
+
+    bool IsSortActive(string column) =>
+        string.Equals(effectiveSortBy, column, StringComparison.OrdinalIgnoreCase);
+
+    string SortIconClass(string column) =>
+        !IsSortActive(column)
+            ? "bi-arrow-down-up tickets-sort-icon-muted"
+            : string.Equals(Model.SortDir, "asc", StringComparison.OrdinalIgnoreCase)
+                ? "bi-sort-up"
+                : "bi-sort-down";
 }
 
 <div class="tickets-page">
@@ -257,6 +269,8 @@
                         </select>
                     </div>
                 </div>
+                <input type="hidden" name="sortBy" id="tickets-sort-by" value="@Model.SortBy" />
+                <input type="hidden" name="sortDir" id="tickets-sort-dir" value="@Model.SortDir" />
             </div>
         </div>
     </form>
@@ -278,40 +292,67 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th class="tickets-th-resizable" data-col="number">
-                            <span class="tickets-th-label">Número</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Number) ? " is-active" : "")" data-col="number" data-sort="@TicketSort.Number">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por número">
+                                <span class="tickets-th-label">Número</span>
+                                <i class="bi @SortIconClass(TicketSort.Number) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Número" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="subject">
-                            <span class="tickets-th-label">Asunto</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Subject) ? " is-active" : "")" data-col="subject" data-sort="@TicketSort.Subject">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por asunto">
+                                <span class="tickets-th-label">Asunto</span>
+                                <i class="bi @SortIconClass(TicketSort.Subject) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Asunto" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="customer">
-                            <span class="tickets-th-label">Cliente</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Customer) ? " is-active" : "")" data-col="customer" data-sort="@TicketSort.Customer">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por cliente">
+                                <span class="tickets-th-label">Cliente</span>
+                                <i class="bi @SortIconClass(TicketSort.Customer) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Cliente" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="status">
-                            <span class="tickets-th-label">Estado</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Status) ? " is-active" : "")" data-col="status" data-sort="@TicketSort.Status">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por estado">
+                                <span class="tickets-th-label">Estado</span>
+                                <i class="bi @SortIconClass(TicketSort.Status) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Estado" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="priority">
-                            <span class="tickets-th-label">Prioridad</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Priority) ? " is-active" : "")" data-col="priority" data-sort="@TicketSort.Priority">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por prioridad">
+                                <span class="tickets-th-label">Prioridad</span>
+                                <i class="bi @SortIconClass(TicketSort.Priority) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Prioridad" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="created">
-                            <span class="tickets-th-label">Creado</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Created) ? " is-active" : "")" data-col="created" data-sort="@TicketSort.Created">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por fecha de creación">
+                                <span class="tickets-th-label">Creado</span>
+                                <i class="bi @SortIconClass(TicketSort.Created) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Creado" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable" data-col="modified">
-                            <span class="tickets-th-label">Modificado</span>
+                        <th class="tickets-th-resizable tickets-th-sortable@(IsSortActive(TicketSort.Modified) ? " is-active" : "")" data-col="modified" data-sort="@TicketSort.Modified">
+                            <button type="button" class="tickets-th-sort-btn" aria-label="Ordenar por fecha de modificación">
+                                <span class="tickets-th-label">Modificado</span>
+                                <i class="bi @SortIconClass(TicketSort.Modified) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Modificado" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable text-center" data-col="indexed">
-                            <span class="tickets-th-label">Indexado</span>
+                        <th class="tickets-th-resizable text-center tickets-th-sortable@(IsSortActive(TicketSort.Indexed) ? " is-active" : "")" data-col="indexed" data-sort="@TicketSort.Indexed">
+                            <button type="button" class="tickets-th-sort-btn tickets-th-sort-btn-center" aria-label="Ordenar por indexado">
+                                <span class="tickets-th-label">Indexado</span>
+                                <i class="bi @SortIconClass(TicketSort.Indexed) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Indexado" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable text-center" data-col="rag">
-                            <span class="tickets-th-label">RAG</span>
+                        <th class="tickets-th-resizable text-center tickets-th-sortable@(IsSortActive(TicketSort.Rag) ? " is-active" : "")" data-col="rag" data-sort="@TicketSort.Rag">
+                            <button type="button" class="tickets-th-sort-btn tickets-th-sort-btn-center" aria-label="Ordenar por RAG">
+                                <span class="tickets-th-label">RAG</span>
+                                <i class="bi @SortIconClass(TicketSort.Rag) tickets-sort-icon" aria-hidden="true"></i>
+                            </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna RAG" tabindex="0"></span>
                         </th>
                         <th class="tickets-th-resizable text-end" data-col="actions">
@@ -451,6 +492,36 @@
 
             if (typeof initTicketsColumnResize === 'function') {
                 initTicketsColumnResize('tickets-table', 'moneypenny.tickets.columnWidths');
+            }
+
+            const sortByInput = document.getElementById('tickets-sort-by');
+            const sortDirInput = document.getElementById('tickets-sort-dir');
+            const table = document.getElementById('tickets-table');
+
+            if (form && sortByInput && sortDirInput && table) {
+                table.querySelectorAll('th[data-sort]').forEach(function (th) {
+                    const btn = th.querySelector('.tickets-th-sort-btn');
+                    if (!btn) return;
+
+                    btn.addEventListener('click', function () {
+                        const column = th.dataset.sort;
+                        if (!column) return;
+
+                        if (sortByInput.value === column) {
+                            sortDirInput.value = sortDirInput.value === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            sortByInput.value = column;
+                            sortDirInput.value = (column === 'created' || column === 'modified') ? 'desc' : 'asc';
+                        }
+
+                        document.querySelector('.tickets-table-card')?.classList.add('tickets-loading');
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else {
+                            form.submit();
+                        }
+                    });
+                });
             }
         })();
     </script>

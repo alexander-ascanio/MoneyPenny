@@ -56,6 +56,11 @@ public class VectorDbContext : DbContext
             entity.ToTable("rag_query_logs");
             entity.HasKey(l => l.Id);
             entity.Property(l => l.UserId).HasMaxLength(450);
+            entity.Property(l => l.RatedByUserId).HasMaxLength(450);
+            entity.Property(l => l.ResponseType)
+                .HasConversion<int>()
+                .HasDefaultValue(RagResponseType.Gpt);
+            entity.HasIndex(l => new { l.TicketId, l.ResponseType });
         });
 
         modelBuilder.Entity<CommentImageTextCache>(entity =>

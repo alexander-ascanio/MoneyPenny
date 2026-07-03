@@ -23,6 +23,8 @@ public class RagOrchestrator : IRagOrchestrator
     public const string DefaultGenerationQuestion =
         "Propón una solución o pasos de resolución para el problema descrito en el comentario del cliente.";
 
+    public const string KnowledgeBasePromptVersion = "kb-solution-v1";
+
     private readonly IRetrievalService _retrievalService;
     private readonly IGenerationService _generationService;
     private readonly IVectorRepository _vectorRepository;
@@ -93,6 +95,12 @@ public class RagOrchestrator : IRagOrchestrator
             contextItems,
             cancellationToken);
 
+        var knowledgeBaseLog = await TrySaveKnowledgeBaseQueryLogAsync(
+            request,
+            userId,
+            knowledgeBaseSolution,
+            cancellationToken);
+
         if (!request.GenerateGptAnswer)
         {
             return new RagResponseViewModel
@@ -103,7 +111,9 @@ public class RagOrchestrator : IRagOrchestrator
                 TicketNumber = request.TicketNumber,
                 KnowledgeBaseOnly = request.KnowledgeBaseOnly,
                 KnowledgeBaseSolution = knowledgeBaseSolution,
-                GptContextText = gptContextText
+                GptContextText = gptContextText,
+                KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
+                KnowledgeBaseRating = knowledgeBaseLog?.Rating
             };
         }
 
@@ -114,14 +124,15 @@ public class RagOrchestrator : IRagOrchestrator
             firstComment.Content,
             cancellationToken);
 
-        await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
+        var gptLog = await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
         {
             UserId = userId,
             TicketId = request.TicketId,
             Question = $"{DefaultGenerationQuestion} (ticket #{request.TicketNumber})",
             Answer = answer,
-            PromptVersion = OpenAiGenerationService.PromptVersion
-        }, cancellationToken);
+            PromptVersion = OpenAiGenerationService.PromptVersion,
+            ResponseType = RagResponseType.Gpt
+        }, cancellationToken: cancellationToken);
 
         return new RagResponseViewModel
         {
@@ -133,8 +144,37 @@ public class RagOrchestrator : IRagOrchestrator
             TicketNumber = request.TicketNumber,
             KnowledgeBaseOnly = request.KnowledgeBaseOnly,
             KnowledgeBaseSolution = knowledgeBaseSolution,
-            GptContextText = gptContextText
+            GptContextText = gptContextText,
+            GptQueryLogId = gptLog.Id,
+            GptRating = gptLog.Rating,
+            KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
+            KnowledgeBaseRating = knowledgeBaseLog?.Rating
         };
+    }
+
+    private async Task<RagQueryLog?> TrySaveKnowledgeBaseQueryLogAsync(
+        AskTicketViewModel request,
+        string userId,
+        RagKnowledgeBaseSolutionViewModel? knowledgeBaseSolution,
+        CancellationToken cancellationToken)
+    {
+        if (!request.KnowledgeBaseOnly || knowledgeBaseSolution is null)
+        {
+            return null;
+        }
+
+        return await _vectorRepository.SaveQueryLogAsync(
+            new RagQueryLog
+            {
+                UserId = userId,
+                TicketId = request.TicketId,
+                Question = $"Solución Knowledge Base extraída (ticket #{request.TicketNumber})",
+                Answer = knowledgeBaseSolution.Text,
+                PromptVersion = KnowledgeBasePromptVersion,
+                ResponseType = RagResponseType.KnowledgeBase
+            },
+            reuseIfUnrated: true,
+            cancellationToken);
     }
 
     private async Task<string> BuildGptContextTextAsync(

@@ -1,0 +1,27 @@
+---
+description: Modo consulta — mensajes con «Una pregunta:» sin cambios en el proyecto
+alwaysApply: true
+---
+
+# Modo consulta («Una pregunta:»)
+
+Cuando el usuario escriba un mensaje que **empiece por** `Una pregunta:` (con o sin mayúsculas en «una»), entra en **modo consulta**.
+
+## Qué hacer
+
+- Responder con explicaciones, opiniones, recomendaciones o aclaraciones.
+- Leer el código o la configuración **solo si hace falta** para responder con precisión.
+
+## Qué no hacer
+
+- **No** modificar archivos del proyecto (código, vistas, CSS, config, migraciones, etc.).
+- **No** crear commits, PRs ni ejecutar cambios en bases de datos.
+- **No** proponer implementación salvo que el usuario lo pida explícitamente en otro mensaje (sin el prefijo de consulta).
+
+## Ejemplos
+
+- `Una pregunta: ¿qué base de datos conviene para guardar X?` → solo respuesta.
+- `Una pregunta: ¿cómo funciona el RAG aquí?` → explicar leyendo el repo si hace falta, sin editar.
+- `Añade un botón para X` → modo normal; sí se pueden hacer cambios.
+
+Si el mensaje mezcla pregunta y petición de cambio, priorizar el modo consulta **solo** para la parte marcada con `Una pregunta:`; para implementar algo, el usuario debe pedirlo sin ese prefijo o en un mensaje aparte.

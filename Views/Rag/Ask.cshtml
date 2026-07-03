@@ -24,6 +24,8 @@
     }
     else
     {
+        @Html.AntiForgeryToken()
+
         @if (Model.FirstComment is not null)
         {
             <div class="card shadow-sm mb-4">
@@ -136,6 +138,8 @@
             </div>
         </div>
 
+        <partial name="_RagRatedAnswers" model="Model.RatedAnswers" />
+
         @if (Model.KnowledgeBaseOnly)
         {
             <div class="card shadow-sm mb-4 rag-kb-solution-card">
@@ -155,6 +159,7 @@
                             @Model.KnowledgeBaseSolution.Score.ToString("P1") similitud).
                         </p>
                         <pre class="rag-context-snippet mb-0">@Model.KnowledgeBaseSolution.Text</pre>
+                        <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = Model.KnowledgeBaseQueryLogId ?? 0, Rating = Model.KnowledgeBaseRating }" />
                     }
                     else if (Model.ContextItems.Any())
                     {
@@ -177,7 +182,7 @@
             <partial name="_TokenUsageEstimate" model="Model.GptEstimate" />
         }
 
-        <form asp-action="ConsultGptAnswer" method="post" class="mb-4">
+        <form asp-action="ConsultGptAnswer" method="post" class="mb-3" id="consultGptAnswerForm">
             @Html.AntiForgeryToken()
             <input type="hidden" name="ticketId" value="@Model.TicketId" />
             <input type="hidden" name="ticketNumber" value="@Model.TicketNumber" />
@@ -185,13 +190,30 @@
             {
                 <input type="hidden" name="knowledgeBaseOnly" value="true" />
             }
-            <button type="submit" class="btn btn-primary" @(!Model.ContextItems.Any() ? "disabled" : null)>
-                <i class="bi bi-robot me-1"></i>Consultar respuesta GPT
+            <button type="submit"
+                    class="btn btn-primary"
+                    id="consultGptAnswerButton"
+                    @(!Model.ContextItems.Any() ? "disabled" : null)>
+                <span class="consult-gpt-btn-label">
+                    <i class="bi bi-robot me-1"></i>Consultar respuesta GPT
+                </span>
+                <span class="consult-gpt-btn-loading d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Consultando…
+                </span>
             </button>
             <a asp-controller="Tickets" asp-action="Details" asp-route-id="@Model.TicketId" class="btn btn-outline-secondary ms-2">
                 <i class="bi bi-arrow-left me-1"></i>Volver al ticket
             </a>
         </form>
+
+        <div id="consultGptProcessing" class="rag-gpt-processing d-none mb-4" role="status" aria-live="polite">
+            <div class="rag-gpt-processing-spinner spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="rag-gpt-processing-title">Generando respuesta GPT…</div>
+            <div class="rag-gpt-processing-subtitle text-muted small">
+                Recuperando contexto y consultando el modelo. Puede tardar unos segundos.
+            </div>
+        </div>
 
         @if (Model.HasGptAnswer)
         {
@@ -200,12 +222,154 @@
                 <partial name="_TokenUsageEstimate" model="Model.LastRunEstimate" />
             }
 
-            <div class="card shadow-sm mb-4">
+            <div class="alert alert-success d-flex align-items-center mb-4" id="gptAnswerReadyAlert" role="status">
+                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                <span>Respuesta GPT generada correctamente.</span>
+            </div>
+
+            <div class="card shadow-sm mb-4" id="gptAnswerCard">
                 <div class="card-header rag-section-header">
                     <i class="bi bi-robot me-2"></i>Respuesta GPT
                 </div>
-                <div class="card-body rag-answer">@Model.Answer</div>
+                <div class="card-body rag-answer">
+                    @Model.Answer
+                    <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = Model.GptQueryLogId ?? 0, Rating = Model.GptRating }" />
+                </div>
             </div>
         }
     }
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const consultForm = document.getElementById('consultGptAnswerForm');
+            const consultButton = document.getElementById('consultGptAnswerButton');
+            const consultProcessing = document.getElementById('consultGptProcessing');
+            const gptAnswerReadyAlert = document.getElementById('gptAnswerReadyAlert');
+
+            if (consultForm && consultButton) {
+                consultForm.addEventListener('submit', function () {
+                    const label = consultButton.querySelector('.consult-gpt-btn-label');
+                    const loading = consultButton.querySelector('.consult-gpt-btn-loading');
+
+                    consultButton.disabled = true;
+                    label?.classList.add('d-none');
+                    loading?.classList.remove('d-none');
+                    consultProcessing?.classList.remove('d-none');
+                    consultProcessing?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            }
+
+            if (gptAnswerReadyAlert) {
+                gptAnswerReadyAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            const rateUrl = '@Url.Action("RateAnswer", "Rag")';
+            const ratingClear = @MoneyPenny.Models.Rag.RagQueryLog.RatingClear;
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenInput?.value ?? '';
+
+            function setRatingButtons(container, rating) {
+                container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                    const btnRating = Number(btn.dataset.rating);
+                    const isActive = rating !== null && rating !== ratingClear && btnRating === rating;
+                    btn.classList.toggle('active', isActive);
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
+
+            function setFeedback(feedback, message, visible) {
+                if (!feedback) {
+                    return;
+                }
+
+                feedback.textContent = message;
+                feedback.hidden = !visible;
+            }
+
+            function updateRatedAnswersSection(removedItem) {
+                const list = document.getElementById('rag-rated-answers-list');
+                const countBadge = document.getElementById('rag-rated-answers-count');
+                const card = document.getElementById('rag-rated-answers-card');
+
+                if (!list || !removedItem || !list.contains(removedItem)) {
+                    return;
+                }
+
+                removedItem.remove();
+                const remaining = list.querySelectorAll('.rag-rated-answer-item').length;
+
+                if (countBadge) {
+                    countBadge.textContent = String(remaining);
+                }
+
+                if (remaining === 0 && card) {
+                    card.remove();
+                }
+            }
+
+            document.querySelectorAll('.rag-answer-rating').forEach(function (container) {
+                const queryLogId = container.dataset.queryLogId;
+                const feedback = container.querySelector('.rag-rating-feedback');
+
+                container.querySelectorAll('.rag-rating-btn').forEach(function (button) {
+                    button.addEventListener('click', async function () {
+                        if (!queryLogId) {
+                            return;
+                        }
+
+                        const requestedRating = button.classList.contains('active')
+                            ? ratingClear
+                            : Number(button.dataset.rating);
+
+                        const formData = new FormData();
+                        formData.append('queryLogId', queryLogId);
+                        formData.append('rating', String(requestedRating));
+                        formData.append('__RequestVerificationToken', token);
+
+                        container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                            btn.disabled = true;
+                        });
+
+                        try {
+                            const response = await fetch(rateUrl, {
+                                method: 'POST',
+                                body: formData,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('No se pudo guardar la valoración');
+                            }
+
+                            const ratedItem = container.closest('.rag-rated-answer-item');
+
+                            if (requestedRating === ratingClear) {
+                                setRatingButtons(container, ratingClear);
+                                setFeedback(feedback, 'Valoración eliminada', true);
+                                updateRatedAnswersSection(ratedItem);
+                            } else {
+                                setRatingButtons(container, requestedRating);
+                                setFeedback(feedback, 'Gracias por tu valoración', true);
+
+                                if (ratedItem) {
+                                    ratedItem.classList.toggle('rag-rated-answer-positive', requestedRating > 0);
+                                    ratedItem.querySelector('.rag-rated-answer-text')?.classList.toggle(
+                                        'rag-rated-answer-text-negative',
+                                        requestedRating < 0);
+                                }
+                            }
+                        } catch {
+                            setFeedback(feedback, 'No se pudo guardar la valoración', true);
+                        } finally {
+                            container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                                btn.disabled = false;
+                            });
+                        }
+                    });
+                });
+            });
+        })();
+    </script>
+}

@@ -57,7 +57,10 @@ public class TicketRepository : ITicketRepository
             query = query.Where(t => t.Priority == filters.Priority);
         }
 
-        IQueryable<Ticket> ordered = query.OrderByDescending(t => t.CreatedAt);
+        IQueryable<Ticket> ordered = TicketSort.Apply(
+            query,
+            filters.SortBy,
+            filters.SortDescending);
 
         ordered = filters.ResultLimit switch
         {
@@ -133,36 +136,24 @@ public class TicketRepository : ITicketRepository
         bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default)
     {
-        var tickets = _context.Tickets.AsNoTracking();
-        if (onlyTicketsListScope)
-        {
-            tickets = TicketListScope.Apply(tickets);
-        }
-
-        var ticketIds = tickets.Select(t => t.Id);
-
-        return await _context.TicketActions
-            .AsNoTracking()
-            .Where(a => a.Content != null && a.Content != "")
-            .Where(a => ticketIds.Contains(a.TicketId))
-            .Select(a => a.TicketId)
-            .Distinct()
-            .CountAsync(cancellationToken);
+        var scopeFilter = onlyTicketsListScope ? TicketListScope.SqlFilter : string.Empty;
+        return await CountFirstCommentsInScopeAsync(scopeFilter, cancellationToken);
     }
 
     public async Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
         CancellationToken cancellationToken = default)
     {
-        var ticketIds = KnowledgeBaseScope.Apply(_context.Tickets.AsNoTracking())
-            .Select(t => t.Id);
+        var ticketIds = await GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(cancellationToken);
+        return ticketIds.Count;
+    }
 
-        return await _context.TicketActions
-            .AsNoTracking()
-            .Where(a => a.Content != null && a.Content != "")
-            .Where(a => ticketIds.Contains(a.TicketId))
-            .Select(a => a.TicketId)
-            .Distinct()
-            .CountAsync(cancellationToken);
+    public async Task<HashSet<int>> GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var ids = await GetFirstCommentTicketIdsInScopeAsync(
+            KnowledgeBaseScope.SqlFilter,
+            cancellationToken);
+        return ids.ToHashSet();
     }
 
     public async Task<IReadOnlyList<TicketFirstCommentRow>> GetFirstCommentsPageAsync(
@@ -462,6 +453,82 @@ public class TicketRepository : ITicketRepository
         onlyKnowledgeBaseScope
             ? KnowledgeBaseScope.Matches(ticket)
             : TicketListScope.Matches(ticket);
+
+    private static string BuildFirstCommentDistinctOnSql(string scopeFilter, string dateFilterSql = "") =>
+        $"""
+            SELECT DISTINCT ON (ta."TicketId")
+                ta."TicketId"
+            FROM ticket_actions ta
+            INNER JOIN tickets t ON t."Id" = ta."TicketId"
+            WHERE ta."Content" IS NOT NULL AND ta."Content" <> ''
+            {scopeFilter}
+            {dateFilterSql}
+            ORDER BY ta."TicketId", ta."CreatedAt" ASC, ta."Id" ASC
+            """;
+
+    private async Task<int> CountFirstCommentsInScopeAsync(
+        string scopeFilter,
+        CancellationToken cancellationToken)
+    {
+        var sql = $"""
+            SELECT COUNT(*)
+            FROM (
+                {BuildFirstCommentDistinctOnSql(scopeFilter)}
+            ) first_comments
+            """;
+
+        return await ExecuteScalarCountAsync(sql, [], cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<int>> GetFirstCommentTicketIdsInScopeAsync(
+        string scopeFilter,
+        CancellationToken cancellationToken)
+    {
+        var sql = BuildFirstCommentDistinctOnSql(scopeFilter);
+        var ids = new List<int>();
+
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            await using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                ids.Add(reader.GetInt32(0));
+            }
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+
+        return ids;
+    }
+
+    private async Task<int> ExecuteScalarCountAsync(
+        string sql,
+        IReadOnlyList<Npgsql.NpgsqlParameter> parameters,
+        CancellationToken cancellationToken)
+    {
+        await _context.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            await using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = sql;
+            foreach (var parameter in parameters)
+            {
+                command.Parameters.Add(parameter);
+            }
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is null or DBNull ? 0 : Convert.ToInt32(result);
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
+        }
+    }
 
     private static TicketCreatedAtSqlFilter BuildTicketCreatedAtSqlFilter(
         DateTime? ticketCreatedFrom,

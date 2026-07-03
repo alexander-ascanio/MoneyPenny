@@ -52,14 +52,17 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             cancellationToken);
         var kbTotal = await _ticketRepository.CountKnowledgeBaseTicketsWithFirstCommentAsync(
             cancellationToken);
+        var kbScopedTicketIds = await _ticketRepository.GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(
+            cancellationToken);
         var indexed = await _vectorRepository.CountIndexedTicketsBySourceAsync(
             DocumentChunkSource.ClientFirstComment,
             isKnowledgeBase: false,
             cancellationToken);
-        var kbIndexed = await _vectorRepository.CountIndexedTicketsBySourceAsync(
+        var kbIndexedIds = await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
             DocumentChunkSource.ClientFirstComment,
             isKnowledgeBase: true,
             cancellationToken);
+        var kbIndexed = kbIndexedIds.Count(kbScopedTicketIds.Contains);
 
         return new FirstCommentIndexCounts
         {
@@ -91,7 +94,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         var alreadyIndexed = options.SkipAlreadyIndexed && !options.RebuildAll
             ? (await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
                 DocumentChunkSource.ClientFirstComment,
-                cancellationToken)).ToHashSet()
+                cancellationToken: cancellationToken)).ToHashSet()
             : [];
 
         var batchSize = Math.Max(1, _options.FirstCommentIndexBatchSize);
@@ -236,7 +239,8 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             if (options.OnlyKnowledgeBaseTickets is true && !KnowledgeBaseScope.Matches(ticket))
             {
                 return SingleTicketError(
-                    $"El ticket #{normalized} no pertenece al ámbito Knowledge Base (IsKnowledgeBase = true o grupo «Telematel – Knowledge Base»).");
+                    $"El ticket #{normalized} no pertenece al ámbito Knowledge Base " +
+                    $"(IsKnowledgeBase = true, grupo «{KnowledgeBaseScope.KnowledgeBaseGroup}» y cliente «{KnowledgeBaseScope.KnowledgeBaseCustomer}»).");
             }
 
             if (options.OnlyKnowledgeBaseTickets is false && !TicketListScope.Matches(ticket))

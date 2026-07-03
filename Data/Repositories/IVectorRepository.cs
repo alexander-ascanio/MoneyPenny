@@ -18,6 +18,7 @@ public interface IVectorRepository
     Task<IReadOnlyList<int>> GetIndexedTicketIdsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<int>> GetIndexedTicketIdsBySourceAsync(
         DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default);
     Task<int> CountIndexedTicketsBySourceAsync(
         DocumentChunkSource source,
@@ -38,5 +39,17 @@ public interface IVectorRepository
         int ticketId,
         DocumentChunkSource source,
         CancellationToken cancellationToken = default);
-    Task SaveQueryLogAsync(RagQueryLog log, CancellationToken cancellationToken = default);
+    Task<RagQueryLog> SaveQueryLogAsync(
+        RagQueryLog log,
+        bool reuseIfUnrated = false,
+        CancellationToken cancellationToken = default);
+    Task<bool> RateQueryLogAsync(
+        int queryLogId,
+        string userId,
+        short rating,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RagQueryLog>> GetRatedQueryLogsByTicketAsync(
+        int ticketId,
+        RagResponseType responseType,
+        CancellationToken cancellationToken = default);
 }

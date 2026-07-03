@@ -36,6 +36,8 @@ public class TicketsController : Controller
         string? priority,
         string? isKnowledgeBase,
         string? limit,
+        string? sortBy,
+        string? sortDir,
         CancellationToken cancellationToken)
     {
         var filters = new TicketFilters
@@ -48,7 +50,9 @@ public class TicketsController : Controller
             Status = estado,
             Priority = priority,
             IsKnowledgeBase = isKnowledgeBase,
-            ResultLimit = string.IsNullOrWhiteSpace(limit) ? "50" : limit
+            ResultLimit = string.IsNullOrWhiteSpace(limit) ? "50" : limit,
+            SortBy = sortBy,
+            SortDir = string.IsNullOrWhiteSpace(sortDir) ? "desc" : sortDir
         };
 
         var model = await _ticketService.GetListAsync(filters, cancellationToken);

@@ -12,6 +12,11 @@ public class TicketFilters
     /// <summary>Valores: null/vacío (listado habitual), "true", "false".</summary>
     public string? IsKnowledgeBase { get; set; }
     public string ResultLimit { get; set; } = "50";
+    public string? SortBy { get; set; }
+    public string SortDir { get; set; } = "desc";
+
+    public bool SortDescending =>
+        !string.Equals(SortDir, "asc", StringComparison.OrdinalIgnoreCase);
 
     public bool? IsKnowledgeBaseFilter => IsKnowledgeBase?.Trim().ToLowerInvariant() switch
     {

@@ -3,6 +3,10 @@ using MoneyPenny.Models.Tickets;
 
 namespace MoneyPenny.Data;
 
+/// <summary>
+/// Contexto de solo lectura sobre TeamSupport (Azure: tickets, ticket_actions).
+/// No usar SaveChanges ni migraciones sobre esta base de datos.
+/// </summary>
 public class TicketsDbContext : DbContext
 {
     public TicketsDbContext(DbContextOptions<TicketsDbContext> options)

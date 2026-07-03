@@ -9,6 +9,8 @@ public class TicketFilterSelections
     public string? Priority { get; init; }
     public string? IsKnowledgeBase { get; init; }
     public string ResultLimit { get; init; } = "50";
+    public string? SortBy { get; init; }
+    public string SortDir { get; init; } = "desc";
 
     public bool HasAny =>
         !string.IsNullOrWhiteSpace(GroupName) ||

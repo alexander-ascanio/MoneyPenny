@@ -1,0 +1,28 @@
+@model IReadOnlyList<MoneyPenny.ViewModels.Rag.RagRatedAnswerViewModel>
+
+@if (Model.Count > 0)
+{
+    <div class="card shadow-sm mb-4 rag-rated-answers-card" id="rag-rated-answers-card">
+        <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-star me-2"></i>Respuestas valoradas</span>
+            <span class="badge text-bg-secondary" id="rag-rated-answers-count">@Model.Count</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="rag-rated-answers-list" id="rag-rated-answers-list">
+                @foreach (var item in Model)
+                {
+                    <div class="rag-rated-answer-item" data-query-log-id="@item.QueryLogId">
+                        <div class="rag-rated-answer-text@(item.IsPositive ? "" : " rag-rated-answer-text-negative")">@item.Answer</div>
+                        <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = item.QueryLogId, Rating = item.Rating }" />
+                        @if (item.RatedAt != default)
+                        {
+                            <div class="rag-rated-answer-date text-muted small">
+                                Valorada @item.RatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,23 @@
+@model MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel
+
+@if (Model.QueryLogId > 0)
+{
+    <div class="rag-answer-rating mt-3 pt-3 border-top" data-query-log-id="@Model.QueryLogId">
+        <span class="text-muted small me-2">¿Te parece acertada la respuesta?</span>
+        <button type="button"
+                class="btn rag-rating-btn rag-rating-up@(Model.Rating == MoneyPenny.Models.Rag.RagQueryLog.RatingGood ? " active" : "")"
+                data-rating="@MoneyPenny.Models.Rag.RagQueryLog.RatingGood"
+                aria-pressed="@(Model.Rating == MoneyPenny.Models.Rag.RagQueryLog.RatingGood ? "true" : "false")"
+                title="Marcar como acertada">
+            <i class="bi bi-hand-thumbs-up" aria-hidden="true"></i>
+        </button>
+        <button type="button"
+                class="btn rag-rating-btn rag-rating-down@(Model.Rating == MoneyPenny.Models.Rag.RagQueryLog.RatingBad ? " active" : "")"
+                data-rating="@MoneyPenny.Models.Rag.RagQueryLog.RatingBad"
+                aria-pressed="@(Model.Rating == MoneyPenny.Models.Rag.RagQueryLog.RatingBad ? "true" : "false")"
+                title="Marcar como no acertada">
+            <i class="bi bi-hand-thumbs-down" aria-hidden="true"></i>
+        </button>
+        <span class="rag-rating-feedback small ms-2" hidden>Gracias por tu valoración</span>
+    </div>
+}

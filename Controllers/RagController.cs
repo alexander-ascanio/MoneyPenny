@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyPenny.Data.Repositories;
+using MoneyPenny.Models.Rag;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag;
 using MoneyPenny.Services.Rag.Ingestion;
@@ -19,6 +20,7 @@ public class RagController : Controller
     private readonly IFirstCommentIndexService _firstCommentIndexService;
     private readonly IRagTokenEstimateService _tokenEstimateService;
     private readonly ITicketRepository _ticketRepository;
+    private readonly IVectorRepository _vectorRepository;
     private readonly RagOptions _ragOptions;
 
     public RagController(
@@ -26,12 +28,14 @@ public class RagController : Controller
         IFirstCommentIndexService firstCommentIndexService,
         IRagTokenEstimateService tokenEstimateService,
         ITicketRepository ticketRepository,
+        IVectorRepository vectorRepository,
         IOptions<RagOptions> ragOptions)
     {
         _ragOrchestrator = ragOrchestrator;
         _firstCommentIndexService = firstCommentIndexService;
         _tokenEstimateService = tokenEstimateService;
         _ticketRepository = ticketRepository;
+        _vectorRepository = vectorRepository;
         _ragOptions = ragOptions.Value;
     }
 
@@ -54,6 +58,30 @@ public class RagController : Controller
         CancellationToken cancellationToken = default)
     {
         return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: true, knowledgeBaseOnly, cancellationToken);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RateAnswer(
+        int queryLogId,
+        short rating,
+        CancellationToken cancellationToken = default)
+    {
+        if (rating is not (RagQueryLog.RatingGood or RagQueryLog.RatingBad or RagQueryLog.RatingClear))
+        {
+            return BadRequest(new { success = false, message = "Valoración no válida." });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+        var saved = await _vectorRepository.RateQueryLogAsync(queryLogId, userId, rating, cancellationToken);
+
+        if (!saved)
+        {
+            return NotFound(new { success = false, message = "Registro no encontrado." });
+        }
+
+        short? storedRating = rating == RagQueryLog.RatingClear ? null : rating;
+        return Json(new { success = true, rating = storedRating });
     }
 
     private async Task<IActionResult> RenderAskAsync(
@@ -108,7 +136,52 @@ public class RagController : Controller
                 "Consumo estimado de la respuesta GPT");
         }
 
+        response.RatedAnswers = await LoadRatedAnswersAsync(
+            ticketId.Value,
+            knowledgeBaseOnly,
+            response.GptQueryLogId,
+            response.KnowledgeBaseQueryLogId,
+            cancellationToken);
+
         return View("Ask", response);
+    }
+
+    private async Task<IReadOnlyList<RagRatedAnswerViewModel>> LoadRatedAnswersAsync(
+        int ticketId,
+        bool knowledgeBaseOnly,
+        int? currentGptLogId,
+        int? currentKbLogId,
+        CancellationToken cancellationToken)
+    {
+        var responseType = knowledgeBaseOnly ? RagResponseType.KnowledgeBase : RagResponseType.Gpt;
+        var excludeIds = new HashSet<int>();
+        if (currentGptLogId is > 0)
+        {
+            excludeIds.Add(currentGptLogId.Value);
+        }
+
+        if (currentKbLogId is > 0)
+        {
+            excludeIds.Add(currentKbLogId.Value);
+        }
+
+        var logs = await _vectorRepository.GetRatedQueryLogsByTicketAsync(
+            ticketId,
+            responseType,
+            cancellationToken);
+
+        return logs
+            .Where(l => !excludeIds.Contains(l.Id))
+            .Select(l => new RagRatedAnswerViewModel
+            {
+                QueryLogId = l.Id,
+                Answer = l.Answer,
+                Rating = l.Rating!.Value,
+                ResponseType = l.ResponseType,
+                CreatedAt = l.CreatedAt,
+                RatedAt = l.RatedAt ?? l.CreatedAt
+            })
+            .ToList();
     }
 
     [HttpGet]

@@ -1,0 +1,25 @@
+---
+description: TeamSupport (Azure) es solo lectura; no escribir en tickets ni ticket_actions
+alwaysApply: true
+---
+
+# TeamSupport Azure — solo lectura
+
+La base de datos **TicketsDatabase** (`teamsupport_db` en Azure PostgreSQL) es **solo lectura**.
+
+## Reglas
+
+- **No** implementar `INSERT`, `UPDATE`, `DELETE` ni `SaveChanges` sobre `TicketsDbContext`.
+- **No** añadir migraciones EF ni `ApplyMigrationsOnStartup` para TeamSupport.
+- **No** proponer scripts que modifiquen `tickets` o `ticket_actions` en Azure.
+
+## Uso permitido
+
+- Consultas de lectura: listados, detalle, comentarios, contadores, contexto RAG.
+- Indexación RAG: escribir solo en **VectorDatabase** (`document_chunks`, embeddings, logs).
+
+## Configuración
+
+En `appsettings`, `TicketsDatabase` debe mantener `ApplyMigrationsOnStartup: false` y `EnableSeed: false`.
+
+Esta pauta puede cambiar en el futuro; hasta entonces tratar TeamSupport como fuente de datos externa de solo lectura.

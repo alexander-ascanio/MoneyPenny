@@ -75,16 +75,26 @@ public class VectorRepository : IVectorRepository
 
     public async Task<IReadOnlyList<int>> GetIndexedTicketIdsAsync(CancellationToken cancellationToken = default)
     {
-        return await GetIndexedTicketIdsBySourceAsync(DocumentChunkSource.TicketDocument, cancellationToken);
+        return await GetIndexedTicketIdsBySourceAsync(
+            DocumentChunkSource.TicketDocument,
+            cancellationToken: cancellationToken);
     }
 
     public async Task<IReadOnlyList<int>> GetIndexedTicketIdsBySourceAsync(
         DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default)
     {
-        return await _context.DocumentChunks
+        var query = _context.DocumentChunks
             .AsNoTracking()
-            .Where(c => c.Source == source)
+            .Where(c => c.Source == source);
+
+        if (isKnowledgeBase is not null)
+        {
+            query = query.Where(c => c.IsKnowledgeBase == isKnowledgeBase.Value);
+        }
+
+        return await query
             .Select(c => c.TicketId)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -260,9 +270,80 @@ public class VectorRepository : IVectorRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task SaveQueryLogAsync(RagQueryLog log, CancellationToken cancellationToken = default)
+    public async Task<RagQueryLog> SaveQueryLogAsync(
+        RagQueryLog log,
+        bool reuseIfUnrated = false,
+        CancellationToken cancellationToken = default)
     {
+        if (reuseIfUnrated)
+        {
+            var existing = await _context.RagQueryLogs
+                .FirstOrDefaultAsync(
+                    l => l.TicketId == log.TicketId
+                         && l.ResponseType == log.ResponseType
+                         && l.Answer == log.Answer
+                         && l.UserId == log.UserId
+                         && l.Rating == null,
+                    cancellationToken);
+
+            if (existing is not null)
+            {
+                return existing;
+            }
+        }
+
         _context.RagQueryLogs.Add(log);
         await _context.SaveChangesAsync(cancellationToken);
+        return log;
+    }
+
+    public async Task<bool> RateQueryLogAsync(
+        int queryLogId,
+        string userId,
+        short rating,
+        CancellationToken cancellationToken = default)
+    {
+        if (rating is not (RagQueryLog.RatingGood or RagQueryLog.RatingBad or RagQueryLog.RatingClear))
+        {
+            return false;
+        }
+
+        var log = await _context.RagQueryLogs
+            .FirstOrDefaultAsync(l => l.Id == queryLogId, cancellationToken);
+
+        if (log is null)
+        {
+            return false;
+        }
+
+        if (rating == RagQueryLog.RatingClear)
+        {
+            log.Rating = null;
+            log.RatedByUserId = null;
+            log.RatedAt = null;
+        }
+        else
+        {
+            log.Rating = rating;
+            log.RatedByUserId = userId;
+            log.RatedAt = DateTime.UtcNow;
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<IReadOnlyList<RagQueryLog>> GetRatedQueryLogsByTicketAsync(
+        int ticketId,
+        RagResponseType responseType,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.RagQueryLogs
+            .AsNoTracking()
+            .Where(l => l.TicketId == ticketId
+                        && l.ResponseType == responseType
+                        && l.Rating != null)
+            .OrderByDescending(l => l.RatedAt)
+            .ThenByDescending(l => l.Id)
+            .ToListAsync(cancellationToken);
     }
 }
