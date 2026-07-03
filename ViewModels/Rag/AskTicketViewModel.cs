@@ -6,4 +6,7 @@ public class AskTicketViewModel
     public string? TicketNumber { get; set; }
     public bool GenerateGptAnswer { get; set; }
     public bool KnowledgeBaseOnly { get; set; }
+    public double? MinScoreOverride { get; set; }
+    public bool AllowMinScoreFallback { get; set; } = true;
+    public bool SkipQueryLog { get; set; }
 }

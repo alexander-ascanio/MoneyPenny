@@ -29,30 +29,39 @@ public class PgVectorRetrievalService : IRetrievalService
         _logger = logger;
     }
 
+    public Task<float[]> CreateQueryEmbeddingAsync(
+        string firstCommentText,
+        CancellationToken cancellationToken = default) =>
+        _embeddingService.CreateEmbeddingAsync(firstCommentText, cancellationToken);
+
     public async Task<IReadOnlyList<SimilarDocumentChunk>> RetrieveSimilarFirstCommentsAsync(
         string firstCommentText,
         int excludeTicketId,
         bool knowledgeBaseOnly = false,
+        double? minScoreOverride = null,
+        bool allowFallbackToZero = true,
+        float[]? queryVector = null,
         CancellationToken cancellationToken = default)
     {
-        var queryVector = await _embeddingService.CreateEmbeddingAsync(firstCommentText, cancellationToken);
+        queryVector ??= await CreateQueryEmbeddingAsync(firstCommentText, cancellationToken);
+        var minScore = minScoreOverride ?? _options.MinScore;
         var fetchLimit = knowledgeBaseOnly
             ? Math.Max(_options.TopK * 5, _options.TopK)
             : Math.Max(_options.TopK * 20, _options.TopK);
         var results = await SearchAndDedupeAsync(
             queryVector,
             fetchLimit,
-            _options.MinScore,
+            minScore,
             excludeTicketId,
             knowledgeBaseOnly,
             cancellationToken);
 
-        if (results.Count == 0 && _options.MinScore > 0)
+        if (results.Count == 0 && allowFallbackToZero && minScore > 0)
         {
             _logger.LogInformation(
                 "Sin tickets similares para ticket {TicketId} con minScore={MinScore} (KB only={KnowledgeBaseOnly}). Reintentando sin umbral.",
                 excludeTicketId,
-                _options.MinScore,
+                minScore,
                 knowledgeBaseOnly);
 
             results = await SearchAndDedupeAsync(
@@ -68,7 +77,7 @@ public class PgVectorRetrievalService : IRetrievalService
             "Recuperados {Count} ticket(s) similares por comentario #1 (excluyendo ticket {TicketId}, minScore={MinScore}, KB only={KnowledgeBaseOnly}).",
             results.Count,
             excludeTicketId,
-            _options.MinScore,
+            minScore,
             knowledgeBaseOnly);
 
         return results;

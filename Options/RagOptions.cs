@@ -9,6 +9,7 @@ public class RagOptions
     public int TopK { get; set; } = 5;
     public double MinScore { get; set; } = 0.72;
     public double TicketScopedMinScore { get; set; } = 0.55;
+    public double[] CompareThresholdValues { get; set; } = [0.72, 0.55, 0.45];
     public string EmbeddingModel { get; set; } = "text-embedding-3-small";
     public int EmbeddingDimensions { get; set; } = 1536;
     public string ChatModel { get; set; } = "gpt-4o-mini";

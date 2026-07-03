@@ -84,6 +84,71 @@ public class RagController : Controller
         return Json(new { success = true, rating = storedRating });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> CompareThresholds(
+        int? ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (ticketId is null or <= 0)
+        {
+            TempData["WarningMessage"] = "Selecciona un ticket para comparar umbrales.";
+            return RedirectToAction("Index", "Tickets");
+        }
+
+        if (string.IsNullOrWhiteSpace(ticketNumber))
+        {
+            var ticket = await _ticketRepository.GetByIdAsync(ticketId.Value, cancellationToken);
+            ticketNumber = ticket?.Number;
+        }
+
+        return View(new RagThresholdComparisonViewModel
+        {
+            TicketId = ticketId.Value,
+            TicketNumber = ticketNumber,
+            KnowledgeBaseOnly = knowledgeBaseOnly,
+            ThresholdValues = GetCompareThresholdValues()
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CompareThresholds(
+        int ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(ticketNumber))
+        {
+            var ticket = await _ticketRepository.GetByIdAsync(ticketId, cancellationToken);
+            ticketNumber = ticket?.Number;
+        }
+
+        var model = await _ragOrchestrator.CompareThresholdsAsync(
+            ticketId,
+            ticketNumber,
+            knowledgeBaseOnly,
+            cancellationToken);
+
+        return View(model);
+    }
+
+    private IReadOnlyList<double> GetCompareThresholdValues()
+    {
+        var values = _ragOptions.CompareThresholdValues is { Length: > 0 }
+            ? _ragOptions.CompareThresholdValues
+            : [_ragOptions.MinScore, 0.55, 0.45];
+
+        return values
+            .Where(value => value is >= 0 and <= 1)
+            .Distinct()
+            .OrderByDescending(value => value)
+            .Take(3)
+            .ToList();
+    }
+
     private async Task<IActionResult> RenderAskAsync(
         int? ticketId,
         string? ticketNumber,

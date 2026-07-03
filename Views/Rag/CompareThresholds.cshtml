@@ -1,0 +1,160 @@
+@model MoneyPenny.ViewModels.Rag.RagThresholdComparisonViewModel
+
+@{
+    ViewData["Title"] = "Comparar umbrales RAG";
+    var thresholdLabels = Model.ThresholdValues.Select(value => value.ToString("P0")).ToList();
+}
+
+<div class="rag-threshold-compare-page">
+    <h2 class="mb-2">
+        <i class="bi bi-columns-gap me-2 text-primary"></i>
+        Comparar umbrales RAG
+    </h2>
+
+    @if (!string.IsNullOrWhiteSpace(Model.TicketNumber))
+    {
+        <p class="text-muted mb-4">
+            Ticket: <strong>#@Model.TicketNumber</strong>
+            · Modo: <strong>@(Model.KnowledgeBaseOnly ? "Knowledge Base" : "Tickets")</strong>
+        </p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-warning">@Model.ErrorMessage</div>
+        <a asp-controller="Tickets" asp-action="Details" asp-route-id="@Model.TicketId" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver al ticket
+        </a>
+    }
+    else if (!Model.HasComparison)
+    {
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <p class="mb-3">
+                    Ejecuta la misma consulta RAG con <strong>@Model.ThresholdValues.Count umbrales</strong> de similitud
+                    y compara el contexto recuperado y la respuesta GPT de cada uno, lado a lado.
+                </p>
+                <p class="text-muted small mb-3">
+                    Umbrales configurados:
+                    @foreach (var label in thresholdLabels)
+                    {
+                        <span class="badge text-bg-light border me-1">@label</span>
+                    }
+                    (sin reintento automático a umbral 0).
+                </p>
+                <p class="text-muted small mb-0">
+                    Nota: se realizarán @Model.ThresholdValues.Count llamadas a GPT; el proceso puede tardar varios segundos.
+                </p>
+            </div>
+        </div>
+
+        @Html.AntiForgeryToken()
+
+        <form asp-action="CompareThresholds" method="post" class="mb-3" id="compareThresholdsForm">
+            <input type="hidden" name="ticketId" value="@Model.TicketId" />
+            <input type="hidden" name="ticketNumber" value="@Model.TicketNumber" />
+            @if (Model.KnowledgeBaseOnly)
+            {
+                <input type="hidden" name="knowledgeBaseOnly" value="true" />
+            }
+            <button type="submit" class="btn btn-primary" id="compareThresholdsButton">
+                <span class="compare-thresholds-btn-label">
+                    <i class="bi bi-play-fill me-1"></i>Ejecutar comparación
+                </span>
+                <span class="compare-thresholds-btn-loading d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Comparando…
+                </span>
+            </button>
+            <a asp-action="Ask"
+               asp-route-ticketId="@Model.TicketId"
+               asp-route-ticketNumber="@Model.TicketNumber"
+               asp-route-knowledgeBaseOnly="@Model.KnowledgeBaseOnly"
+               class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-left me-1"></i>Volver a respuesta RAG
+            </a>
+        </form>
+
+        <div id="compareThresholdsProcessing" class="rag-gpt-processing d-none mb-4" role="status" aria-live="polite">
+            <div class="rag-gpt-processing-spinner spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="rag-gpt-processing-title">Comparando umbrales…</div>
+            <div class="rag-gpt-processing-subtitle text-muted small">
+                Recuperando contexto y generando @Model.ThresholdValues.Count respuestas GPT. Puede tardar un minuto.
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (Model.FirstComment is not null)
+        {
+            <div class="card shadow-sm mb-4 rag-reference-card">
+                <div class="card-header rag-section-header">
+                    <i class="bi bi-chat-left-quote me-2"></i>Comentario #1 indexado (consulta)
+                </div>
+                <div class="card-body">
+                    <pre class="rag-context-snippet mb-0">@Model.FirstComment.Content</pre>
+                </div>
+            </div>
+        }
+
+        <div class="alert alert-success d-flex align-items-center mb-4" role="status">
+            <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+            <span>Comparación completada para @Model.Columns.Count umbral(es).</span>
+        </div>
+
+        <div class="row g-3 rag-threshold-compare-grid mb-4">
+            @foreach (var column in Model.Columns)
+            {
+                <div class="col-12 col-xl-4">
+                    @{
+                        ViewData["KnowledgeBaseOnly"] = Model.KnowledgeBaseOnly;
+                    }
+                    <partial name="_RagThresholdComparisonColumn" model="column" />
+                </div>
+            }
+        </div>
+
+        <a asp-action="CompareThresholds"
+           asp-route-ticketId="@Model.TicketId"
+           asp-route-ticketNumber="@Model.TicketNumber"
+           asp-route-knowledgeBaseOnly="@Model.KnowledgeBaseOnly"
+           class="btn btn-outline-primary me-2">
+            <i class="bi bi-arrow-repeat me-1"></i>Nueva comparación
+        </a>
+        <a asp-action="Ask"
+           asp-route-ticketId="@Model.TicketId"
+           asp-route-ticketNumber="@Model.TicketNumber"
+           asp-route-knowledgeBaseOnly="@Model.KnowledgeBaseOnly"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Volver a respuesta RAG
+        </a>
+    }
+</div>
+
+@section Scripts {
+    @if (!Model.HasComparison && string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <script>
+            (function () {
+                const form = document.getElementById('compareThresholdsForm');
+                const button = document.getElementById('compareThresholdsButton');
+                const processing = document.getElementById('compareThresholdsProcessing');
+
+                if (!form || !button) {
+                    return;
+                }
+
+                form.addEventListener('submit', function () {
+                    const label = button.querySelector('.compare-thresholds-btn-label');
+                    const loading = button.querySelector('.compare-thresholds-btn-loading');
+
+                    button.disabled = true;
+                    label?.classList.add('d-none');
+                    loading?.classList.remove('d-none');
+                    processing?.classList.remove('d-none');
+                    processing?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            })();
+        </script>
+    }
+}

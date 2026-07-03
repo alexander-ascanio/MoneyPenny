@@ -1,0 +1,61 @@
+@model MoneyPenny.ViewModels.Rag.RagThresholdComparisonColumnViewModel
+
+<div class="rag-threshold-column card h-100 shadow-sm">
+    <div class="card-header rag-section-header text-center">
+        <span class="fw-semibold">Umbral @Model.MinScore.ToString("P0")</span>
+    </div>
+    <div class="card-body d-flex flex-column">
+        <div class="mb-3">
+            <div class="text-muted small mb-2">
+                @Model.ContextItems.Count ticket(s) en contexto
+            </div>
+            @if (!Model.ContextItems.Any())
+            {
+                <div class="alert alert-warning py-2 small mb-0">
+                    @(Model.ErrorMessage ?? "Sin tickets por encima del umbral.")
+                </div>
+            }
+            else
+            {
+                <div class="rag-threshold-context-list">
+                    @foreach (var item in Model.ContextItems)
+                    {
+                        <details class="rag-context-item rag-threshold-context-item">
+                            <summary class="rag-context-item-summary">
+                                <span class="rag-context-summary-main">
+                                    <i class="bi bi-chevron-right rag-context-chevron" aria-hidden="true"></i>
+                                    <span>#@item.TicketNumber</span>
+                                </span>
+                                <span class="badge rag-score-badge">@item.Score.ToString("P1")</span>
+                            </summary>
+                            <div class="rag-context-item-body">
+                                @{
+                                    var contextSnippet = ViewData["KnowledgeBaseOnly"] as bool? == true
+                                        ? KnowledgeBaseContextDisplayHelper.Format(item.Content) ?? item.Content
+                                        : item.Content;
+                                }
+                                <pre class="rag-context-snippet mb-0">@contextSnippet</pre>
+                            </div>
+                        </details>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="rag-threshold-answer mt-auto">
+            <div class="rag-threshold-answer-label text-muted small mb-2">
+                <i class="bi bi-robot me-1"></i>Respuesta GPT
+            </div>
+            @if (Model.HasGptAnswer)
+            {
+                <div class="rag-threshold-answer-text rag-answer">@Model.Answer</div>
+            }
+            else
+            {
+                <div class="alert alert-secondary py-2 small mb-0">
+                    No se generó respuesta (sin contexto suficiente).
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -16,6 +16,12 @@ public interface IRagOrchestrator
         AskTicketViewModel request,
         string userId,
         CancellationToken cancellationToken = default);
+
+    Task<RagThresholdComparisonViewModel> CompareThresholdsAsync(
+        int ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly,
+        CancellationToken cancellationToken = default);
 }
 
 public class RagOrchestrator : IRagOrchestrator
@@ -69,7 +75,9 @@ public class RagOrchestrator : IRagOrchestrator
             firstComment.Content,
             request.TicketId,
             request.KnowledgeBaseOnly,
-            cancellationToken);
+            request.MinScoreOverride,
+            request.AllowMinScoreFallback,
+            cancellationToken: cancellationToken);
 
         var contextItems = new List<RagContextItemViewModel>();
         foreach (var item in retrieved)
@@ -95,11 +103,13 @@ public class RagOrchestrator : IRagOrchestrator
             contextItems,
             cancellationToken);
 
-        var knowledgeBaseLog = await TrySaveKnowledgeBaseQueryLogAsync(
-            request,
-            userId,
-            knowledgeBaseSolution,
-            cancellationToken);
+        var knowledgeBaseLog = request.SkipQueryLog
+            ? null
+            : await TrySaveKnowledgeBaseQueryLogAsync(
+                request,
+                userId,
+                knowledgeBaseSolution,
+                cancellationToken);
 
         if (!request.GenerateGptAnswer)
         {
@@ -124,15 +134,17 @@ public class RagOrchestrator : IRagOrchestrator
             firstComment.Content,
             cancellationToken);
 
-        var gptLog = await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
-        {
-            UserId = userId,
-            TicketId = request.TicketId,
-            Question = $"{DefaultGenerationQuestion} (ticket #{request.TicketNumber})",
-            Answer = answer,
-            PromptVersion = OpenAiGenerationService.PromptVersion,
-            ResponseType = RagResponseType.Gpt
-        }, cancellationToken: cancellationToken);
+        var gptLog = request.SkipQueryLog
+            ? null
+            : await _vectorRepository.SaveQueryLogAsync(new RagQueryLog
+            {
+                UserId = userId,
+                TicketId = request.TicketId,
+                Question = $"{DefaultGenerationQuestion} (ticket #{request.TicketNumber})",
+                Answer = answer,
+                PromptVersion = OpenAiGenerationService.PromptVersion,
+                ResponseType = RagResponseType.Gpt
+            }, cancellationToken: cancellationToken);
 
         return new RagResponseViewModel
         {
@@ -145,10 +157,141 @@ public class RagOrchestrator : IRagOrchestrator
             KnowledgeBaseOnly = request.KnowledgeBaseOnly,
             KnowledgeBaseSolution = knowledgeBaseSolution,
             GptContextText = gptContextText,
-            GptQueryLogId = gptLog.Id,
-            GptRating = gptLog.Rating,
+            GptQueryLogId = gptLog?.Id,
+            GptRating = gptLog?.Rating,
             KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
             KnowledgeBaseRating = knowledgeBaseLog?.Rating
+        };
+    }
+
+    public async Task<RagThresholdComparisonViewModel> CompareThresholdsAsync(
+        int ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly,
+        CancellationToken cancellationToken = default)
+    {
+        var firstComment = await LoadFirstCommentAsync(ticketId, cancellationToken);
+        if (firstComment is null || string.IsNullOrWhiteSpace(firstComment.Content))
+        {
+            return new RagThresholdComparisonViewModel
+            {
+                TicketId = ticketId,
+                TicketNumber = ticketNumber,
+                KnowledgeBaseOnly = knowledgeBaseOnly,
+                ErrorMessage = "Este ticket no tiene un comentario #1 con contenido indexable.",
+                ThresholdValues = ResolveCompareThresholds()
+            };
+        }
+
+        var thresholds = ResolveCompareThresholds();
+        var queryVector = await _retrievalService.CreateQueryEmbeddingAsync(
+            firstComment.Content,
+            cancellationToken);
+
+        var columns = new List<RagThresholdComparisonColumnViewModel>();
+        foreach (var minScore in thresholds)
+        {
+            var column = await BuildThresholdColumnAsync(
+                firstComment,
+                ticketId,
+                ticketNumber,
+                knowledgeBaseOnly,
+                minScore,
+                queryVector,
+                cancellationToken);
+            columns.Add(column);
+        }
+
+        return new RagThresholdComparisonViewModel
+        {
+            TicketId = ticketId,
+            TicketNumber = ticketNumber,
+            KnowledgeBaseOnly = knowledgeBaseOnly,
+            FirstComment = firstComment,
+            HasComparison = true,
+            ThresholdValues = thresholds,
+            Columns = columns
+        };
+    }
+
+    private IReadOnlyList<double> ResolveCompareThresholds()
+    {
+        var values = _options.CompareThresholdValues is { Length: > 0 }
+            ? _options.CompareThresholdValues
+            : [_options.MinScore, 0.55, 0.45];
+
+        return values
+            .Where(value => value is >= 0 and <= 1)
+            .Distinct()
+            .OrderByDescending(value => value)
+            .Take(3)
+            .ToList();
+    }
+
+    private async Task<RagThresholdComparisonColumnViewModel> BuildThresholdColumnAsync(
+        RagFirstCommentViewModel firstComment,
+        int ticketId,
+        string? ticketNumber,
+        bool knowledgeBaseOnly,
+        double minScore,
+        float[] queryVector,
+        CancellationToken cancellationToken)
+    {
+        var retrieved = await _retrievalService.RetrieveSimilarFirstCommentsAsync(
+            firstComment.Content,
+            ticketId,
+            knowledgeBaseOnly,
+            minScore,
+            allowFallbackToZero: false,
+            queryVector,
+            cancellationToken);
+
+        var contextItems = new List<RagContextItemViewModel>();
+        foreach (var item in retrieved)
+        {
+            var content = await GetRetrievedContextContentAsync(
+                item.Chunk.TicketId,
+                item.Chunk.Content,
+                cancellationToken);
+
+            contextItems.Add(new RagContextItemViewModel
+            {
+                TicketId = item.Chunk.TicketId,
+                TicketNumber = item.Chunk.TicketNumber,
+                ChunkIndex = item.Chunk.ChunkIndex,
+                Score = item.Score,
+                Content = content
+            });
+        }
+
+        if (contextItems.Count == 0)
+        {
+            return new RagThresholdComparisonColumnViewModel
+            {
+                MinScore = minScore,
+                ContextItems = contextItems,
+                ErrorMessage = $"Ningún ticket supera el umbral {minScore:P0}."
+            };
+        }
+
+        var gptContextText = await BuildGptContextTextAsync(
+            knowledgeBaseOnly,
+            contextItems,
+            cancellationToken);
+
+        var answer = await _generationService.GenerateAnswerAsync(
+            DefaultGenerationQuestion,
+            gptContextText,
+            ticketNumber,
+            firstComment.Content,
+            cancellationToken);
+
+        return new RagThresholdComparisonColumnViewModel
+        {
+            MinScore = minScore,
+            ContextItems = contextItems,
+            Answer = answer,
+            HasGptAnswer = !string.IsNullOrWhiteSpace(answer)
         };
     }
 
