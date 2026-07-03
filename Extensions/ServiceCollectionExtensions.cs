@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
         services.AddScoped<IGenerationService, OpenAiGenerationService>();
         services.AddScoped<IRagOrchestrator, RagOrchestrator>();
+        services.AddSingleton<IRagAskResultCache, RagAskResultCache>();
 
         return services;
     }

@@ -79,21 +79,60 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         CancellationToken cancellationToken = default) =>
         _ticketRepository.GetFirstCommentCorpusStatsAsync(sampleSize, onlyKnowledgeBaseScope, cancellationToken);
 
+    public async Task<int> CountBulkTicketsToProcessAsync(
+        FirstCommentIndexOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        var onlyKb = options.OnlyKnowledgeBaseTickets ?? false;
+        var scopeIds = await _ticketRepository.GetFirstCommentTicketIdsAsync(
+            onlyKb,
+            options.TicketCreatedFrom,
+            options.TicketCreatedTo,
+            cancellationToken);
+
+        int count;
+        if (options.RebuildAll || !options.SkipAlreadyIndexed)
+        {
+            count = scopeIds.Count;
+        }
+        else
+        {
+            var alreadyIndexed = (await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
+                DocumentChunkSource.ClientFirstComment,
+                isKnowledgeBase: onlyKb,
+                cancellationToken: cancellationToken)).ToHashSet();
+            count = scopeIds.Count(id => !alreadyIndexed.Contains(id));
+        }
+
+        if (options.MaxTickets is > 0)
+        {
+            count = Math.Min(count, options.MaxTickets.Value);
+        }
+
+        return count;
+    }
+
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
         CancellationToken cancellationToken = default)
     {
+        var onlyKb = options.OnlyKnowledgeBaseTickets ?? false;
+
         if (options.RebuildAll)
         {
-            _logger.LogInformation("Eliminando índice masivo de comentarios #1 existente.");
+            _logger.LogInformation(
+                "Eliminando índice de comentarios #1 del ámbito {Scope}.",
+                onlyKb ? "Knowledge Base" : "listado de Tickets");
             await _vectorRepository.DeleteChunksBySourceAsync(
                 DocumentChunkSource.ClientFirstComment,
+                isKnowledgeBase: onlyKb,
                 cancellationToken);
         }
 
         var alreadyIndexed = options.SkipAlreadyIndexed && !options.RebuildAll
             ? (await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
                 DocumentChunkSource.ClientFirstComment,
+                isKnowledgeBase: onlyKb,
                 cancellationToken: cancellationToken)).ToHashSet()
             : [];
 
@@ -178,7 +217,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 catch (Exception ex)
                 {
                     failed++;
-                    var message = $"Ticket #{row.TicketNumber} (Id={row.TicketId}): {ex.Message}";
+                    var message = $"Ticket #{row.TicketNumber} (Id={row.TicketId}): {ExceptionMessageHelper.GetDetail(ex)}";
                     errors.Add(message);
                     _logger.LogError(ex, "Error indexando comentario #1 del ticket {TicketId}.", row.TicketId);
                 }
@@ -315,7 +354,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
             {
                 TicketsProcessed = 1,
                 TicketsFailed = 1,
-                Errors = [$"Ticket #{row.TicketNumber} (Id={row.TicketId}): {ex.Message}"]
+                Errors = [$"Ticket #{row.TicketNumber} (Id={row.TicketId}): {ExceptionMessageHelper.GetDetail(ex)}"]
             };
         }
     }
@@ -399,6 +438,12 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         foreach (var chunk in chunks)
         {
             var vector = await _embeddingService.CreateEmbeddingAsync(chunk.Content, cancellationToken);
+            if (vector.Length != Data.VectorDbContext.EmbeddingDimensions)
+            {
+                throw new InvalidOperationException(
+                    $"El embedding devolvió {vector.Length} dimensiones; se esperaban {Data.VectorDbContext.EmbeddingDimensions}.");
+            }
+
             embeddings.Add(new TicketEmbedding
             {
                 DocumentChunkId = chunk.Id,
@@ -409,6 +454,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         }
 
         await _vectorRepository.SaveEmbeddingsAsync(embeddings, cancellationToken);
+        _vectorRepository.ClearChangeTracker();
         return new FirstCommentRowIndexResult(
             chunks.Count,
             embeddings.Count,

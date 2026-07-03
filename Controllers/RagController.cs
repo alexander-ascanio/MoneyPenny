@@ -21,6 +21,7 @@ public class RagController : Controller
     private readonly IRagTokenEstimateService _tokenEstimateService;
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
+    private readonly IRagAskResultCache _ragAskResultCache;
     private readonly RagOptions _ragOptions;
 
     public RagController(
@@ -29,6 +30,7 @@ public class RagController : Controller
         IRagTokenEstimateService tokenEstimateService,
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
+        IRagAskResultCache ragAskResultCache,
         IOptions<RagOptions> ragOptions)
     {
         _ragOrchestrator = ragOrchestrator;
@@ -36,6 +38,7 @@ public class RagController : Controller
         _tokenEstimateService = tokenEstimateService;
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
+        _ragAskResultCache = ragAskResultCache;
         _ragOptions = ragOptions.Value;
     }
 
@@ -44,8 +47,27 @@ public class RagController : Controller
         int? ticketId,
         string? ticketNumber,
         bool knowledgeBaseOnly = false,
+        string? gptResult = null,
         CancellationToken cancellationToken = default)
     {
+        if (ticketId is null or <= 0)
+        {
+            TempData["WarningMessage"] = "Selecciona un ticket para ver la respuesta RAG.";
+            return RedirectToAction("Index", "Tickets");
+        }
+
+        if (!string.IsNullOrWhiteSpace(gptResult))
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+            var cached = _ragAskResultCache.Get(userId, gptResult);
+            if (cached is not null)
+            {
+                return View("Ask", cached.Response);
+            }
+
+            TempData["WarningMessage"] = "La respuesta GPT ya no está en caché. Pulsa «Consultar respuesta GPT» de nuevo.";
+        }
+
         return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, knowledgeBaseOnly, cancellationToken);
     }
 
@@ -57,7 +79,36 @@ public class RagController : Controller
         bool knowledgeBaseOnly = false,
         CancellationToken cancellationToken = default)
     {
-        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: true, knowledgeBaseOnly, cancellationToken);
+        if (ticketId <= 0)
+        {
+            TempData["WarningMessage"] = "Selecciona un ticket para ver la respuesta RAG.";
+            return RedirectToAction("Index", "Tickets");
+        }
+
+        if (string.IsNullOrWhiteSpace(ticketNumber))
+        {
+            var ticket = await _ticketRepository.GetByIdAsync(ticketId, cancellationToken);
+            ticketNumber = ticket?.Number;
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+        var response = await BuildAskResponseAsync(
+            ticketId,
+            ticketNumber,
+            generateGptAnswer: true,
+            knowledgeBaseOnly,
+            userId,
+            cancellationToken);
+
+        var cacheKey = _ragAskResultCache.Store(userId, new RagAskCachedResult { Response = response });
+
+        return RedirectToAction(nameof(Ask), new
+        {
+            ticketId,
+            ticketNumber,
+            knowledgeBaseOnly,
+            gptResult = cacheKey
+        });
     }
 
     [HttpPost]
@@ -169,10 +220,29 @@ public class RagController : Controller
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+        var response = await BuildAskResponseAsync(
+            ticketId.Value,
+            ticketNumber,
+            generateGptAnswer,
+            knowledgeBaseOnly,
+            userId,
+            cancellationToken);
+
+        return View("Ask", response);
+    }
+
+    private async Task<RagResponseViewModel> BuildAskResponseAsync(
+        int ticketId,
+        string? ticketNumber,
+        bool generateGptAnswer,
+        bool knowledgeBaseOnly,
+        string userId,
+        CancellationToken cancellationToken)
+    {
         var response = await _ragOrchestrator.ProcessTicketAsync(
             new AskTicketViewModel
             {
-                TicketId = ticketId.Value,
+                TicketId = ticketId,
                 TicketNumber = ticketNumber,
                 GenerateGptAnswer = generateGptAnswer,
                 KnowledgeBaseOnly = knowledgeBaseOnly
@@ -202,13 +272,13 @@ public class RagController : Controller
         }
 
         response.RatedAnswers = await LoadRatedAnswersAsync(
-            ticketId.Value,
+            ticketId,
             knowledgeBaseOnly,
             response.GptQueryLogId,
             response.KnowledgeBaseQueryLogId,
             cancellationToken);
 
-        return View("Ask", response);
+        return response;
     }
 
     private async Task<IReadOnlyList<RagRatedAnswerViewModel>> LoadRatedAnswersAsync(
@@ -284,6 +354,36 @@ public class RagController : Controller
             averageImagesPerTicket = corpus.AverageImagesPerTicket,
             corpusSampleSize = corpus.SampleSize
         });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FirstCommentBulkCount(
+        bool onlyKnowledgeBaseTickets = false,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
+        bool rebuildAll = true,
+        bool skipAlreadyIndexed = true,
+        int? maxTickets = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (ticketCreatedFrom > ticketCreatedTo)
+        {
+            return BadRequest(new { error = "La fecha hasta debe ser igual o posterior a la fecha desde." });
+        }
+
+        var count = await _firstCommentIndexService.CountBulkTicketsToProcessAsync(
+            new FirstCommentIndexOptions
+            {
+                OnlyKnowledgeBaseTickets = onlyKnowledgeBaseTickets,
+                TicketCreatedFrom = ticketCreatedFrom,
+                TicketCreatedTo = ticketCreatedTo,
+                RebuildAll = rebuildAll,
+                SkipAlreadyIndexed = skipAlreadyIndexed,
+                MaxTickets = maxTickets
+            },
+            cancellationToken);
+
+        return Json(new { ticketsToProcess = count });
     }
 
     [HttpPost]

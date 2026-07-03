@@ -15,6 +15,11 @@
         <p class="text-muted mb-4">Ticket: <strong>#@Model.TicketNumber</strong></p>
     }
 
+    @if (TempData["WarningMessage"] is string warningMessage)
+    {
+        <div class="alert alert-warning">@warningMessage</div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
         <div class="alert alert-warning">@Model.ErrorMessage</div>

@@ -1,4 +1,5 @@
 using MoneyPenny.Models.Rag;
+using MoneyPenny.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace MoneyPenny.Data.Repositories;
@@ -50,6 +51,15 @@ public class CommentImageTextCacheRepository : ICommentImageTextCacheRepository
         {
             return;
         }
+
+        normalizedImageSource = CommentImageSourceKey.ForCache(
+            TicketHtmlHelper.SanitizeImageSource(normalizedImageSource));
+        if (string.IsNullOrWhiteSpace(normalizedImageSource))
+        {
+            return;
+        }
+
+        visionModel = visionModel.Length <= 100 ? visionModel : visionModel[..100];
 
         var existing = await _context.CommentImageTextCaches
             .FirstOrDefaultAsync(

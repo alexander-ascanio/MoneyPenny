@@ -25,11 +25,16 @@ public class VectorRepository : IVectorRepository
 
     public async Task DeleteChunksBySourceAsync(
         DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
         CancellationToken cancellationToken = default)
     {
-        var chunks = await _context.DocumentChunks
-            .Where(c => c.Source == source)
-            .ToListAsync(cancellationToken);
+        var query = _context.DocumentChunks.Where(c => c.Source == source);
+        if (isKnowledgeBase is not null)
+        {
+            query = query.Where(c => c.IsKnowledgeBase == isKnowledgeBase.Value);
+        }
+
+        var chunks = await query.ToListAsync(cancellationToken);
 
         if (chunks.Count == 0)
         {
@@ -131,6 +136,8 @@ public class VectorRepository : IVectorRepository
         _context.TicketEmbeddings.AddRange(embeddings);
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public void ClearChangeTracker() => _context.ChangeTracker.Clear();
 
     public async Task<IReadOnlyList<SimilarDocumentChunk>> SearchSimilarAsync(
         float[] queryVector,

@@ -30,23 +30,27 @@ public class ChunkingService : IChunkingService
         var chunkSize = Math.Max(100, _options.ChunkSize);
         var overlap = Math.Clamp(_options.ChunkOverlap, 0, chunkSize / 2);
         var index = 0;
+        var sanitizedText = text.Replace('\0', ' ');
+        var safeTicketNumber = ticketNumber.Length <= 50
+            ? ticketNumber
+            : ticketNumber[..50];
 
-        for (var start = 0; start < text.Length; start += chunkSize - overlap)
+        for (var start = 0; start < sanitizedText.Length; start += chunkSize - overlap)
         {
-            var length = Math.Min(chunkSize, text.Length - start);
+            var length = Math.Min(chunkSize, sanitizedText.Length - start);
             chunks.Add(new DocumentChunk
             {
                 TicketId = ticketId,
-                TicketNumber = ticketNumber,
+                TicketNumber = safeTicketNumber,
                 TicketActionId = ticketActionId,
                 Source = source,
                 IsKnowledgeBase = isKnowledgeBase,
                 ChunkIndex = index++,
-                Content = text.Substring(start, length),
+                Content = sanitizedText.Substring(start, length),
                 CreatedAt = DateTime.UtcNow
             });
 
-            if (start + length >= text.Length)
+            if (start + length >= sanitizedText.Length)
             {
                 break;
             }

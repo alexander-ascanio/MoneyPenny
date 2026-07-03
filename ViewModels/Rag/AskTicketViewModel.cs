@@ -7,6 +7,5 @@ public class AskTicketViewModel
     public bool GenerateGptAnswer { get; set; }
     public bool KnowledgeBaseOnly { get; set; }
     public double? MinScoreOverride { get; set; }
-    public bool AllowMinScoreFallback { get; set; } = true;
     public bool SkipQueryLog { get; set; }
 }

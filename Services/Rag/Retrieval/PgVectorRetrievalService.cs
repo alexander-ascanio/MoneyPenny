@@ -39,7 +39,6 @@ public class PgVectorRetrievalService : IRetrievalService
         int excludeTicketId,
         bool knowledgeBaseOnly = false,
         double? minScoreOverride = null,
-        bool allowFallbackToZero = true,
         float[]? queryVector = null,
         CancellationToken cancellationToken = default)
     {
@@ -55,23 +54,6 @@ public class PgVectorRetrievalService : IRetrievalService
             excludeTicketId,
             knowledgeBaseOnly,
             cancellationToken);
-
-        if (results.Count == 0 && allowFallbackToZero && minScore > 0)
-        {
-            _logger.LogInformation(
-                "Sin tickets similares para ticket {TicketId} con minScore={MinScore} (KB only={KnowledgeBaseOnly}). Reintentando sin umbral.",
-                excludeTicketId,
-                minScore,
-                knowledgeBaseOnly);
-
-            results = await SearchAndDedupeAsync(
-                queryVector,
-                fetchLimit,
-                minScore: 0,
-                excludeTicketId,
-                knowledgeBaseOnly,
-                cancellationToken);
-        }
 
         _logger.LogInformation(
             "Recuperados {Count} ticket(s) similares por comentario #1 (excluyendo ticket {TicketId}, minScore={MinScore}, KB only={KnowledgeBaseOnly}).",

@@ -76,7 +76,6 @@ public class RagOrchestrator : IRagOrchestrator
             request.TicketId,
             request.KnowledgeBaseOnly,
             request.MinScoreOverride,
-            request.AllowMinScoreFallback,
             cancellationToken: cancellationToken);
 
         var contextItems = new List<RagContextItemViewModel>();
@@ -242,7 +241,6 @@ public class RagOrchestrator : IRagOrchestrator
             ticketId,
             knowledgeBaseOnly,
             minScore,
-            allowFallbackToZero: false,
             queryVector,
             cancellationToken);
 

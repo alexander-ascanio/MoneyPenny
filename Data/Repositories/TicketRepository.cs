@@ -140,6 +140,28 @@ public class TicketRepository : ITicketRepository
         return await CountFirstCommentsInScopeAsync(scopeFilter, cancellationToken);
     }
 
+    public Task<int> CountFirstCommentsAsync(
+        bool onlyKnowledgeBaseScope = false,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
+        CancellationToken cancellationToken = default)
+    {
+        var scopeFilter = GetFirstCommentScopeSqlFilter(onlyKnowledgeBaseScope);
+        var dateFilter = BuildTicketCreatedAtSqlFilter(ticketCreatedFrom, ticketCreatedTo);
+        return CountFirstCommentsInScopeAsync(scopeFilter, dateFilter, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<int>> GetFirstCommentTicketIdsAsync(
+        bool onlyKnowledgeBaseScope = false,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
+        CancellationToken cancellationToken = default)
+    {
+        var scopeFilter = GetFirstCommentScopeSqlFilter(onlyKnowledgeBaseScope);
+        var dateFilter = BuildTicketCreatedAtSqlFilter(ticketCreatedFrom, ticketCreatedTo);
+        return GetFirstCommentTicketIdsInScopeAsync(scopeFilter, dateFilter, cancellationToken);
+    }
+
     public async Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
         CancellationToken cancellationToken = default)
     {
@@ -468,23 +490,41 @@ public class TicketRepository : ITicketRepository
 
     private async Task<int> CountFirstCommentsInScopeAsync(
         string scopeFilter,
+        CancellationToken cancellationToken) =>
+        await CountFirstCommentsInScopeAsync(
+            scopeFilter,
+            BuildTicketCreatedAtSqlFilter(null, null),
+            cancellationToken);
+
+    private async Task<int> CountFirstCommentsInScopeAsync(
+        string scopeFilter,
+        TicketCreatedAtSqlFilter dateFilter,
         CancellationToken cancellationToken)
     {
         var sql = $"""
             SELECT COUNT(*)
             FROM (
-                {BuildFirstCommentDistinctOnSql(scopeFilter)}
+                {BuildFirstCommentDistinctOnSql(scopeFilter, dateFilter.Sql)}
             ) first_comments
             """;
 
-        return await ExecuteScalarCountAsync(sql, [], cancellationToken);
+        return await ExecuteScalarCountAsync(sql, dateFilter.Parameters, cancellationToken);
     }
 
     private async Task<IReadOnlyList<int>> GetFirstCommentTicketIdsInScopeAsync(
         string scopeFilter,
+        CancellationToken cancellationToken) =>
+        await GetFirstCommentTicketIdsInScopeAsync(
+            scopeFilter,
+            BuildTicketCreatedAtSqlFilter(null, null),
+            cancellationToken);
+
+    private async Task<IReadOnlyList<int>> GetFirstCommentTicketIdsInScopeAsync(
+        string scopeFilter,
+        TicketCreatedAtSqlFilter dateFilter,
         CancellationToken cancellationToken)
     {
-        var sql = BuildFirstCommentDistinctOnSql(scopeFilter);
+        var sql = BuildFirstCommentDistinctOnSql(scopeFilter, dateFilter.Sql);
         var ids = new List<int>();
 
         await _context.Database.OpenConnectionAsync(cancellationToken);
@@ -492,6 +532,11 @@ public class TicketRepository : ITicketRepository
         {
             await using var command = _context.Database.GetDbConnection().CreateCommand();
             command.CommandText = sql;
+            foreach (var parameter in dateFilter.Parameters)
+            {
+                command.Parameters.Add(parameter);
+            }
+
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {

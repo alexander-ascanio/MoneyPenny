@@ -13,7 +13,6 @@ public interface IRetrievalService
         int excludeTicketId,
         bool knowledgeBaseOnly = false,
         double? minScoreOverride = null,
-        bool allowFallbackToZero = true,
         float[]? queryVector = null,
         CancellationToken cancellationToken = default);
 }

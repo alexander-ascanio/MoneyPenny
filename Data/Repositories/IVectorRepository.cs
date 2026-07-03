@@ -5,7 +5,10 @@ namespace MoneyPenny.Data.Repositories;
 public interface IVectorRepository
 {
     Task DeleteTicketIndexAsync(int ticketId, CancellationToken cancellationToken = default);
-    Task DeleteChunksBySourceAsync(DocumentChunkSource source, CancellationToken cancellationToken = default);
+    Task DeleteChunksBySourceAsync(
+        DocumentChunkSource source,
+        bool? isKnowledgeBase = null,
+        CancellationToken cancellationToken = default);
     Task DeleteChunksByTicketAndSourceAsync(
         int ticketId,
         DocumentChunkSource source,
@@ -26,6 +29,7 @@ public interface IVectorRepository
         CancellationToken cancellationToken = default);
     Task SaveChunksAsync(IEnumerable<DocumentChunk> chunks, CancellationToken cancellationToken = default);
     Task SaveEmbeddingsAsync(IEnumerable<TicketEmbedding> embeddings, CancellationToken cancellationToken = default);
+    void ClearChangeTracker();
     Task<IReadOnlyList<SimilarDocumentChunk>> SearchSimilarAsync(
         float[] queryVector,
         int topK,

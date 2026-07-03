@@ -42,7 +42,22 @@
             <div class="small text-muted fst-italic mt-1 mb-0">Aproximación; el consumo real puede variar.</div>`;
     }
 
+    function readBulkFormOptions() {
+        return {
+            rebuildAll: document.getElementById('rebuildAll')?.checked ?? true,
+            skipIndexed: document.getElementById('skipAlreadyIndexed')?.checked ?? true,
+            kbOnly: document.getElementById('onlyKnowledgeBaseTickets')?.checked ?? false,
+            maxTickets: document.querySelector('[data-bulk-max-tickets]')?.value,
+            ticketCreatedFrom: document.getElementById('TicketCreatedFrom')?.value || '',
+            ticketCreatedTo: document.getElementById('TicketCreatedTo')?.value || ''
+        };
+    }
+
     function computeBulkTicketsToProcess(corpus, options) {
+        if (options.exactCount != null && Number.isFinite(options.exactCount)) {
+            return Math.max(0, options.exactCount);
+        }
+
         const rebuildAll = options.rebuildAll ?? true;
         const skipIndexed = options.skipIndexed ?? true;
         const kbOnly = options.kbOnly ?? false;
@@ -69,31 +84,118 @@
         return document.querySelector('[data-bulk-index-estimate]');
     }
 
-    function getBulkCorpus() {
+    function getBulkState() {
         const root = getBulkEstimateRoot();
         if (!root) {
+            return null;
+        }
+
+        let state = bulkEstimateState.get(root);
+        if (!state) {
+            state = {
+                corpus: {},
+                exactCount: null,
+                countLoading: false,
+                countError: null,
+                countRequestId: 0
+            };
+            bulkEstimateState.set(root, state);
+        }
+
+        return { root, state };
+    }
+
+    function getBulkCorpus() {
+        const ctx = getBulkState();
+        if (!ctx) {
             return {};
         }
 
-        const state = bulkEstimateState.get(root);
-        if (state?.corpus) {
-            return state.corpus;
+        if (ctx.state.corpus && Object.keys(ctx.state.corpus).length > 0) {
+            return ctx.state.corpus;
         }
 
         try {
-            return JSON.parse(root.dataset.corpus || '{}');
+            return JSON.parse(ctx.root.dataset.corpus || '{}');
         } catch {
             return {};
         }
     }
 
-    function getBulkTicketsToIndex() {
-        return computeBulkTicketsToProcess(getBulkCorpus(), {
-            rebuildAll: document.getElementById('rebuildAll')?.checked ?? true,
-            skipIndexed: document.getElementById('skipAlreadyIndexed')?.checked ?? true,
-            kbOnly: document.getElementById('onlyKnowledgeBaseTickets')?.checked ?? false,
-            maxTickets: document.querySelector('[data-bulk-max-tickets]')?.value
+    function buildBulkCountUrl(baseUrl, options) {
+        if (!baseUrl) {
+            return '';
+        }
+
+        const params = new URLSearchParams();
+        params.set('onlyKnowledgeBaseTickets', options.kbOnly ? 'true' : 'false');
+        params.set('rebuildAll', options.rebuildAll ? 'true' : 'false');
+        params.set('skipAlreadyIndexed', options.skipIndexed ? 'true' : 'false');
+
+        if (options.ticketCreatedFrom) {
+            params.set('ticketCreatedFrom', options.ticketCreatedFrom);
+        }
+
+        if (options.ticketCreatedTo) {
+            params.set('ticketCreatedTo', options.ticketCreatedTo);
+        }
+
+        const limit = Number(options.maxTickets || 0);
+        if (limit > 0) {
+            params.set('maxTickets', String(limit));
+        }
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        return `${baseUrl}${separator}${params.toString()}`;
+    }
+
+    async function fetchBulkTicketsToIndexCount() {
+        const ctx = getBulkState();
+        if (!ctx) {
+            return computeBulkTicketsToProcess({}, readBulkFormOptions());
+        }
+
+        const { root, state } = ctx;
+        const countUrl = root.dataset.bulkCountUrl;
+        const options = readBulkFormOptions();
+
+        if (!countUrl) {
+            return computeBulkTicketsToProcess(state.corpus, options);
+        }
+
+        const requestId = ++state.countRequestId;
+        state.countLoading = true;
+        state.countError = null;
+
+        const response = await fetch(buildBulkCountUrl(countUrl, options), {
+            headers: { Accept: 'application/json' }
         });
+
+        if (!response.ok) {
+            state.countLoading = false;
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (requestId !== state.countRequestId) {
+            return state.exactCount ?? computeBulkTicketsToProcess(state.corpus, options);
+        }
+
+        state.exactCount = Number(data.ticketsToProcess ?? 0);
+        state.countLoading = false;
+        return state.exactCount;
+    }
+
+    function getBulkTicketsToIndex() {
+        const ctx = getBulkState();
+        const options = readBulkFormOptions();
+        const corpus = ctx?.state?.corpus ?? getBulkCorpus();
+
+        if (ctx?.state?.exactCount != null && Number.isFinite(ctx.state.exactCount)) {
+            return computeBulkTicketsToProcess(corpus, { ...options, exactCount: ctx.state.exactCount });
+        }
+
+        return computeBulkTicketsToProcess(corpus, options);
     }
 
     function getSingleTicketsToIndex() {
@@ -111,6 +213,7 @@
 
     window.MoneyPennyFirstCommentIndex = {
         getBulkTicketsToIndex,
+        fetchBulkTicketsToIndexCount,
         getSingleTicketsToIndex,
         formatTicketCount
     };
@@ -118,8 +221,16 @@
     function initFirstCommentBulkEstimate(root) {
         const config = JSON.parse(root.dataset.pricing || '{}');
         const corpus = JSON.parse(root.dataset.corpus || '{}');
-        bulkEstimateState.set(root, { corpus });
+        const state = {
+            corpus,
+            exactCount: null,
+            countLoading: false,
+            countError: null,
+            countRequestId: 0
+        };
+        bulkEstimateState.set(root, state);
         const corpusUrl = root.dataset.corpusUrl;
+        const countUrl = root.dataset.bulkCountUrl;
         const output = root.querySelector('[data-bulk-estimate-output]');
         const corpusInfo = document.querySelector('[data-corpus-info]');
         const rebuild = root.querySelector('[data-bulk-rebuild]');
@@ -127,9 +238,30 @@
         const processImages = root.querySelector('[data-bulk-process-images]');
         const onlyKnowledgeBase = root.querySelector('[data-bulk-only-knowledge-base]');
         const maxTickets = root.querySelector('[data-bulk-max-tickets]');
+        const dateFrom = document.getElementById('TicketCreatedFrom');
+        const dateTo = document.getElementById('TicketCreatedTo');
         if (!output) {
             return;
         }
+
+        let countDebounceTimer = null;
+
+        const scheduleBulkCountRefresh = () => {
+            if (!countUrl) {
+                return;
+            }
+
+            clearTimeout(countDebounceTimer);
+            countDebounceTimer = setTimeout(() => {
+                fetchBulkTicketsToIndexCount()
+                    .then(() => update())
+                    .catch(() => {
+                        state.countError = true;
+                        state.exactCount = null;
+                        update();
+                    });
+            }, 300);
+        };
 
         const updateCorpusInfo = () => {
             if (!corpusInfo || !corpus.corpusSampleSize) {
@@ -145,16 +277,29 @@
         const update = () => {
             const avgChars = Number(corpus.averageCommentCharCount || 0);
             const avgImages = Number(corpus.averageImagesPerTicket || 0);
-            const rebuildAll = rebuild?.checked ?? true;
-            const skip = skipIndexed?.checked;
+            const formOptions = readBulkFormOptions();
+            const rebuildAll = formOptions.rebuildAll;
+            const skip = formOptions.skipIndexed;
             const withImages = processImages?.checked;
-            const limit = Number(maxTickets?.value || 0);
-            const kbOnly = onlyKnowledgeBase?.checked ?? false;
+            const limit = Number(formOptions.maxTickets || 0);
+            const kbOnly = formOptions.kbOnly;
+
+            if (state.countLoading && countUrl) {
+                renderEstimate(output, ['Calculando tickets a procesar…'], {
+                    embeddingTokens: 0,
+                    visionTokens: 0,
+                    chatTokens: 0,
+                    cost: 0
+                });
+                return;
+            }
+
             const tickets = computeBulkTicketsToProcess(corpus, {
                 rebuildAll,
                 skipIndexed: skip,
                 kbOnly,
-                maxTickets: limit
+                maxTickets: limit,
+                exactCount: state.exactCount
             });
 
             if (tickets <= 0) {
@@ -189,6 +334,10 @@
                 `Tickets a procesar: ${tickets.toLocaleString()} (media ~${docChars.toLocaleString()} caracteres/documento, muestra ${corpus.corpusSampleSize || 0} tickets).`
             ];
 
+            if (state.countError && countUrl) {
+                lines.push('No se pudo recalcular el total exacto; se muestra una aproximación.');
+            }
+
             let cost = costFromTokens(embeddingTokens, config.embeddingPricePerMillion);
             if (withImages && avgImages > 0) {
                 visionCalls = Math.ceil(tickets * avgImages);
@@ -212,10 +361,16 @@
             });
         };
 
-        [rebuild, skipIndexed, processImages, onlyKnowledgeBase, maxTickets].forEach(el => {
+        const onFormOptionChange = () => {
+            state.countError = null;
+            scheduleBulkCountRefresh();
+            update();
+        };
+
+        [rebuild, skipIndexed, processImages, onlyKnowledgeBase, maxTickets, dateFrom, dateTo].forEach(el => {
             if (el) {
-                el.addEventListener('change', update);
-                el.addEventListener('input', update);
+                el.addEventListener('change', onFormOptionChange);
+                el.addEventListener('input', onFormOptionChange);
             }
         });
 
@@ -245,6 +400,7 @@
                         corpus.averageImagesPerTicket = data.averageImagesPerTicket;
                         corpus.corpusSampleSize = data.corpusSampleSize;
                         updateCorpusInfo();
+                        scheduleBulkCountRefresh();
                         update();
                     })
                     .catch(() => {
@@ -275,6 +431,7 @@
                     corpus.averageImagesPerTicket = data.averageImagesPerTicket;
                     corpus.corpusSampleSize = data.corpusSampleSize;
                     updateCorpusInfo();
+                    scheduleBulkCountRefresh();
                     update();
                 })
                 .catch(() => {
@@ -290,6 +447,7 @@
                 });
         } else {
             updateCorpusInfo();
+            scheduleBulkCountRefresh();
             update();
         }
     }

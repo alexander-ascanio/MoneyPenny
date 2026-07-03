@@ -11,6 +11,9 @@ public interface IFirstCommentIndexService
         int sampleSize = 200,
         bool onlyKnowledgeBaseScope = false,
         CancellationToken cancellationToken = default);
+    Task<int> CountBulkTicketsToProcessAsync(
+        FirstCommentIndexOptions options,
+        CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
         CancellationToken cancellationToken = default);

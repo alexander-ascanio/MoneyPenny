@@ -137,7 +137,8 @@
 <div data-bulk-index-estimate
      data-pricing="@pricingJson"
      data-corpus="@corpusJson"
-     data-corpus-url="@Url.Action("FirstCommentCorpusStats")">
+     data-corpus-url="@Url.Action("FirstCommentCorpusStats")"
+     data-bulk-count-url="@Url.Action("FirstCommentBulkCount")">
     <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm" data-first-comment-bulk-form>
         <div class="card-header rag-section-header">Ejecutar indexación masiva</div>
         <div class="card-body">
@@ -158,7 +159,7 @@
                 <label class="form-check-label" for="rebuildAll">
                     Reconstruir índice completo
                 </label>
-                <div class="form-text">Borra todos los chunks de comentarios #1 antes de indexar de nuevo. Si está marcado, se ignoran los tickets ya indexados.</div>
+                <div class="form-text">Borra los chunks de comentarios #1 del ámbito seleccionado (listado de Tickets o Knowledge Base) antes de indexar de nuevo. No afecta al otro ámbito. Si está marcado, se ignoran los tickets ya indexados.</div>
             </div>
 
             <div class="form-check mb-3">
@@ -320,24 +321,37 @@
         (function () {
             const bulkForm = document.querySelector('[data-first-comment-bulk-form]');
             if (bulkForm) {
-                bulkForm.addEventListener('submit', function (event) {
+                let bulkSubmitConfirmed = false;
+                bulkForm.addEventListener('submit', async function (event) {
+                    if (bulkSubmitConfirmed) {
+                        return;
+                    }
+
+                    event.preventDefault();
                     const api = window.MoneyPennyFirstCommentIndex;
-                    const ticketCount = api?.getBulkTicketsToIndex?.() ?? 0;
+                    let ticketCount = api?.getBulkTicketsToIndex?.() ?? 0;
+
+                    try {
+                        ticketCount = await api.fetchBulkTicketsToIndexCount();
+                    } catch {
+                        ticketCount = api?.getBulkTicketsToIndex?.() ?? ticketCount;
+                    }
+
                     const formattedCount = api?.formatTicketCount?.(ticketCount) ?? String(ticketCount);
                     const rebuild = document.getElementById('rebuildAll')?.checked;
                     const maxTickets = document.querySelector('[data-bulk-max-tickets]')?.value?.trim();
                     const fromDate = document.getElementById('TicketCreatedFrom')?.value;
                     const toDate = document.getElementById('TicketCreatedTo')?.value;
 
+                    const kbOnly = document.getElementById('onlyKnowledgeBaseTickets')?.checked;
+                    const scopeLabel = kbOnly ? 'Knowledge Base' : 'listado de Tickets';
+
                     let message = '¿Iniciar la indexación masiva con la configuración actual?';
                     if (rebuild) {
-                        message = '¿Iniciar la indexación masiva? Se borrará todo el índice #1 antes de indexar.';
+                        message = `¿Iniciar la indexación masiva? Se borrará el índice #1 del ámbito «${scopeLabel}» antes de indexar (el otro ámbito no se modifica).`;
                     }
 
                     message += `\n\nTickets a indexar: ${formattedCount}.`;
-                    if (fromDate || toDate) {
-                        message += '\n(El rango de fechas puede reducir el número real.)';
-                    }
                     if (maxTickets) {
                         message += `\n\nLímite configurado: ${maxTickets} ticket(s).`;
                     }
@@ -345,8 +359,9 @@
                         message += `\n\nRango de fechas: ${fromDate || '…'} → ${toDate || '…'}.`;
                     }
 
-                    if (!window.confirm(message)) {
-                        event.preventDefault();
+                    if (window.confirm(message)) {
+                        bulkSubmitConfirmed = true;
+                        bulkForm.submit();
                     }
                 });
             }

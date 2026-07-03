@@ -16,6 +16,16 @@ public interface ITicketRepository
     Task<int> CountTicketsWithFirstCommentAsync(
         bool onlyTicketsListScope = true,
         CancellationToken cancellationToken = default);
+    Task<int> CountFirstCommentsAsync(
+        bool onlyKnowledgeBaseScope = false,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<int>> GetFirstCommentTicketIdsAsync(
+        bool onlyKnowledgeBaseScope = false,
+        DateTime? ticketCreatedFrom = null,
+        DateTime? ticketCreatedTo = null,
+        CancellationToken cancellationToken = default);
     Task<int> CountKnowledgeBaseTicketsWithFirstCommentAsync(
         CancellationToken cancellationToken = default);
     Task<HashSet<int>> GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(
