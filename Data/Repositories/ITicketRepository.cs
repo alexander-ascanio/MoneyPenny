@@ -51,4 +51,7 @@ public interface ITicketRepository
     Task<HashSet<int>> GetTicketIdsInNonKnowledgeBaseScopeAsync(
         IEnumerable<int> ticketIds,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IndexedTicketsMonthCount>> GetTicketCountsByCreatedMonthAsync(
+        IReadOnlyCollection<int> ticketIds,
+        CancellationToken cancellationToken = default);
 }

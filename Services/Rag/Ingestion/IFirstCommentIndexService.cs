@@ -14,6 +14,9 @@ public interface IFirstCommentIndexService
     Task<int> CountBulkTicketsToProcessAsync(
         FirstCommentIndexOptions options,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IndexedTicketsMonthCount>> GetIndexedTicketsByMonthAsync(
+        bool knowledgeBaseScope = false,
+        CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
         IFirstCommentBulkIndexProgressReporter? progress = null,

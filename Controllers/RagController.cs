@@ -9,6 +9,7 @@ using MoneyPenny.Services.Rag.Pricing;
 using MoneyPenny.ViewModels.Rag;
 using MoneyPenny.ViewModels.Shared;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Security.Claims;
 
 namespace MoneyPenny.Controllers;
@@ -399,6 +400,30 @@ public class RagController : Controller
         return Json(new { ticketsToProcess = count });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> FirstCommentIndexedByMonth(
+        bool knowledgeBaseScope = false,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await _firstCommentIndexService.GetIndexedTicketsByMonthAsync(
+            knowledgeBaseScope,
+            cancellationToken);
+
+        return Json(new
+        {
+            scopeTitle = knowledgeBaseScope ? "Knowledge Base" : "Tickets del listado",
+            totalTickets = rows.Sum(row => row.TicketCount),
+            totalTicketsFormatted = FormatCount(rows.Sum(row => row.TicketCount)),
+            months = rows.Select(row => new
+            {
+                monthName = row.MonthName,
+                year = row.Year,
+                ticketCount = row.TicketCount,
+                ticketCountFormatted = FormatCount(row.TicketCount)
+            })
+        });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public IActionResult FirstCommentIndexStart(FirstCommentIndexViewModel model)
@@ -523,7 +548,7 @@ public class RagController : Controller
         if (result.TicketsFailed > 0)
         {
             model.SuccessMessage = result.Errors.FirstOrDefault()
-                ?? $"Indexación finalizada con {result.TicketsFailed} error(es).";
+                ?? $"Indexación finalizada con {FormatCount(result.TicketsFailed)} error(es).";
         }
         else if (result.TicketsSkipped > 0 && result.TicketsIndexed == 0)
         {
@@ -535,12 +560,12 @@ public class RagController : Controller
         {
             var imageSummary = result.ProcessImages
                 ? result.ImagesDetected > 0
-                    ? $" Imágenes: {result.ImagesExtracted}/{result.ImagesDetected} con texto extraído."
+                    ? $" Imágenes: {FormatCount(result.ImagesExtracted)}/{FormatCount(result.ImagesDetected)} con texto extraído."
                     : " Sin imágenes detectadas en el comentario."
                 : string.Empty;
 
             model.SuccessMessage =
-                $"Indexación completada: {result.TicketsIndexed} ticket(s) indexados, {result.ChunksCreated} chunk(s), {result.EmbeddingsCreated} embedding(s).{imageSummary}";
+                $"Indexación completada: {FormatCount(result.TicketsIndexed)} ticket(s) indexados, {FormatCount(result.ChunksCreated)} chunk(s), {FormatCount(result.EmbeddingsCreated)} embedding(s).{imageSummary}";
 
             if (!string.IsNullOrWhiteSpace(result.ImageExtractionWarning))
             {
@@ -593,4 +618,7 @@ public class RagController : Controller
 
     private string GetCurrentUserId() =>
         User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+
+    private static string FormatCount(int value) =>
+        value.ToString("N0", CultureInfo.GetCultureInfo("es-ES"));
 }

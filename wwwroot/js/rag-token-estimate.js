@@ -1,4 +1,9 @@
 (function () {
+    const numberLocale = 'es-ES';
+
+    function formatNumber(value) {
+        return Number(value || 0).toLocaleString(numberLocale);
+    }
     function estimateTokensFromText(text, charsPerToken) {
         if (!text || !text.trim()) {
             return 0;
@@ -208,7 +213,7 @@
     }
 
     function formatTicketCount(count) {
-        return Number(count || 0).toLocaleString('es-ES');
+        return formatNumber(count);
     }
 
     window.MoneyPennyFirstCommentIndex = {
@@ -268,10 +273,10 @@
                 return;
             }
 
-            const avgChars = Number(corpus.averageCommentCharCount || 0).toLocaleString();
+            const avgChars = formatNumber(corpus.averageCommentCharCount || 0);
             const avgImages = Number(corpus.averageImagesPerTicket || 0).toFixed(2).replace(/\.?0+$/, '');
             corpusInfo.innerHTML =
-                `Muestra de ${corpus.corpusSampleSize} ticket(s): media ~${avgChars} caracteres/comentario, ~${avgImages} imagen(es)/ticket.`;
+                `Muestra de ${formatNumber(corpus.corpusSampleSize)} ticket(s): media ~${avgChars} caracteres/comentario, ~${avgImages} imagen(es)/ticket.`;
         };
 
         const update = () => {
@@ -331,7 +336,7 @@
             let visionCalls = 0;
             const lines = [
                 `Embeddings (${config.embeddingModel}): ~${embeddingCalls.toLocaleString()} llamada(s), ~${embeddingTokens.toLocaleString()} tokens de entrada.`,
-                `Tickets a procesar: ${tickets.toLocaleString()} (media ~${docChars.toLocaleString()} caracteres/documento, muestra ${corpus.corpusSampleSize || 0} tickets).`
+                `Tickets a procesar: ${formatNumber(tickets)} (media ~${formatNumber(docChars)} caracteres/documento, muestra ${formatNumber(corpus.corpusSampleSize || 0)} tickets).`
             ];
 
             if (state.countError && countUrl) {

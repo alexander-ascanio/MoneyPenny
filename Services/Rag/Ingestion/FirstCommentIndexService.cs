@@ -112,6 +112,30 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         return count;
     }
 
+    public async Task<IReadOnlyList<IndexedTicketsMonthCount>> GetIndexedTicketsByMonthAsync(
+        bool knowledgeBaseScope = false,
+        CancellationToken cancellationToken = default)
+    {
+        var indexedIds = await _vectorRepository.GetIndexedTicketIdsBySourceAsync(
+            DocumentChunkSource.ClientFirstComment,
+            isKnowledgeBase: knowledgeBaseScope,
+            cancellationToken);
+
+        IReadOnlyCollection<int> scopedIds;
+        if (knowledgeBaseScope)
+        {
+            var kbScopedTicketIds = await _ticketRepository.GetKnowledgeBaseIndexCountsTicketIdsWithFirstCommentAsync(
+                cancellationToken);
+            scopedIds = indexedIds.Where(kbScopedTicketIds.Contains).ToArray();
+        }
+        else
+        {
+            scopedIds = indexedIds;
+        }
+
+        return await _ticketRepository.GetTicketCountsByCreatedMonthAsync(scopedIds, cancellationToken);
+    }
+
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
         IFirstCommentBulkIndexProgressReporter? progress = null,

@@ -320,6 +320,39 @@ public class TicketRepository : ITicketRepository
         return allowed.ToHashSet();
     }
 
+    public async Task<IReadOnlyList<IndexedTicketsMonthCount>> GetTicketCountsByCreatedMonthAsync(
+        IReadOnlyCollection<int> ticketIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (ticketIds.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => ticketIds.Contains(t.Id))
+            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                TicketCount = g.Count()
+            })
+            .OrderByDescending(x => x.Year)
+            .ThenByDescending(x => x.Month)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Select(row => new IndexedTicketsMonthCount
+            {
+                Year = row.Year,
+                Month = row.Month,
+                TicketCount = row.TicketCount
+            })
+            .ToList();
+    }
+
     private async Task<TicketFirstCommentRow?> BuildFirstCommentRowAsync(
         Ticket ticket,
         CancellationToken cancellationToken)

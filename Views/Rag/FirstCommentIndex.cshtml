@@ -1,8 +1,11 @@
+@using System.Globalization
 @using System.Text.Json
 @model MoneyPenny.ViewModels.Rag.FirstCommentIndexViewModel
 
 @{
     ViewData["Title"] = "Índice de comentarios #1";
+    var numberCulture = CultureInfo.GetCultureInfo("es-ES");
+    string FormatCount(int value) => value.ToString("N0", numberCulture);
     var pricingJson = JsonSerializer.Serialize(new
     {
         charsPerToken = Model.PricingConfig.CharsPerToken,
@@ -39,7 +42,7 @@
     @if (Model.CorpusSampleSize > 0)
     {
         <p class="text-muted small mb-0 mt-2" data-corpus-info>
-            Muestra de @Model.CorpusSampleSize ticket(s): media ~@Model.AverageCommentCharCount.ToString("N0") caracteres/comentario,
+            Muestra de @FormatCount(Model.CorpusSampleSize) ticket(s): media ~@Model.AverageCommentCharCount.ToString("N0", numberCulture) caracteres/comentario,
             ~@Model.AverageImagesPerTicket.ToString("0.##") imagen(es)/ticket.
         </p>
     }
@@ -74,15 +77,21 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small">Con comentario #1</div>
-                    <div class="display-6">@Model.TotalTicketsWithFirstComment</div>
+                    <div class="display-6">@FormatCount(Model.TotalTicketsWithFirstComment)</div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm h-100 border-success">
+            <div class="card shadow-sm h-100 border-success indexed-summary-card"
+                 role="button"
+                 tabindex="0"
+                 data-indexed-summary
+                 data-knowledge-base="false"
+                 data-summary-url="@Url.Action("FirstCommentIndexedByMonth")"
+                 title="Ver resumen por mes">
                 <div class="card-body">
-                    <div class="text-muted small">Ya indexados</div>
-                    <div class="display-6 text-success">@Model.IndexedTickets</div>
+                    <div class="text-muted small">Ya indexados <i class="bi bi-box-arrow-up-right ms-1 small"></i></div>
+                    <div class="display-6 text-success">@FormatCount(Model.IndexedTickets)</div>
                 </div>
             </div>
         </div>
@@ -90,7 +99,7 @@
             <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
                     <div class="text-muted small">Pendientes</div>
-                    <div class="display-6 text-warning">@Model.PendingTickets</div>
+                    <div class="display-6 text-warning">@FormatCount(Model.PendingTickets)</div>
                 </div>
             </div>
         </div>
@@ -111,15 +120,21 @@
             <div class="card shadow-sm h-100 border-info">
                 <div class="card-body">
                     <div class="text-muted small">Con comentario #1</div>
-                    <div class="display-6 text-info">@Model.KnowledgeBaseTotalTicketsWithFirstComment</div>
+                    <div class="display-6 text-info">@FormatCount(Model.KnowledgeBaseTotalTicketsWithFirstComment)</div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm h-100 border-success">
+            <div class="card shadow-sm h-100 border-success indexed-summary-card"
+                 role="button"
+                 tabindex="0"
+                 data-indexed-summary
+                 data-knowledge-base="true"
+                 data-summary-url="@Url.Action("FirstCommentIndexedByMonth")"
+                 title="Ver resumen por mes">
                 <div class="card-body">
-                    <div class="text-muted small">Ya indexados</div>
-                    <div class="display-6 text-success">@Model.KnowledgeBaseIndexedTickets</div>
+                    <div class="text-muted small">Ya indexados <i class="bi bi-box-arrow-up-right ms-1 small"></i></div>
+                    <div class="display-6 text-success">@FormatCount(Model.KnowledgeBaseIndexedTickets)</div>
                 </div>
             </div>
         </div>
@@ -127,8 +142,45 @@
             <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
                     <div class="text-muted small">Pendientes</div>
-                    <div class="display-6 text-warning">@Model.KnowledgeBasePendingTickets</div>
+                    <div class="display-6 text-warning">@FormatCount(Model.KnowledgeBasePendingTickets)</div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="indexedByMonthModal" tabindex="-1" aria-labelledby="indexedByMonthModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered indexed-by-month-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="indexedByMonthModalLabel">Resumen de Tickets indexados</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3" data-indexed-summary-scope></p>
+                <div class="text-center py-4 d-none" data-indexed-summary-loading>
+                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                    <div class="small text-muted mt-2">Cargando resumen…</div>
+                </div>
+                <div class="alert alert-warning d-none mb-0" data-indexed-summary-error role="alert"></div>
+                <div class="d-none" data-indexed-summary-content>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped indexed-by-month-table mb-3">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Mes</th>
+                                    <th scope="col">Año</th>
+                                    <th scope="col" class="text-end">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody data-indexed-summary-table-body></tbody>
+                        </table>
+                    </div>
+                    <div class="small text-muted" data-indexed-summary-total></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -315,16 +367,16 @@
         <div class="card-header">Resultado de la última ejecución</div>
         <div class="card-body">
             <ul class="mb-0">
-                <li>Procesados: <strong>@Model.LastResult.TicketsProcessed</strong></li>
-                <li>Indexados: <strong>@Model.LastResult.TicketsIndexed</strong></li>
-                <li>Omitidos: <strong>@Model.LastResult.TicketsSkipped</strong></li>
-                <li>Errores: <strong>@Model.LastResult.TicketsFailed</strong></li>
-                <li>Chunks creados: <strong>@Model.LastResult.ChunksCreated</strong></li>
-                <li>Embeddings creados: <strong>@Model.LastResult.EmbeddingsCreated</strong></li>
+                <li>Procesados: <strong>@FormatCount(Model.LastResult.TicketsProcessed)</strong></li>
+                <li>Indexados: <strong>@FormatCount(Model.LastResult.TicketsIndexed)</strong></li>
+                <li>Omitidos: <strong>@FormatCount(Model.LastResult.TicketsSkipped)</strong></li>
+                <li>Errores: <strong>@FormatCount(Model.LastResult.TicketsFailed)</strong></li>
+                <li>Chunks creados: <strong>@FormatCount(Model.LastResult.ChunksCreated)</strong></li>
+                <li>Embeddings creados: <strong>@FormatCount(Model.LastResult.EmbeddingsCreated)</strong></li>
                 @if (Model.LastResult.ProcessImages)
                 {
-                    <li>Imágenes detectadas: <strong>@Model.LastResult.ImagesDetected</strong></li>
-                    <li>Imágenes con texto extraído: <strong>@Model.LastResult.ImagesExtracted</strong></li>
+                    <li>Imágenes detectadas: <strong>@FormatCount(Model.LastResult.ImagesDetected)</strong></li>
+                    <li>Imágenes con texto extraído: <strong>@FormatCount(Model.LastResult.ImagesExtracted)</strong></li>
                 }
             </ul>
 
@@ -346,7 +398,7 @@
                     </ul>
                     @if (Model.LastResult.Errors.Count > 20)
                     {
-                        <div class="small mt-2">… y @(Model.LastResult.Errors.Count - 20) error(es) más.</div>
+                        <div class="small mt-2">… y @FormatCount(Model.LastResult.Errors.Count - 20) error(es) más.</div>
                     }
                 </div>
             }
@@ -358,6 +410,7 @@
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/rag-token-estimate.js" asp-append-version="true"></script>
     <script src="~/js/first-comment-index-progress.js" asp-append-version="true"></script>
+    <script src="~/js/first-comment-indexed-summary.js" asp-append-version="true"></script>
     <script>
         (function () {
             const singleForm = document.querySelector('[data-first-comment-single-form]');

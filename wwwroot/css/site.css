@@ -774,6 +774,36 @@ body.tickets-col-resizing * {
   height: 1.25rem;
 }
 
+.indexed-summary-card {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.indexed-summary-card:hover,
+.indexed-summary-card:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 0.35rem 0.85rem rgba(22, 101, 52, 0.15);
+  outline: none;
+}
+
+.indexed-summary-card:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.35);
+}
+
+.indexed-by-month-modal {
+  max-width: 32rem;
+}
+
+.indexed-by-month-table thead th {
+  background-color: #f8fafc;
+  border-bottom-width: 2px;
+  white-space: nowrap;
+}
+
+.indexed-by-month-table tbody td {
+  vertical-align: middle;
+}
+
 .rag-threshold-compare-grid {
   align-items: stretch;
 }
