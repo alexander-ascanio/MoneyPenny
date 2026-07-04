@@ -1,0 +1,16 @@
+Ticket actual (#{{ticketNumber}}) — comentario #1 indexado:
+{{currentTicketComment}}
+
+Contexto recuperado (tickets con problema similar; comentarios posteriores al #1 del cliente, sin repetir el problema inicial):
+{{context}}
+
+Pregunta:
+{{question}}
+
+Instrucciones:
+- El comentario #1 del ticket actual describe el problema a resolver.
+- El contexto recuperado incluye el hilo de cada ticket similar a partir del comentario #2 (respuestas del agente, aclaraciones y cierre).
+- Identifica en esos comentarios posteriores qué solución o pasos aplicó el agente en casos parecidos.
+- Propón una resolución para el ticket actual basándote en ese hilo y en el problema actual; no inventes pasos sin apoyo en el contexto.
+- Cita el número de ticket cuando sea relevante.
+- Si no hay comentarios posteriores o no hay información suficiente para una resolución concreta, indícalo explícitamente.

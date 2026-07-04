@@ -168,7 +168,7 @@ public class CommentContentService : ICommentContentService
 
             document.AppendLine();
             document.AppendLine($"Texto extraído de imagen {imageIndex}:");
-            document.AppendLine(extractedText);
+            document.AppendLine(TicketHtmlHelper.SanitizeForIndexing(extractedText));
             imageIndex++;
         }
 

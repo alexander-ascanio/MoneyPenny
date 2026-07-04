@@ -34,7 +34,15 @@
                             <span class="badge rounded-pill text-bg-success">Indexado RAG</span>
                         }
                     </div>
-                    <h2 class="ticket-detail-title mb-1">@Model.Title</h2>
+                    @{
+                        var showTitleInHero = !Model.Comments.Any(c =>
+                            !string.IsNullOrWhiteSpace(c.ActionType)
+                            && string.Equals(c.ActionType, Model.Title, StringComparison.OrdinalIgnoreCase));
+                    }
+                    @if (showTitleInHero)
+                    {
+                        <h2 class="ticket-detail-title mb-1">@Model.Title</h2>
+                    }
                     <p class="text-muted mb-0 small">
                         ID interno: @Model.Id
                         @if (!string.IsNullOrWhiteSpace(Model.TeamSupportId))
@@ -101,13 +109,27 @@
                     {
                         var totalComments = Model.Comments.Count;
                         var commentIndex = 0;
+                        string AttachmentProxyUrl(string originalUrl) =>
+                            Url.Action("Attachment", "Tickets", new { url = originalUrl }) ?? originalUrl;
                         <div class="ticket-comments-timeline">
                             @foreach (var comment in Model.Comments)
                             {
                                 commentIndex++;
                                 var commentNumber = totalComments - commentIndex + 1;
                                 var hasContent = !string.IsNullOrWhiteSpace(comment.Content);
+                                var isTicketSubjectAction = !string.IsNullOrWhiteSpace(comment.ActionType)
+                                    && string.Equals(comment.ActionType, Model.Title, StringComparison.OrdinalIgnoreCase);
+                                @if (isTicketSubjectAction)
+                                {
+                                    <div class="ticket-comment-date-marker">
+                                        @comment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                                    </div>
+                                }
                                 <article class="ticket-comment-card @(comment.IsVisible ? "ticket-comment-public" : "ticket-comment-internal")">
+                                    @if (isTicketSubjectAction)
+                                    {
+                                        <div class="ticket-comment-subject-bar">@Model.Title</div>
+                                    }
                                     <div class="ticket-comment-top">
                                         <div class="ticket-comment-top-left">
                                             <span class="ticket-comment-avatar">
@@ -139,16 +161,42 @@
                                     @if (hasContent)
                                     {
                                         <div class="ticket-comment-body ticket-comment-body-html">
-                                            @Html.Raw(TicketHtmlHelper.PrepareCommentHtml(comment.Content))
+                                            @Html.Raw(TicketHtmlHelper.PrepareCommentHtmlForDisplay(comment.Content, AttachmentProxyUrl))
                                         </div>
                                     }
-                                    else if (!string.IsNullOrWhiteSpace(comment.ActionType))
+                                    @if (comment.Attachments.Any())
+                                    {
+                                        <div class="ticket-comment-attachments">
+                                            @foreach (var attachment in comment.Attachments)
+                                            {
+                                                var proxyUrl = AttachmentProxyUrl(attachment.OriginalUrl);
+                                                var label = attachment.FileName ?? "Adjunto";
+                                                <a class="ticket-comment-attachment-link" href="@proxyUrl" target="_blank" rel="noopener">
+                                                    <i class="bi bi-paperclip" aria-hidden="true"></i>
+                                                    <span>@label</span>
+                                                </a>
+                                            }
+                                        </div>
+                                    }
+                                    else if (comment.PendingAttachmentResolution)
+                                    {
+                                        <div class="ticket-comment-attachments ticket-comment-attachments-pending"
+                                             data-action-id="@comment.TeamSupportActionId"
+                                             data-ticket-id="@Model.TeamSupportId"
+                                             data-content="@comment.Content">
+                                            <span class="text-muted small">
+                                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                Buscando adjuntos en TeamSupport...
+                                            </span>
+                                        </div>
+                                    }
+                                    else if (!hasContent && !string.IsNullOrWhiteSpace(comment.ActionType))
                                     {
                                         <div class="ticket-comment-body ticket-comment-body-system text-muted">
                                             <i class="bi bi-gear me-1"></i>@comment.ActionType
                                         </div>
                                     }
-                                    @if (!string.IsNullOrWhiteSpace(comment.ActionType) && hasContent)
+                                    @if (!string.IsNullOrWhiteSpace(comment.ActionType) && hasContent && !isTicketSubjectAction)
                                     {
                                         <div class="ticket-comment-type-label">@comment.ActionType</div>
                                     }
@@ -246,22 +294,43 @@
                             <partial name="_TokenUsageEstimate" model="Model.IndexWithoutImagesEstimate" />
                         }
                         <button type="submit" class="btn btn-success w-100" id="indexTicketButton">
-                            <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
+                            <span class="index-ticket-label">
+                                <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
+                            </span>
+                            <span class="index-ticket-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Indexando…
+                            </span>
                         </button>
                     </form>
-                    <a asp-controller="Rag" asp-action="Ask"
-                       asp-route-ticketId="@Model.Id"
-                       asp-route-ticketNumber="@Model.Number"
-                       class="btn btn-primary w-100">
-                        <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
-                    </a>
-                    <a asp-controller="Rag" asp-action="Ask"
-                       asp-route-ticketId="@Model.Id"
-                       asp-route-ticketNumber="@Model.Number"
-                       asp-route-knowledgeBaseOnly="true"
-                       class="btn btn-outline-primary w-100 mt-2">
-                        <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
-                    </a>
+                    <div class="alert alert-warning border-0 mb-0 d-none" id="notIndexedRagAlert" role="alert">
+                        Este ticket no está indexado. Utiliza «Indexar ticket» antes de consultar la respuesta RAG.
+                    </div>
+                    @if (Model.IsIndexed)
+                    {
+                        <a asp-controller="Rag" asp-action="Ask"
+                           asp-route-ticketId="@Model.Id"
+                           asp-route-ticketNumber="@Model.Number"
+                           class="btn btn-primary w-100">
+                            <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
+                        </a>
+                        <a asp-controller="Rag" asp-action="Ask"
+                           asp-route-ticketId="@Model.Id"
+                           asp-route-ticketNumber="@Model.Number"
+                           asp-route-knowledgeBaseOnly="true"
+                           class="btn btn-outline-primary w-100 mt-2">
+                            <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary w-100" data-rag-blocked-button>
+                            <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
+                        </button>
+                        <button type="button" class="btn btn-outline-primary w-100 mt-2" data-rag-blocked-button>
+                            <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -331,13 +400,38 @@
 }
 
 @section Scripts {
-    @if (Model.PromptImageProcessingOnIndex)
-    {
-        <script>
-            (function () {
-                const form = document.getElementById('indexTicketForm');
+    <script>
+        (function () {
+            const notIndexedAlert = document.getElementById('notIndexedRagAlert');
+            document.querySelectorAll('[data-rag-blocked-button]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    notIndexedAlert?.classList.remove('d-none');
+                    notIndexedAlert?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const form = document.getElementById('indexTicketForm');
+            const button = document.getElementById('indexTicketButton');
+            if (!form || !button) {
+                return;
+            }
+
+            const label = button.querySelector('.index-ticket-label');
+            const loading = button.querySelector('.index-ticket-loading');
+
+            function setIndexTicketLoading(isLoading) {
+                button.disabled = isLoading;
+                label?.classList.toggle('d-none', isLoading);
+                loading?.classList.toggle('d-none', !isLoading);
+            }
+
+            const modalElement = document.getElementById('imageProcessingModal');
+            if (modalElement) {
                 const processImagesInput = document.getElementById('processImagesInput');
-                const modalElement = document.getElementById('imageProcessingModal');
                 const modal = new bootstrap.Modal(modalElement);
                 const choiceWithVision = document.getElementById('choiceWithVision');
                 const choiceWithoutVision = document.getElementById('choiceWithoutVision');
@@ -357,6 +451,7 @@
 
                 form.addEventListener('submit', function (event) {
                     if (confirmedSubmit) {
+                        setIndexTicketLoading(true);
                         return;
                     }
 
@@ -367,8 +462,9 @@
                 document.getElementById('confirmProcessImagesButton').addEventListener('click', function () {
                     processImagesInput.value = choiceWithVision.checked ? 'true' : 'false';
                     confirmedSubmit = true;
+                    setIndexTicketLoading(true);
                     modal.hide();
-                    form.submit();
+                    form.requestSubmit();
                 });
 
                 document.getElementById('cancelIndexButton').addEventListener('click', function () {
@@ -380,7 +476,59 @@
                         processImagesInput.value = 'true';
                     }
                 });
-            })();
-        </script>
-    }
+            } else {
+                form.addEventListener('submit', function () {
+                    setIndexTicketLoading(true);
+                });
+            }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const pendingBlocks = document.querySelectorAll('.ticket-comment-attachments-pending');
+            if (!pendingBlocks.length) {
+                return;
+            }
+
+            pendingBlocks.forEach(async function (block) {
+                const actionId = block.dataset.actionId;
+                const ticketId = block.dataset.ticketId || '';
+                const content = block.dataset.content || '';
+                if (!actionId) {
+                    block.remove();
+                    return;
+                }
+
+                try {
+                    const params = new URLSearchParams({
+                        teamSupportActionId: actionId,
+                        teamSupportTicketId: ticketId,
+                        content: content
+                    });
+                    const response = await fetch(`/Tickets/ResolveActionAttachments?${params.toString()}`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('resolve failed');
+                    }
+
+                    const attachments = await response.json();
+                    if (!attachments.length) {
+                        block.innerHTML = '<span class="text-muted small"><i class="bi bi-paperclip me-1"></i>Este comentario referencia un adjunto en TeamSupport que no está sincronizado. Configure ApiOrganizationId/ApiToken o AttachmentOverrides.</span>';
+                        return;
+                    }
+
+                    block.classList.remove('ticket-comment-attachments-pending');
+                    block.innerHTML = attachments.map(function (attachment) {
+                        const label = attachment.fileName || 'Adjunto';
+                        return `<a class="ticket-comment-attachment-link" href="${attachment.proxyUrl}" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i><span>${label}</span></a>`;
+                    }).join('');
+                } catch {
+                    block.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-circle me-1"></i>No se pudieron cargar los adjuntos de TeamSupport.</span>';
+                }
+            });
+        })();
+    </script>
 }

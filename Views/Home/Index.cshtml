@@ -1,562 +1,194 @@
 @{
-    ViewData["Title"] = "MoneyPenny - Esqueleto Base";
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center my-5">
-    <h1 class="display-5 fw-bold" style="color: #2c3e50;">Plataforma Base <span style="color: #3498db;">para Aplicaciones</span></h1>
-    <h2 class="display-5 fw-bold" style="color: #2c3e50;">Empresariales <span style="color: #3498db;">en .NET</span></h2>
-    <p class="lead text-muted mt-3">Todo lo que necesitas para lanzar tu sistema profesional listo para producción.</p>
-    
-    <div class="mt-4">
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <a asp-controller="DummyRecords" asp-action="Index" class="btn btn-primary btn-lg me-2 px-4">
-                🚀 Ver Demo
-            </a>
-        }
-        else
-        {
-            <a asp-controller="DummyRecords" asp-action="Index" class="btn btn-primary btn-lg me-2 px-4">
-                🚀 Ver Demo
-            </a>
-        }
-        <a href="#stack" class="btn btn-outline-secondary btn-lg px-4">
-            💻 Ver Stack Tecnológico
-        </a>
-    </div>
-</div>
-
-<div class="row mb-5" id="stack">
-    <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow border-primary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4">
-                    <span class="text-primary">⚙️</span> <strong>Stack Tecnológico</strong>
-                </h5>
-                <ul class="list-unstyled">
-                    <li class="mb-2">✓ <strong>ASP.NET Core MVC</strong> (.NET 10 LTS)</li>
-                    <li class="mb-2">✓ <strong>PostgreSQL</strong> + EF Core</li>
-                    <li class="mb-2">✓ <strong>ASP.NET Identity</strong></li>
-                    <li class="mb-2">✓ <strong>Bootstrap 5</strong> + Razor</li>
-                    <li class="mb-2">✓ <strong>Migraciones automáticas</strong></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow border-success" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4">
-                    <span class="text-success">✨</span> <strong>Características Incluidas</strong>
-                </h5>
-                <ul class="list-unstyled">
-                    <li class="mb-2">✓ <strong>Sistema de usuarios completo</strong></li>
-                    <li class="mb-2">✓ <strong>Autorización y roles</strong></li>
-                    <li class="mb-2">✓ <strong>CRUD de ejemplo</strong></li>
-                    <li class="mb-2">✓ <strong>Seed inicial configurable</strong></li>
-                    <li class="mb-2">✓ <strong>Configuración por entornos</strong></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="text-center mb-5">
-    <h3 class="fw-bold mb-4" style="color: #2c3e50;">Capacidades de la Plataforma</h3>
-</div>
-
-<div class="row mb-5 g-4">
-    <div class="col-md-3">
-        <div class="card h-100 shadow text-center border-primary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#0d6efd" class="bi bi-database" viewBox="0 0 16 16">
-                            <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
-                        </svg>
+<div class="home-page">
+    <section class="home-hero mb-4 mb-lg-5">
+        <div class="home-hero-glow home-hero-glow-1"></div>
+        <div class="home-hero-glow home-hero-glow-2"></div>
+        <div class="home-hero-inner">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <span class="home-hero-badge">
+                        <i class="bi bi-stars me-1"></i> Asistente RAG para soporte
+                    </span>
+                    <h1 class="home-title mb-3">MoneyPenny</h1>
+                    <p class="home-hero-lead mb-4">
+                        Portal interno para consultar tickets de <strong>TeamSupport</strong>, indexar el contenido
+                        relevante del primer comentario y obtener respuestas asistidas con
+                        <strong>RAG</strong> sobre tickets similares y la base de conocimiento.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-controller="Tickets" asp-action="Index" class="btn btn-light btn-lg home-hero-btn">
+                            <i class="bi bi-ticket-detailed me-1"></i> Ver tickets
+                        </a>
+                        <a asp-controller="Rag" asp-action="FirstCommentIndex" class="btn btn-outline-light btn-lg home-hero-btn">
+                            <i class="bi bi-journal-text me-1"></i> Índice #1
+                        </a>
                     </div>
                 </div>
-                <h5 class="fw-bold mb-3">Gestión de Datos</h5>
-                <p class="text-muted">Maneja cualquier tipo de entidad con EF Core y relaciones automáticas.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card h-100 shadow text-center border-success" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#198754" class="bi bi-link-45deg" viewBox="0 0 16 16">
-                            <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                            <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                        </svg>
-                    </div>
-                </div>
-                <h5 class="fw-bold mb-3">Integración con APIs</h5>
-                <p class="text-muted">Conecta servicios externos como Stripe, PayPal, geolocalización y más.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card h-100 shadow text-center border-info" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-info bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#0dcaf0" class="bi bi-robot" viewBox="0 0 16 16">
-                            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/>
-                            <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/>
-                        </svg>
-                    </div>
-                </div>
-                <h5 class="fw-bold mb-3">Inteligencia Artificial</h5>
-                <p class="text-muted">Integra ChatGPT, Claude, Gemini y otros modelos de IA para chatbots y agentes.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card h-100 shadow text-center border-warning" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#ffc107" class="bi bi-shield-check" viewBox="0 0 16 16">
-                            <path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56"/>
-                            <path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0"/>
-                        </svg>
-                    </div>
-                </div>
-                <h5 class="fw-bold mb-3">Seguridad Empresarial</h5>
-                <p class="text-muted">Autenticación, roles, sesiones seguras y protección CSRF.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="text-center mb-5">
-    <h3 class="fw-bold mb-4" style="color: #2c3e50;">Tipos de Aplicaciones <span style="color: #3498db;">que Puedes Desarrollar</span></h3>
-</div>
-
-<div class="row g-4 mb-5">
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">🛒</span>
-                </div>
-                <h5 class="fw-bold">E-Commerce</h5>
-                <p class="text-muted mb-0">Tiendas online, pagos, inventario y envíos.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">📊</span>
-                </div>
-                <h5 class="fw-bold">ERP / CRM</h5>
-                <p class="text-muted mb-0">Gestión empresarial, ventas, facturación y reportes.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">🎫</span>
-                </div>
-                <h5 class="fw-bold">Sistemas de Tickets</h5>
-                <p class="text-muted mb-0">Help desk, soporte técnico y seguimiento de tareas.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">🏥</span>
-                </div>
-                <h5 class="fw-bold">Gestión de Servicios</h5>
-                <p class="text-muted mb-0">Reservas, citas, hoteles y restaurantes.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">📚</span>
-                </div>
-                <h5 class="fw-bold">Plataformas Educativas</h5>
-                <p class="text-muted mb-0">LMS, cursos, estudiantes y evaluaciones.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">🏢</span>
-                </div>
-                <h5 class="fw-bold">Portales Corporativos</h5>
-                <p class="text-muted mb-0">Intranets, gestión documental y workflows.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">🔗</span>
-                </div>
-                <h5 class="fw-bold">Agregadores de Datos</h5>
-                <p class="text-muted mb-0">Centraliza APIs de clima, noticias y finanzas.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">📱</span>
-                </div>
-                <h5 class="fw-bold">Aplicaciones SaaS</h5>
-                <p class="text-muted mb-0">Multi-tenant, suscripciones y analytics.</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-secondary" style="border-width: 2px;">
-            <div class="card-body p-4">
-                <div class="mb-3">
-                    <span class="fs-1">📊</span>
-                </div>
-                <h5 class="fw-bold">Dashboards Analíticos</h5>
-                <p class="text-muted mb-0">Métricas en tiempo real y reportes personalizados.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="alert alert-info border-info mb-5" style="border-width: 2px; background-color: #e7f3ff;">
-    <div class="row align-items-center">
-        <div class="col-md-1 text-center">
-            <span class="fs-1">💡</span>
-        </div>
-        <div class="col-md-11">
-            <h4 class="alert-heading fw-bold mb-3">
-                <i class="bi bi-info-circle me-2"></i>
-                ¿Qué es MoneyPenny?
-            </h4>
-            <p class="mb-2">
-                <strong>MoneyPenny es un esqueleto de aplicación completamente funcional</strong>, listo para que empieces a programar cualquier tipo de sistema empresarial sin perder tiempo en configuración inicial.
-            </p>
-            <p class="mb-0">
-                Todo lo esencial ya está implementado: autenticación, base de datos, migraciones, roles, CRUD de ejemplo y estructura de proyecto profesional. 
-                <strong>Solo necesitas agregar tu lógica de negocio específica y desplegar.</strong>
-            </p>
-        </div>
-    </div>
-</div>
-
-<div class="text-center mb-4">
-    <h3 class="fw-bold" style="color: #2c3e50;">🤖 Asistentes Inteligentes <span style="color: #3498db;">para Desarrollo</span></h3>
-    <p class="lead text-muted">Agentes especializados diseñados para las 3 tareas más comunes en el desarrollo</p>
-</div>
-
-<div class="alert alert-primary border-primary mb-4" style="border-width: 2px;">
-    <h5 class="alert-heading fw-bold mb-3">
-        <i class="bi bi-star-fill me-2"></i>
-        Los Agentes Están Diseñados para las 3 Tareas Básicas del Portal
-    </h5>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="d-flex align-items-start">
-                <div class="me-3">
-                    <span class="badge bg-danger rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">1</span>
-                </div>
-                <div>
-                    <h6 class="fw-bold mb-1">📊 Cambios en Diccionario de Datos</h6>
-                    <p class="small mb-0">Modificar la base de datos: agregar tablas, columnas, relaciones y migraciones.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="d-flex align-items-start">
-                <div class="me-3">
-                    <span class="badge bg-success rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">2</span>
-                </div>
-                <div>
-                    <h6 class="fw-bold mb-1">🔗 Conexiones a APIs Externas</h6>
-                    <p class="small mb-0">Integrar servicios de terceros: pagos, emails, IA, geolocalización, etc.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="d-flex align-items-start">
-                <div class="me-3">
-                    <span class="badge bg-info rounded-circle" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">3</span>
-                </div>
-                <div>
-                    <h6 class="fw-bold mb-1">🎨 Modificaciones en Vistas</h6>
-                    <p class="small mb-0">Crear y personalizar interfaces: formularios, tablas, dashboards y componentes UI.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <hr class="my-3">
-    <p class="small mb-0 text-center">
-        <strong>💡 Estos agentes te guían paso a paso</strong> para que puedas realizar estas tareas de forma eficiente y siguiendo las mejores prácticas del proyecto.
-    </p>
-</div>
-
-<div class="row g-4 mb-5">
-    <div class="col-md-12">
-        <div class="card shadow border-primary" style="border-width: 2px;">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-folder me-2"></i>
-                    Carpeta <code>.cursor/</code> - Configuración y Agentes
-                </h5>
-            </div>
-            <div class="card-body p-4">
-                <p class="mb-3">
-                    La carpeta <code>.cursor/</code> contiene toda la configuración y herramientas especializadas para trabajar eficientemente con Cursor IDE:
-                </p>
-                
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="card h-100 border-secondary">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-primary mb-2">
-                                    <i class="bi bi-file-earmark-code me-2"></i>
-                                    <code>.cursor/commands/</code>
-                                </h6>
-                                <p class="small text-muted mb-0">
-                                    Comandos personalizados y plantillas de código. Incluye <code>Crear-Aplicacion.md</code> con las especificaciones completas del proyecto.
-                                </p>
-                            </div>
+                <div class="col-lg-5">
+                    <div class="home-hero-stats">
+                        <div class="home-stat-card home-stat-card-violet">
+                            <i class="bi bi-search"></i>
+                            <span>Búsqueda semántica</span>
                         </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card h-100 border-secondary">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-success mb-2">
-                                    <i class="bi bi-robot me-2"></i>
-                                    <code>.cursor/agents/</code>
-                                </h6>
-                                <p class="small text-muted mb-0">
-                                    Agentes especializados que actúan como consultores expertos para tareas específicas del desarrollo.
-                                </p>
-                            </div>
+                        <div class="home-stat-card home-stat-card-cyan">
+                            <i class="bi bi-image"></i>
+                            <span>Vision en capturas</span>
                         </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card h-100 border-secondary">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-info mb-2">
-                                    <i class="bi bi-chat-dots me-2"></i>
-                                    <code>.cursor/prompts/</code>
-                                </h6>
-                                <p class="small text-muted mb-0">
-                                    Prompts predefinidos para tareas comunes de IA, como clasificación de objetos y análisis de código.
-                                </p>
-                            </div>
+                        <div class="home-stat-card home-stat-card-amber">
+                            <i class="bi bi-chat-square-text"></i>
+                            <span>Respuestas GPT / KB</span>
                         </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card h-100 border-secondary">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-warning mb-2">
-                                    <i class="bi bi-gear me-2"></i>
-                                    <code>.cursor/rules/</code>
-                                </h6>
-                                <p class="small text-muted mb-0">
-                                    Reglas de codificación y estándares del proyecto que Cursor aplica automáticamente.
-                                </p>
-                            </div>
+                        <div class="home-stat-card home-stat-card-rose">
+                            <i class="bi bi-shield-check"></i>
+                            <span>Identity + roles</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    </section>
 
-<div class="text-center mb-4">
-    <h4 class="fw-bold" style="color: #2c3e50;">
-        3 Agentes Diseñados Especialmente <span style="color: #3498db;">para Estas Tres Tareas Básicas</span>
-    </h4>
-</div>
-
-<div class="row g-4 mb-5">
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-danger" style="border-width: 2px;">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-database-gear me-2"></i>
-                    Database Migration Agent
-                </h5>
+    <section class="mb-4 mb-lg-5">
+        <h2 class="home-section-title"><i class="bi bi-lightning-charge"></i> Qué hace</h2>
+        <div class="row g-3 g-lg-4">
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-blue">
+                    <div class="home-feature-icon"><i class="bi bi-list-ul"></i></div>
+                    <h3 class="h6">Tickets TeamSupport</h3>
+                    <p>Lista y filtra tickets sincronizados desde Azure PostgreSQL (solo lectura).</p>
+                </div>
             </div>
-            <div class="card-body">
-                <p class="mb-3">
-                    <strong>Especialista en migraciones de base de datos</strong> con Entity Framework Core.
-                </p>
-                <p class="small mb-3"><strong>Cuándo usarlo:</strong></p>
-                <ul class="small mb-3">
-                    <li>Crear nuevas migraciones</li>
-                    <li>Modificar esquema (tablas/columnas)</li>
-                    <li>Aplicar o revertir migraciones</li>
-                    <li>Generar scripts SQL</li>
-                </ul>
-                <div class="alert alert-light mb-0">
-                    <p class="mb-2"><strong>Invocar:</strong></p>
-                    <div class="bg-white border rounded p-2">
-                        <p class="mb-1 small"><strong>Tú:</strong></p>
-                        <code class="text-danger small">
-                            @@database-migration-agent.md necesito agregar una columna Email a la tabla Users
-                        </code>
-                    </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-indigo">
+                    <div class="home-feature-icon"><i class="bi bi-chat-left-text"></i></div>
+                    <h3 class="h6">Detalle enriquecido</h3>
+                    <p>Comentarios, adjuntos, imágenes embebidas y proxy autenticado de archivos.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-violet">
+                    <div class="home-feature-icon"><i class="bi bi-diagram-3"></i></div>
+                    <h3 class="h6">Índice vectorial</h3>
+                    <p>Indexa el comentario #1 para búsqueda semántica con pgvector y embeddings OpenAI.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-teal">
+                    <div class="home-feature-icon"><i class="bi bi-eye"></i></div>
+                    <h3 class="h6">OpenAI Vision</h3>
+                    <p>Extrae texto de capturas y filtra firmas, avisos legales y ruido de email.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-green">
+                    <div class="home-feature-icon"><i class="bi bi-robot"></i></div>
+                    <h3 class="h6">Respuestas RAG</h3>
+                    <p>Sugerencias con GPT a partir de tickets similares o solo Knowledge Base.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-orange">
+                    <div class="home-feature-icon"><i class="bi bi-sliders"></i></div>
+                    <h3 class="h6">Indexación avanzada</h3>
+                    <p>Indexación masiva, estimación de tokens y comparación de umbrales de similitud.</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-success" style="border-width: 2px;">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-link-45deg me-2"></i>
-                    API Integration Agent
-                </h5>
-            </div>
-            <div class="card-body">
-                <p class="mb-3">
-                    <strong>Especialista en integración con APIs externas</strong> usando HttpClient.
-                </p>
-                <p class="small mb-3"><strong>Cuándo usarlo:</strong></p>
-                <ul class="small mb-3">
-                    <li>Integrar APIs (OpenAI, Jira, Auth0)</li>
-                    <li>Configurar autenticación</li>
-                    <li>Implementar retry logic</li>
-                    <li>Manejar errores y timeouts</li>
-                </ul>
-                <div class="alert alert-light mb-0">
-                    <p class="mb-2"><strong>Invocar:</strong></p>
-                    <div class="bg-white border rounded p-2">
-                        <p class="mb-1 small"><strong>Tú:</strong></p>
-                        <code class="text-success small">
-                            @@api-integration-agent.md necesito integrar la API de SendGrid para enviar emails
-                        </code>
-                    </div>
+    <section class="mb-4 mb-lg-5">
+        <h2 class="home-section-title"><i class="bi bi-stack"></i> Stack tecnológico</h2>
+        <div class="home-stack-grid">
+            <span class="home-stack-pill home-stack-pill-net"><i class="bi bi-window"></i> ASP.NET Core MVC · .NET 10</span>
+            <span class="home-stack-pill home-stack-pill-db"><i class="bi bi-database"></i> PostgreSQL + pgvector</span>
+            <span class="home-stack-pill home-stack-pill-ef"><i class="bi bi-layers"></i> Entity Framework Core</span>
+            <span class="home-stack-pill home-stack-pill-id"><i class="bi bi-person-badge"></i> ASP.NET Identity</span>
+            <span class="home-stack-pill home-stack-pill-ui"><i class="bi bi-palette"></i> Bootstrap 5 + Razor</span>
+            <span class="home-stack-pill home-stack-pill-ai"><i class="bi bi-cpu"></i> OpenAI API</span>
+        </div>
+    </section>
+
+    <div class="row g-4 mb-4 mb-lg-5">
+        <div class="col-lg-6">
+            <section class="home-panel home-panel-databases h-100">
+                <div class="home-panel-header">
+                    <i class="bi bi-database-fill"></i>
+                    <h2 class="h5 mb-0">Bases de datos</h2>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card shadow h-100 border-info" style="border-width: 2px;">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-palette me-2"></i>
-                    View Modification Agent
-                </h5>
-            </div>
-            <div class="card-body">
-                <p class="mb-3">
-                    <strong>Especialista en crear y modificar vistas</strong> Razor con Bootstrap 5.
-                </p>
-                <p class="small mb-3"><strong>Cuándo usarlo:</strong></p>
-                <ul class="small mb-3">
-                    <li>Crear nuevas vistas y formularios</li>
-                    <li>Diseñar componentes UI</li>
-                    <li>Modificar tablas y cards</li>
-                    <li>Agregar modales y alertas</li>
-                </ul>
-                <div class="alert alert-light mb-0">
-                    <p class="mb-2"><strong>Invocar:</strong></p>
-                    <div class="bg-white border rounded p-2">
-                        <p class="mb-1 small"><strong>Tú:</strong></p>
-                        <code class="text-info small">
-                            @@view-modification-agent.md necesito crear un formulario de registro de productos
-                        </code>
-                    </div>
+                <div class="home-panel-body">
+                    <article class="home-db-card home-db-card-app">
+                        <div class="home-db-card-label">App</div>
+                        <h3 class="h6">Aplicación <code>Database</code></h3>
+                        <p>PostgreSQL local. Usuarios, roles, identidad y datos internos. Migraciones y seed al arranque.</p>
+                    </article>
+                    <article class="home-db-card home-db-card-ts">
+                        <div class="home-db-card-label">Solo lectura</div>
+                        <h3 class="h6">TeamSupport <code>TicketsDatabase</code></h3>
+                        <p>Azure PostgreSQL. Tickets, acciones y HTML sincronizado. La app no escribe en esta base.</p>
+                    </article>
+                    <article class="home-db-card home-db-card-vec mb-0">
+                        <div class="home-db-card-label">RAG</div>
+                        <h3 class="h6">Vectores <code>VectorDatabase</code></h3>
+                        <p>Chunks, embeddings, logs de consultas RAG y caché de texto extraído de imágenes.</p>
+                    </article>
                 </div>
-            </div>
+            </section>
+        </div>
+
+        <div class="col-lg-6">
+            <section class="home-panel home-panel-integrations h-100">
+                <div class="home-panel-header">
+                    <i class="bi bi-plug-fill"></i>
+                    <h2 class="h5 mb-0">Integraciones</h2>
+                </div>
+                <div class="home-panel-body">
+                    <article class="home-int-card">
+                        <div class="home-int-icon home-int-icon-ts"><i class="bi bi-headset"></i></div>
+                        <div>
+                            <h3 class="h6 mb-1">TeamSupport</h3>
+                            <p class="mb-0">Lectura en Azure, proxy de adjuntos, resolución de URLs y overrides por acción. API REST opcional.</p>
+                        </div>
+                    </article>
+                    <article class="home-int-card">
+                        <div class="home-int-icon home-int-icon-ai"><i class="bi bi-stars"></i></div>
+                        <div>
+                            <h3 class="h6 mb-1">OpenAI</h3>
+                            <p class="mb-0">Embeddings, chat <code>gpt-4o-mini</code> y Vision para capturas. Config en <code>ExternalApis:OpenAI</code> y <code>Rag</code>.</p>
+                        </div>
+                    </article>
+                    <article class="home-int-card mb-0">
+                        <div class="home-int-icon home-int-icon-tools"><i class="bi bi-tools"></i></div>
+                        <div>
+                            <h3 class="h6 mb-1">Herramientas del portal</h3>
+                            <p class="mb-0">
+                                Indexación unitaria y masiva, estimación de tokens, umbrales RAG, usuarios (Admin) y
+                                <a asp-controller="Tools" asp-action="Index" class="home-link">Herramientas</a>.
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </section>
         </div>
     </div>
-</div>
 
-<div class="card shadow-sm border-info mb-5" style="border-width: 2px;">
-    <div class="card-body p-4">
-        <h5 class="card-title mb-3">
-            <i class="bi bi-question-circle me-2"></i>
-            ¿Cómo Funcionan los Agentes?
-        </h5>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <h6 class="fw-bold text-primary">📋 Son Guías Especializadas</h6>
-                <p class="small text-muted mb-0">
-                    Los agentes son documentos markdown con conocimiento experto sobre tareas específicas. 
-                    Contienen comandos, ejemplos de código, buenas prácticas y soluciones a problemas comunes.
-                </p>
+    <section class="home-cta">
+        <div class="home-cta-glow"></div>
+        <div class="home-cta-inner">
+            <div>
+                <h2 class="h4 mb-2">¿Listo para empezar?</h2>
+                <p class="mb-0">Explora tickets, indexa comentarios y prueba las respuestas asistidas por IA.</p>
             </div>
-            <div class="col-md-6 mb-3">
-                <h6 class="fw-bold text-success">🎯 Invocación Manual</h6>
-                <p class="small text-muted mb-0">
-                    Los invocas en el chat de Cursor usando <code>@@nombre-agente.md</code> seguido de tu pregunta o tarea. 
-                    El agente te guiará paso a paso con ejemplos específicos.
-                </p>
-            </div>
-            <div class="col-md-6 mb-3">
-                <h6 class="fw-bold text-info">💡 Contexto del Proyecto</h6>
-                <p class="small text-muted mb-0">
-                    Están diseñados específicamente para MoneyPenny, con ejemplos usando PostgreSQL, EF Core, 
-                    ASP.NET Identity y el stack tecnológico del proyecto.
-                </p>
-            </div>
-            <div class="col-md-6 mb-3">
-                <h6 class="fw-bold text-warning">🔄 Versionados en Git</h6>
-                <p class="small text-muted mb-0">
-                    Los agentes están en tu repositorio, puedes modificarlos, crear nuevos y compartirlos con tu equipo. 
-                    Son parte de la documentación viva del proyecto.
-                </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="Tickets" asp-action="Index" class="btn btn-light btn-lg">
+                    <i class="bi bi-ticket-detailed me-1"></i> Ir a tickets
+                </a>
+                <a asp-controller="Rag" asp-action="FirstCommentIndex" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-journal-text me-1"></i> Indexar comentarios
+                </a>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="card shadow-sm border-0 mb-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-    <div class="card-body p-5 text-white text-center">
-        <h3 class="fw-bold mb-3">✅ Todo está listo para que empieces</h3>
-        <p class="fs-5 mb-4">
-            No necesitas configurar nada más. La base de datos, autenticación, migraciones y estructura están completamente funcionales.
-        </p>
-        <p class="fs-5 fw-bold mb-4">Solo agrega tu lógica de negocio y despliega.</p>
-        
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <a asp-controller="DummyRecords" asp-action="Index" class="btn btn-light btn-lg px-5 me-2">Ver Ejemplo CRUD</a>
-            <a asp-controller="Tools" asp-action="Index" class="btn btn-outline-light btn-lg px-5">Ver Herramientas</a>
-        }
-        else
-        {
-            <a asp-controller="Account" asp-action="Login" class="btn btn-light btn-lg px-5 me-2">Iniciar Sesión</a>
-            <a asp-controller="Tools" asp-action="Index" class="btn btn-outline-light btn-lg px-5">Ver Herramientas</a>
-        }
-    </div>
+    </section>
 </div>

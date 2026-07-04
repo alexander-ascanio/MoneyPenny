@@ -11,4 +11,7 @@ public class TicketActionViewModel
     public string? Source { get; init; }
     public decimal? TimeSpentMinutes { get; init; }
     public bool IsVisible { get; init; }
+    public string? TeamSupportActionId { get; init; }
+    public bool PendingAttachmentResolution { get; init; }
+    public IReadOnlyList<TicketAttachmentViewModel> Attachments { get; init; } = [];
 }

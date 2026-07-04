@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Ingestion;
+using MoneyPenny.Services.TeamSupport;
 using MoneyPenny.Services.Tickets;
 using Microsoft.Extensions.Options;
 
@@ -13,15 +14,18 @@ public class TicketsController : Controller
 {
     private readonly ITicketService _ticketService;
     private readonly ITicketIngestionService _ingestionService;
+    private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly TeamSupportApiOptions _teamSupportOptions;
 
     public TicketsController(
         ITicketService ticketService,
         ITicketIngestionService ingestionService,
+        ITeamSupportAttachmentService attachmentService,
         IOptions<TeamSupportApiOptions> teamSupportOptions)
     {
         _ticketService = ticketService;
         _ingestionService = ingestionService;
+        _attachmentService = attachmentService;
         _teamSupportOptions = teamSupportOptions.Value;
     }
 
@@ -68,6 +72,63 @@ public class TicketsController : Controller
         }
 
         return View(model);
+    }
+
+    public async Task<IActionResult> Attachment(string url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !_attachmentService.IsAllowedAttachmentUrl(url))
+        {
+            return BadRequest();
+        }
+
+        var download = await _attachmentService.DownloadAsync(url, cancellationToken);
+        if (download is null)
+        {
+            if (string.IsNullOrWhiteSpace(_teamSupportOptions.AttachmentCookie)
+                && string.IsNullOrWhiteSpace(_teamSupportOptions.AttachmentBearerToken))
+            {
+                return StatusCode(
+                    StatusCodes.Status502BadGateway,
+                    "No hay credenciales de TeamSupport configuradas para descargar adjuntos.");
+            }
+
+            return NotFound();
+        }
+
+        Response.Headers.CacheControl = "private, max-age=300";
+
+        if (download.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return File(download.Content, download.ContentType);
+        }
+
+        return File(download.Content, download.ContentType, download.FileName);
+    }
+
+    public async Task<IActionResult> ResolveActionAttachments(
+        string teamSupportActionId,
+        string? teamSupportTicketId,
+        string? content,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(teamSupportActionId))
+        {
+            return BadRequest();
+        }
+
+        var attachments = await _attachmentService.ResolveAttachmentsAsync(
+            teamSupportActionId,
+            teamSupportTicketId,
+            content,
+            cancellationToken);
+
+        return Json(attachments.Select(item => new
+        {
+            originalUrl = item.OriginalUrl,
+            fileName = item.FileName,
+            isImage = item.IsImage,
+            proxyUrl = Url.Action("Attachment", "Tickets", new { url = item.OriginalUrl })
+        }));
     }
 
     [HttpPost]

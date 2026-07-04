@@ -33,6 +33,23 @@ const string tablesSql = """
     ORDER BY table_schema, table_name;
     """;
 
+const string attachTablesSql = """
+    SELECT table_schema, table_name
+    FROM information_schema.tables
+    WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+      AND table_type = 'BASE TABLE'
+      AND table_name ILIKE '%attach%'
+    ORDER BY table_schema, table_name;
+    """;
+
+Console.WriteLine("\nAttachment tables:");
+await using (var cmd = new NpgsqlCommand(attachTablesSql, conn))
+await using (var reader = await cmd.ExecuteReaderAsync())
+{
+    while (await reader.ReadAsync())
+        Console.WriteLine($"  {reader.GetString(0)}.{reader.GetString(1)}");
+}
+
 Console.WriteLine("\nTables:");
 await using (var cmd = new NpgsqlCommand(tablesSql, conn))
 await using (var reader = await cmd.ExecuteReaderAsync())

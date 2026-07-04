@@ -9,6 +9,7 @@ using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
 using MoneyPenny.Services.Rag.Retrieval;
 using MoneyPenny.Services.Tickets;
+using MoneyPenny.Services.TeamSupport;
 using Microsoft.EntityFrameworkCore;
 
 namespace MoneyPenny.Extensions;
@@ -61,6 +62,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVectorRepository, VectorRepository>();
         services.AddScoped<ICommentImageTextCacheRepository, CommentImageTextCacheRepository>();
         services.AddScoped<ITicketService, TicketService>();
+        services.AddScoped<ITeamSupportAttachmentService, TeamSupportAttachmentService>();
         services.AddScoped<IChunkingService, ChunkingService>();
         services.AddScoped<IImageTextExtractionService, OpenAiImageTextExtractionService>();
         services.AddScoped<ICommentContentService, CommentContentService>();
@@ -93,6 +95,16 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddHttpClient(OpenAiImageTextExtractionService.ImageDownloadHttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MoneyPenny/1.0");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        });
+
+        services.AddHttpClient(TeamSupportAttachmentService.HttpClientName, client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MoneyPenny/1.0");

@@ -5,6 +5,7 @@ using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
+using MoneyPenny.Services.TeamSupport;
 using MoneyPenny.ViewModels.Shared;
 using MoneyPenny.ViewModels.Tickets;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,6 +21,7 @@ public class TicketService : ITicketService
     private readonly IMemoryCache _cache;
     private readonly ITicketIngestionService _ingestionService;
     private readonly IRagTokenEstimateService _tokenEstimateService;
+    private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly RagOptions _ragOptions;
     private readonly ILogger<TicketService> _logger;
 
@@ -31,6 +33,7 @@ public class TicketService : ITicketService
         IMemoryCache cache,
         ITicketIngestionService ingestionService,
         IRagTokenEstimateService tokenEstimateService,
+        ITeamSupportAttachmentService attachmentService,
         IOptions<RagOptions> ragOptions,
         ILogger<TicketService> logger)
     {
@@ -39,6 +42,7 @@ public class TicketService : ITicketService
         _cache = cache;
         _ingestionService = ingestionService;
         _tokenEstimateService = tokenEstimateService;
+        _attachmentService = attachmentService;
         _ragOptions = ragOptions.Value;
         _logger = logger;
     }
@@ -218,7 +222,7 @@ public class TicketService : ITicketService
                 PromptImageProcessingOnIndex = firstCommentImageCount > 0 && _ragOptions.EnableImageTextExtraction,
                 IndexWithoutImagesEstimate = indexWithoutImagesEstimate,
                 IndexWithImagesEstimate = indexWithImagesEstimate,
-                Comments = actions.Select(MapAction).ToList()
+                Comments = await MapActionsAsync(actions, ticket.TeamSupportId, cancellationToken)
             };
         }
         catch (PostgresException ex)
@@ -318,19 +322,59 @@ public class TicketService : ITicketService
         }
     }
 
-    private static TicketActionViewModel MapAction(TicketAction action) => new()
+    private async Task<IReadOnlyList<TicketActionViewModel>> MapActionsAsync(
+        IReadOnlyList<TicketAction> actions,
+        string? teamSupportTicketId,
+        CancellationToken cancellationToken)
     {
-        Id = action.Id,
-        ActionType = action.ActionType,
-        Content = action.Content,
-        Author = action.CreatedByName
-            ?? action.ModifierName
-            ?? action.AssignedUsername
-            ?? "Sistema",
-        CreatedAt = action.CreatedAt,
-        TicketStatus = action.TicketStatus,
-        Source = action.Source,
-        TimeSpentMinutes = action.TimeSpentMinutes,
-        IsVisible = action.IsVisible
-    };
+        var comments = new List<TicketActionViewModel>(actions.Count);
+        foreach (var action in actions)
+        {
+            comments.Add(await MapActionAsync(action, teamSupportTicketId, cancellationToken));
+        }
+
+        return comments;
+    }
+
+    private async Task<TicketActionViewModel> MapActionAsync(
+        TicketAction action,
+        string? teamSupportTicketId,
+        CancellationToken cancellationToken)
+    {
+        var attachments = await _attachmentService.ResolveAttachmentsAsync(
+            action.TeamSupportActionId,
+            teamSupportTicketId,
+            action.Content,
+            cancellationToken);
+
+        var attachmentViewModels = attachments
+            .Select(item => new TicketAttachmentViewModel
+            {
+                OriginalUrl = item.OriginalUrl,
+                FileName = item.FileName,
+                IsImage = item.IsImage
+            })
+            .ToList();
+
+        return new TicketActionViewModel
+        {
+            Id = action.Id,
+            ActionType = action.ActionType,
+            Content = action.Content,
+            Author = action.CreatedByName
+                ?? action.ModifierName
+                ?? action.AssignedUsername
+                ?? "Sistema",
+            CreatedAt = action.CreatedAt,
+            TicketStatus = action.TicketStatus,
+            Source = action.Source,
+            TimeSpentMinutes = action.TimeSpentMinutes,
+            IsVisible = action.IsVisible,
+            TeamSupportActionId = action.TeamSupportActionId,
+            PendingAttachmentResolution = attachmentViewModels.Count == 0
+                && !string.IsNullOrWhiteSpace(action.TeamSupportActionId)
+                && TicketHtmlHelper.ContentMentionsAttachment(action.Content),
+            Attachments = attachmentViewModels
+        };
+    }
 }

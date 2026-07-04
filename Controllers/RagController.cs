@@ -89,6 +89,12 @@ public class RagController : Controller
             return RedirectToAction("Index", "Tickets");
         }
 
+        var notIndexedRedirect = await TryRedirectIfTicketNotIndexedAsync(ticketId, cancellationToken);
+        if (notIndexedRedirect is not null)
+        {
+            return notIndexedRedirect;
+        }
+
         if (string.IsNullOrWhiteSpace(ticketNumber))
         {
             var ticket = await _ticketRepository.GetByIdAsync(ticketId, cancellationToken);
@@ -223,6 +229,12 @@ public class RagController : Controller
             ticketNumber = ticket?.Number;
         }
 
+        var notIndexedRedirect = await TryRedirectIfTicketNotIndexedAsync(ticketId.Value, cancellationToken);
+        if (notIndexedRedirect is not null)
+        {
+            return notIndexedRedirect;
+        }
+
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
         var response = await BuildAskResponseAsync(
             ticketId.Value,
@@ -233,6 +245,20 @@ public class RagController : Controller
             cancellationToken);
 
         return View("Ask", response);
+    }
+
+    private async Task<IActionResult?> TryRedirectIfTicketNotIndexedAsync(
+        int ticketId,
+        CancellationToken cancellationToken)
+    {
+        if (await _vectorRepository.IsTicketIndexedAsync(ticketId, cancellationToken))
+        {
+            return null;
+        }
+
+        TempData["WarningMessage"] =
+            "Este ticket no está indexado. Utiliza «Indexar ticket» antes de consultar la respuesta RAG.";
+        return RedirectToAction("Details", "Tickets", new { id = ticketId });
     }
 
     private async Task<RagResponseViewModel> BuildAskResponseAsync(
