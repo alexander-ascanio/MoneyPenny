@@ -44,7 +44,7 @@
 
     function readBulkFormOptions() {
         return {
-            rebuildAll: document.getElementById('rebuildAll')?.checked ?? true,
+            rebuildAll: document.getElementById('rebuildAll')?.checked ?? false,
             skipIndexed: document.getElementById('skipAlreadyIndexed')?.checked ?? true,
             kbOnly: document.getElementById('onlyKnowledgeBaseTickets')?.checked ?? false,
             maxTickets: document.querySelector('[data-bulk-max-tickets]')?.value,
@@ -58,7 +58,7 @@
             return Math.max(0, options.exactCount);
         }
 
-        const rebuildAll = options.rebuildAll ?? true;
+        const rebuildAll = options.rebuildAll ?? false;
         const skipIndexed = options.skipIndexed ?? true;
         const kbOnly = options.kbOnly ?? false;
         const limit = Number(options.maxTickets || 0);
@@ -199,8 +199,8 @@
     }
 
     function getSingleTicketsToIndex() {
-        const skip = document.getElementById('skipAlreadyIndexedSingle')?.checked ?? false;
-        const rebuild = document.getElementById('rebuildAllSingle')?.checked ?? true;
+        const skip = document.getElementById('skipAlreadyIndexedSingle')?.checked ?? true;
+        const rebuild = document.getElementById('rebuildAllSingle')?.checked ?? false;
         return {
             count: 1,
             maySkip: skip && !rebuild

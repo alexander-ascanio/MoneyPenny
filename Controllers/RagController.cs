@@ -18,6 +18,7 @@ public class RagController : Controller
 {
     private readonly IRagOrchestrator _ragOrchestrator;
     private readonly IFirstCommentIndexService _firstCommentIndexService;
+    private readonly IFirstCommentBulkIndexJobStore _bulkIndexJobStore;
     private readonly IRagTokenEstimateService _tokenEstimateService;
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
@@ -27,6 +28,7 @@ public class RagController : Controller
     public RagController(
         IRagOrchestrator ragOrchestrator,
         IFirstCommentIndexService firstCommentIndexService,
+        IFirstCommentBulkIndexJobStore bulkIndexJobStore,
         IRagTokenEstimateService tokenEstimateService,
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
@@ -35,6 +37,7 @@ public class RagController : Controller
     {
         _ragOrchestrator = ragOrchestrator;
         _firstCommentIndexService = firstCommentIndexService;
+        _bulkIndexJobStore = bulkIndexJobStore;
         _tokenEstimateService = tokenEstimateService;
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
@@ -320,21 +323,31 @@ public class RagController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> FirstCommentIndex(CancellationToken cancellationToken)
+    public async Task<IActionResult> FirstCommentIndex(
+        string? jobId,
+        CancellationToken cancellationToken)
     {
-        var counts = await _firstCommentIndexService.GetCountsAsync(
-            onlyTicketsListScope: true,
-            cancellationToken);
         var model = new FirstCommentIndexViewModel
         {
-            TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment,
-            IndexedTickets = counts.IndexedTickets,
-            PendingTickets = counts.PendingTickets,
-            KnowledgeBaseTotalTicketsWithFirstComment = counts.KnowledgeBaseTotalTicketsWithFirstComment,
-            KnowledgeBaseIndexedTickets = counts.KnowledgeBaseIndexedTickets,
-            KnowledgeBasePendingTickets = counts.KnowledgeBasePendingTickets,
             PricingConfig = BuildPricingConfig()
         };
+        await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(jobId))
+        {
+            var userId = GetCurrentUserId();
+            var job = _bulkIndexJobStore.GetJob(userId, jobId);
+            if (job?.Status == FirstCommentBulkIndexJobStatus.Completed && job.Result is not null)
+            {
+                return await RenderFirstCommentIndexAsync(model, job.Result, cancellationToken);
+            }
+
+            if (job?.Status == FirstCommentBulkIndexJobStatus.Failed)
+            {
+                model.SuccessMessage = $"La indexación falló: {job.ErrorMessage}";
+            }
+        }
+
         return View(model);
     }
 
@@ -361,7 +374,7 @@ public class RagController : Controller
         bool onlyKnowledgeBaseTickets = false,
         DateTime? ticketCreatedFrom = null,
         DateTime? ticketCreatedTo = null,
-        bool rebuildAll = true,
+        bool rebuildAll = false,
         bool skipAlreadyIndexed = true,
         int? maxTickets = null,
         CancellationToken cancellationToken = default)
@@ -388,33 +401,69 @@ public class RagController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> FirstCommentIndex(
-        FirstCommentIndexViewModel model,
-        CancellationToken cancellationToken)
+    public IActionResult FirstCommentIndexStart(FirstCommentIndexViewModel model)
     {
         if (model.TicketCreatedFrom > model.TicketCreatedTo)
         {
-            ModelState.AddModelError(
-                nameof(model.TicketCreatedTo),
-                "La fecha hasta debe ser igual o posterior a la fecha desde.");
-            await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
-            return View("FirstCommentIndex", model);
+            return BadRequest(new { error = "La fecha hasta debe ser igual o posterior a la fecha desde." });
         }
 
-        var result = await _firstCommentIndexService.IndexAllAsync(
-            new FirstCommentIndexOptions
-            {
-                RebuildAll = model.RebuildAll,
-                SkipAlreadyIndexed = model.SkipAlreadyIndexed,
-                ProcessImages = model.ProcessImages,
-                OnlyKnowledgeBaseTickets = model.OnlyKnowledgeBaseTickets,
-                MaxTickets = model.MaxTickets,
-                TicketCreatedFrom = model.TicketCreatedFrom,
-                TicketCreatedTo = model.TicketCreatedTo
-            },
-            cancellationToken);
+        if (_bulkIndexJobStore.HasActiveJob(GetCurrentUserId()))
+        {
+            return Conflict(new { error = "Ya hay una indexación masiva en curso." });
+        }
 
-        return await RenderFirstCommentIndexAsync(model, result, cancellationToken);
+        try
+        {
+            var jobId = _bulkIndexJobStore.StartJob(
+                GetCurrentUserId(),
+                new FirstCommentIndexOptions
+                {
+                    RebuildAll = model.RebuildAll,
+                    SkipAlreadyIndexed = model.SkipAlreadyIndexed,
+                    ProcessImages = model.ProcessImages,
+                    OnlyKnowledgeBaseTickets = model.OnlyKnowledgeBaseTickets,
+                    MaxTickets = model.MaxTickets,
+                    TicketCreatedFrom = model.TicketCreatedFrom,
+                    TicketCreatedTo = model.TicketCreatedTo
+                });
+
+            return Json(new { jobId });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult FirstCommentIndexProgress(string jobId)
+    {
+        if (string.IsNullOrWhiteSpace(jobId))
+        {
+            return NotFound();
+        }
+
+        var job = _bulkIndexJobStore.GetJob(GetCurrentUserId(), jobId);
+        if (job is null)
+        {
+            return NotFound();
+        }
+
+        return Json(new
+        {
+            status = job.Status.ToString(),
+            phase = job.Phase,
+            totalTickets = job.TotalTickets,
+            processed = job.Processed,
+            indexed = job.Indexed,
+            skipped = job.Skipped,
+            failed = job.Failed,
+            chunksCreated = job.ChunksCreated,
+            currentTicketNumber = job.CurrentTicketNumber,
+            percentComplete = job.PercentComplete,
+            errorMessage = job.ErrorMessage
+        });
     }
 
     [HttpPost]
@@ -541,4 +590,7 @@ public class RagController : Controller
         ChatModel = _ragOptions.ChatModel,
         VisionModel = _ragOptions.VisionModel
     };
+
+    private string GetCurrentUserId() =>
+        User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
 }

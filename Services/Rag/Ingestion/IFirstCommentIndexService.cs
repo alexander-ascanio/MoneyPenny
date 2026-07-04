@@ -16,6 +16,7 @@ public interface IFirstCommentIndexService
         CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
+        IFirstCommentBulkIndexProgressReporter? progress = null,
         CancellationToken cancellationToken = default);
     Task<FirstCommentIndexResult> IndexTicketAsync(
         string ticketNumber,

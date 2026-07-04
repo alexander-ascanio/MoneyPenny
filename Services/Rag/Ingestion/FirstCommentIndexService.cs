@@ -114,12 +114,44 @@ public class FirstCommentIndexService : IFirstCommentIndexService
 
     public async Task<FirstCommentIndexResult> IndexAllAsync(
         FirstCommentIndexOptions options,
+        IFirstCommentBulkIndexProgressReporter? progress = null,
         CancellationToken cancellationToken = default)
     {
         var onlyKb = options.OnlyKnowledgeBaseTickets ?? false;
+        var scopeIds = await _ticketRepository.GetFirstCommentTicketIdsAsync(
+            onlyKb,
+            options.TicketCreatedFrom,
+            options.TicketCreatedTo,
+            cancellationToken);
+        var totalTickets = options.MaxTickets is > 0
+            ? Math.Min(scopeIds.Count, options.MaxTickets.Value)
+            : scopeIds.Count;
+
+        void ReportProgress(
+            string phase,
+            int processedCount,
+            int indexedCount,
+            int skippedCount,
+            int failedCount,
+            int chunksCount,
+            string? currentTicketNumber = null) =>
+            progress?.Report(new FirstCommentBulkIndexProgressSnapshot
+            {
+                Phase = phase,
+                TotalTickets = totalTickets,
+                Processed = processedCount,
+                Indexed = indexedCount,
+                Skipped = skippedCount,
+                Failed = failedCount,
+                ChunksCreated = chunksCount,
+                CurrentTicketNumber = currentTicketNumber
+            });
+
+        ReportProgress("Preparando", 0, 0, 0, 0, 0);
 
         if (options.RebuildAll)
         {
+            ReportProgress("Eliminando índice anterior", 0, 0, 0, 0, 0);
             _logger.LogInformation(
                 "Eliminando índice de comentarios #1 del ámbito {Scope}.",
                 onlyKb ? "Knowledge Base" : "listado de Tickets");
@@ -147,6 +179,8 @@ public class FirstCommentIndexService : IFirstCommentIndexService
         var errors = new List<string>();
         var usageParts = new List<TokenUsageEstimate>();
         var maxTickets = options.MaxTickets;
+
+        ReportProgress("Indexando tickets", processed, indexed, skipped, failed, chunksCreated);
 
         while (true)
         {
@@ -185,6 +219,14 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 if (alreadyIndexed.Contains(row.TicketId))
                 {
                     skipped++;
+                    ReportProgress(
+                        "Indexando tickets",
+                        processed,
+                        indexed,
+                        skipped,
+                        failed,
+                        chunksCreated,
+                        row.TicketNumber);
                     continue;
                 }
 
@@ -194,25 +236,35 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                     if (ticketChunks.Chunks == 0)
                     {
                         skipped++;
-                        continue;
+                    }
+                    else
+                    {
+                        indexed++;
+                        chunksCreated += ticketChunks.Chunks;
+                        embeddingsCreated += ticketChunks.Embeddings;
+                        if (ticketChunks.Usage is not null)
+                        {
+                            usageParts.Add(ticketChunks.Usage);
+                        }
+
+                        if (options.ProcessImages
+                            && ticketChunks.ImagesDetected > 0
+                            && ticketChunks.ImagesExtracted == 0
+                            && !string.IsNullOrWhiteSpace(ticketChunks.ImageExtractionWarning))
+                        {
+                            errors.Add(
+                                $"Ticket #{row.TicketNumber}: {ticketChunks.ImageExtractionWarning}");
+                        }
                     }
 
-                    indexed++;
-                    chunksCreated += ticketChunks.Chunks;
-                    embeddingsCreated += ticketChunks.Embeddings;
-                    if (ticketChunks.Usage is not null)
-                    {
-                        usageParts.Add(ticketChunks.Usage);
-                    }
-
-                    if (options.ProcessImages
-                        && ticketChunks.ImagesDetected > 0
-                        && ticketChunks.ImagesExtracted == 0
-                        && !string.IsNullOrWhiteSpace(ticketChunks.ImageExtractionWarning))
-                    {
-                        errors.Add(
-                            $"Ticket #{row.TicketNumber}: {ticketChunks.ImageExtractionWarning}");
-                    }
+                    ReportProgress(
+                        "Indexando tickets",
+                        processed,
+                        indexed,
+                        skipped,
+                        failed,
+                        chunksCreated,
+                        row.TicketNumber);
                 }
                 catch (Exception ex)
                 {
@@ -220,6 +272,14 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                     var message = $"Ticket #{row.TicketNumber} (Id={row.TicketId}): {ExceptionMessageHelper.GetDetail(ex)}";
                     errors.Add(message);
                     _logger.LogError(ex, "Error indexando comentario #1 del ticket {TicketId}.", row.TicketId);
+                    ReportProgress(
+                        "Indexando tickets",
+                        processed,
+                        indexed,
+                        skipped,
+                        failed,
+                        chunksCreated,
+                        row.TicketNumber);
                 }
             }
 
@@ -230,6 +290,8 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 break;
             }
         }
+
+        ReportProgress("Completado", processed, indexed, skipped, failed, chunksCreated);
 
         _logger.LogInformation(
             "Indexación masiva de comentarios #1 finalizada: processed={Processed}, indexed={Indexed}, skipped={Skipped}, failed={Failed}, chunks={Chunks}.",

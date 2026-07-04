@@ -139,7 +139,27 @@
      data-corpus="@corpusJson"
      data-corpus-url="@Url.Action("FirstCommentCorpusStats")"
      data-bulk-count-url="@Url.Action("FirstCommentBulkCount")">
-    <form asp-action="FirstCommentIndex" method="post" class="card shadow-sm" data-first-comment-bulk-form>
+    <div id="bulkIndexProcessing"
+         class="rag-gpt-processing d-none mb-4"
+         role="status"
+         aria-live="polite"
+         data-start-url="@Url.Action("FirstCommentIndexStart")"
+         data-progress-url="@Url.Action("FirstCommentIndexProgress")"
+         data-result-url="@Url.Action("FirstCommentIndex")">
+        <div class="rag-gpt-processing-spinner spinner-border text-primary" role="status" aria-hidden="true"></div>
+        <div class="rag-gpt-processing-title" data-bulk-progress-title>Indexando comentarios #1…</div>
+        <div class="rag-gpt-processing-subtitle text-muted small" data-bulk-progress-subtitle>
+            Procesando tickets en segundo plano. No cierres esta pestaña hasta que finalice.
+        </div>
+        <div class="rag-index-progress-wrap w-100">
+            <div class="progress rag-index-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" data-bulk-progress-bar style="width: 0%">0%</div>
+            </div>
+        </div>
+        <div class="small text-muted mt-1" data-bulk-progress-stats></div>
+    </div>
+
+    <form asp-action="FirstCommentIndexStart" method="post" class="card shadow-sm" data-first-comment-bulk-form>
         <div class="card-header rag-section-header">Ejecutar indexación masiva</div>
         <div class="card-body">
             @Html.AntiForgeryToken()
@@ -200,8 +220,14 @@
                 <div class="form-text">Útil para probar con pocos tickets antes del volcado completo.</div>
             </div>
 
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-play-fill me-1"></i>Iniciar indexación
+            <button type="submit" class="btn btn-primary" data-bulk-submit-button>
+                <span class="bulk-submit-label">
+                    <i class="bi bi-play-fill me-1"></i>Iniciar indexación
+                </span>
+                <span class="bulk-submit-loading d-none">
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    Iniciando…
+                </span>
             </button>
             <a asp-controller="Tickets" asp-action="Index" class="btn btn-outline-secondary ms-2">Ver tickets</a>
         </div>
@@ -214,6 +240,14 @@
     </div>
     <div class="card-body">
         @Html.AntiForgeryToken()
+
+        <div id="singleIndexProcessing" class="rag-gpt-processing d-none mb-4" role="status" aria-live="polite">
+            <div class="rag-gpt-processing-spinner spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="rag-gpt-processing-title">Indexando comentario #1…</div>
+            <div class="rag-gpt-processing-subtitle text-muted small">
+                Generando chunks y embeddings. Puede tardar unos segundos.
+            </div>
+        </div>
 
         <p class="text-muted small">
             Indexa solo el comentario #1 del ticket indicado. Acepta el número con o sin <code>#</code> (ej. <code>142172</code>).
@@ -256,8 +290,14 @@
             </label>
         </div>
 
-        <button type="submit" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-repeat me-1"></i>Indexar ticket
+        <button type="submit" class="btn btn-outline-primary" data-single-submit-button>
+            <span class="single-submit-label">
+                <i class="bi bi-arrow-repeat me-1"></i>Indexar ticket
+            </span>
+            <span class="single-submit-loading d-none">
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Indexando…
+            </span>
         </button>
     </div>
 </form>
@@ -317,55 +357,9 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/rag-token-estimate.js" asp-append-version="true"></script>
+    <script src="~/js/first-comment-index-progress.js" asp-append-version="true"></script>
     <script>
         (function () {
-            const bulkForm = document.querySelector('[data-first-comment-bulk-form]');
-            if (bulkForm) {
-                let bulkSubmitConfirmed = false;
-                bulkForm.addEventListener('submit', async function (event) {
-                    if (bulkSubmitConfirmed) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    const api = window.MoneyPennyFirstCommentIndex;
-                    let ticketCount = api?.getBulkTicketsToIndex?.() ?? 0;
-
-                    try {
-                        ticketCount = await api.fetchBulkTicketsToIndexCount();
-                    } catch {
-                        ticketCount = api?.getBulkTicketsToIndex?.() ?? ticketCount;
-                    }
-
-                    const formattedCount = api?.formatTicketCount?.(ticketCount) ?? String(ticketCount);
-                    const rebuild = document.getElementById('rebuildAll')?.checked;
-                    const maxTickets = document.querySelector('[data-bulk-max-tickets]')?.value?.trim();
-                    const fromDate = document.getElementById('TicketCreatedFrom')?.value;
-                    const toDate = document.getElementById('TicketCreatedTo')?.value;
-
-                    const kbOnly = document.getElementById('onlyKnowledgeBaseTickets')?.checked;
-                    const scopeLabel = kbOnly ? 'Knowledge Base' : 'listado de Tickets';
-
-                    let message = '¿Iniciar la indexación masiva con la configuración actual?';
-                    if (rebuild) {
-                        message = `¿Iniciar la indexación masiva? Se borrará el índice #1 del ámbito «${scopeLabel}» antes de indexar (el otro ámbito no se modifica).`;
-                    }
-
-                    message += `\n\nTickets a indexar: ${formattedCount}.`;
-                    if (maxTickets) {
-                        message += `\n\nLímite configurado: ${maxTickets} ticket(s).`;
-                    }
-                    if (fromDate || toDate) {
-                        message += `\n\nRango de fechas: ${fromDate || '…'} → ${toDate || '…'}.`;
-                    }
-
-                    if (window.confirm(message)) {
-                        bulkSubmitConfirmed = true;
-                        bulkForm.submit();
-                    }
-                });
-            }
-
             const singleForm = document.querySelector('[data-first-comment-single-form]');
             if (singleForm) {
                 singleForm.addEventListener('submit', function (event) {
@@ -386,7 +380,19 @@
 
                     if (!window.confirm(message)) {
                         event.preventDefault();
+                        return;
                     }
+
+                    const button = singleForm.querySelector('[data-single-submit-button]');
+                    const label = button?.querySelector('.single-submit-label');
+                    const loading = button?.querySelector('.single-submit-loading');
+                    const processing = document.getElementById('singleIndexProcessing');
+
+                    button.disabled = true;
+                    label?.classList.add('d-none');
+                    loading?.classList.remove('d-none');
+                    processing?.classList.remove('d-none');
+                    processing?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 });
             }
         })();

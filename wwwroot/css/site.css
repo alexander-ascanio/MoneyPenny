@@ -765,6 +765,15 @@ body.tickets-col-resizing * {
   color: #1e40af;
 }
 
+.rag-index-progress-wrap {
+  max-width: 28rem;
+  margin-top: 0.25rem;
+}
+
+.rag-index-progress {
+  height: 1.25rem;
+}
+
 .rag-threshold-compare-grid {
   align-items: stretch;
 }

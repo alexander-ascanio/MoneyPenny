@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRagTokenEstimateService, RagTokenEstimateService>();
         services.AddScoped<ITicketIngestionService, TicketIngestionService>();
         services.AddScoped<IFirstCommentIndexService, FirstCommentIndexService>();
+        services.AddSingleton<IFirstCommentBulkIndexJobStore, FirstCommentBulkIndexJobStore>();
         services.AddScoped<IEmbeddingService, OpenAiEmbeddingService>();
         services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
         services.AddScoped<IGenerationService, OpenAiGenerationService>();
