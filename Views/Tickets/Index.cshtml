@@ -120,54 +120,6 @@
                     </div>
 
                     <div class="tickets-filter-item">
-                        <label class="tickets-filter-label" for="filter-is-knowledge-base">IsKnowledgeBase:</label>
-                        <select id="filter-is-knowledge-base" name="isKnowledgeBase" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
-                            @if (IsSelected(Model.Filters.IsKnowledgeBase, ""))
-                            {
-                                <option value="" selected>Listado habitual</option>
-                            }
-                            else
-                            {
-                                <option value="">Listado habitual</option>
-                            }
-                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "true"))
-                            {
-                                <option value="true" selected>Sí</option>
-                            }
-                            else
-                            {
-                                <option value="true">Sí</option>
-                            }
-                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "false"))
-                            {
-                                <option value="false" selected>No</option>
-                            }
-                            else
-                            {
-                                <option value="false">No</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="tickets-filter-item">
-                        <label class="tickets-filter-label" for="filter-group-name">GroupName:</label>
-                        <select id="filter-group-name" name="groupName" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
-                            <option value="">Todos</option>
-                            @foreach (var option in Model.FilterOptions.Groups)
-                            {
-                                if (IsSelected(Model.Filters.GroupName, option))
-                                {
-                                    <option value="@option" selected>@option</option>
-                                }
-                                else
-                                {
-                                    <option value="@option">@option</option>
-                                }
-                            }
-                        </select>
-                    </div>
-
-                    <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-customer">Cliente:</label>
                         <select id="filter-customer" name="customer" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                             <option value="">Todos</option>
@@ -240,6 +192,36 @@
                     </div>
 
                     <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-rag">RAG:</label>
+                        <select id="filter-rag" name="rag" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.Rag, ""))
+                            {
+                                <option value="" selected>Todos</option>
+                            }
+                            else
+                            {
+                                <option value="">Todos</option>
+                            }
+                            @if (IsSelected(Model.Filters.Rag, "true"))
+                            {
+                                <option value="true" selected>Indexado</option>
+                            }
+                            else
+                            {
+                                <option value="true">Indexado</option>
+                            }
+                            @if (IsSelected(Model.Filters.Rag, "false"))
+                            {
+                                <option value="false" selected>No indexado</option>
+                            }
+                            else
+                            {
+                                <option value="false">No indexado</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
                         <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                             @if (IsSelected(Model.Filters.ResultLimit, "50"))
@@ -265,6 +247,74 @@
                             else
                             {
                                 <option value="all">Todos</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="tickets-filters-row tickets-filters-row-secondary">
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-is-knowledge-base">IsKnowledgeBase:</label>
+                        <select id="filter-is-knowledge-base" name="isKnowledgeBase" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, ""))
+                            {
+                                <option value="" selected>Listado habitual</option>
+                            }
+                            else
+                            {
+                                <option value="">Listado habitual</option>
+                            }
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "true"))
+                            {
+                                <option value="true" selected>Sí</option>
+                            }
+                            else
+                            {
+                                <option value="true">Sí</option>
+                            }
+                            @if (IsSelected(Model.Filters.IsKnowledgeBase, "false"))
+                            {
+                                <option value="false" selected>No</option>
+                            }
+                            else
+                            {
+                                <option value="false">No</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-group-name">GroupName:</label>
+                        <select id="filter-group-name" name="groupName" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Groups)
+                            {
+                                if (IsSelected(Model.Filters.GroupName, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-customer-name">CustomerName:</label>
+                        <select id="filter-customer-name" name="customerName" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            <option value="">Todos</option>
+                            @foreach (var option in Model.FilterOptions.Customers)
+                            {
+                                if (IsSelected(Model.Filters.CustomerName, option))
+                                {
+                                    <option value="@option" selected>@option</option>
+                                }
+                                else
+                                {
+                                    <option value="@option">@option</option>
+                                }
                             }
                         </select>
                     </div>

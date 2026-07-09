@@ -81,6 +81,11 @@ public class TicketService : ITicketService
                 IsIndexed = indexedIds.Contains(t.Id)
             }).ToList();
 
+            if (filters.RagFilter is bool ragIndexed)
+            {
+                items = items.Where(t => t.IsIndexed == ragIndexed).ToList();
+            }
+
             if (TicketSort.IsInMemorySort(filters.SortBy))
             {
                 items = ApplyInMemorySort(items, filters.SortBy!, filters.SortDescending);
@@ -124,10 +129,12 @@ public class TicketService : ITicketService
     private static TicketFilterSelections ToFilterSelections(TicketFilters filters) => new()
     {
         GroupName = filters.GroupName,
+        CustomerName = filters.CustomerName,
         Customer = filters.Customer,
         Product = filters.Product,
         Status = filters.Status,
         Priority = filters.Priority,
+        Rag = filters.Rag,
         IsKnowledgeBase = filters.IsKnowledgeBase,
         ResultLimit = filters.ResultLimit,
         SortBy = filters.SortBy,

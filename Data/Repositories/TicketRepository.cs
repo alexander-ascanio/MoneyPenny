@@ -42,6 +42,11 @@ public class TicketRepository : ITicketRepository
             query = query.Where(t => t.Group == filters.GroupName);
         }
 
+        if (!string.IsNullOrWhiteSpace(filters.CustomerName))
+        {
+            query = query.Where(t => t.Customer == filters.CustomerName);
+        }
+
         if (!string.IsNullOrWhiteSpace(filters.Customer))
         {
             query = query.Where(t => t.Customer == filters.Customer);
