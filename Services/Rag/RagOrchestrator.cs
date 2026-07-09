@@ -1,11 +1,14 @@
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
 using MoneyPenny.Models.Rag;
+using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Retrieval;
+using MoneyPenny.Services.TeamSupport;
 using MoneyPenny.ViewModels.Rag;
+using MoneyPenny.ViewModels.Tickets;
 using Microsoft.Extensions.Options;
 
 namespace MoneyPenny.Services.Rag;
@@ -36,6 +39,7 @@ public class RagOrchestrator : IRagOrchestrator
     private readonly IVectorRepository _vectorRepository;
     private readonly ITicketRepository _ticketRepository;
     private readonly ICommentContentService _commentContentService;
+    private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly RagOptions _options;
 
     public RagOrchestrator(
@@ -44,6 +48,7 @@ public class RagOrchestrator : IRagOrchestrator
         IVectorRepository vectorRepository,
         ITicketRepository ticketRepository,
         ICommentContentService commentContentService,
+        ITeamSupportAttachmentService attachmentService,
         IOptions<RagOptions> options)
     {
         _retrievalService = retrievalService;
@@ -51,6 +56,7 @@ public class RagOrchestrator : IRagOrchestrator
         _vectorRepository = vectorRepository;
         _ticketRepository = ticketRepository;
         _commentContentService = commentContentService;
+        _attachmentService = attachmentService;
         _options = options.Value;
     }
 
@@ -390,6 +396,9 @@ public class RagOrchestrator : IRagOrchestrator
             return null;
         }
 
+        var (ticket, attachmentViewModels, pendingAttachmentResolution) =
+            await LoadFirstCommentAttachmentsAsync(action, cancellationToken);
+
         var indexedText = await TryGetIndexedFirstCommentTextAsync(ticketId, cancellationToken);
         string displayText;
         string? warning = null;
@@ -407,7 +416,9 @@ public class RagOrchestrator : IRagOrchestrator
                     ProcessImages = false,
                     ImageCacheMode = ImageExtractionCacheMode.CacheOnly,
                     TicketId = ticketId,
-                    TicketActionId = action.Id
+                    TicketActionId = action.Id,
+                    TeamSupportActionId = action.TeamSupportActionId,
+                    TeamSupportTicketId = ticket?.TeamSupportId
                 },
                 cancellationToken);
 
@@ -429,8 +440,40 @@ public class RagOrchestrator : IRagOrchestrator
             CreatedAt = action.CreatedAt,
             OriginalContent = action.Content ?? string.Empty,
             Content = displayText,
-            ImageExtractionWarning = warning
+            ImageExtractionWarning = warning,
+            TeamSupportActionId = action.TeamSupportActionId,
+            TeamSupportTicketId = ticket?.TeamSupportId,
+            Attachments = attachmentViewModels,
+            PendingAttachmentResolution = pendingAttachmentResolution
         };
+    }
+
+    private async Task<(Ticket? Ticket, IReadOnlyList<TicketAttachmentViewModel> Attachments, bool PendingAttachmentResolution)>
+        LoadFirstCommentAttachmentsAsync(
+            TicketAction action,
+            CancellationToken cancellationToken)
+    {
+        var ticket = await _ticketRepository.GetByIdAsync(action.TicketId, cancellationToken);
+        var resolved = await _attachmentService.ResolveAttachmentsAsync(
+            action.TeamSupportActionId,
+            ticket?.TeamSupportId,
+            action.Content,
+            cancellationToken);
+
+        var attachmentViewModels = resolved
+            .Select(item => new TicketAttachmentViewModel
+            {
+                OriginalUrl = item.OriginalUrl,
+                FileName = item.FileName,
+                IsImage = item.IsImage
+            })
+            .ToList();
+
+        var pendingAttachmentResolution = attachmentViewModels.Count == 0
+            && !string.IsNullOrWhiteSpace(action.TeamSupportActionId)
+            && TicketHtmlHelper.ContentMentionsAttachment(action.Content);
+
+        return (ticket, attachmentViewModels, pendingAttachmentResolution);
     }
 
     private async Task<string?> TryGetIndexedFirstCommentTextAsync(

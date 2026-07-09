@@ -1,4 +1,5 @@
 using MoneyPenny.ViewModels.Shared;
+using MoneyPenny.ViewModels.Tickets;
 
 namespace MoneyPenny.ViewModels.Rag;
 
@@ -18,6 +19,10 @@ public class RagFirstCommentViewModel
     public string OriginalContent { get; init; } = string.Empty;
     public string Content { get; init; } = string.Empty;
     public string? ImageExtractionWarning { get; init; }
+    public string? TeamSupportActionId { get; init; }
+    public string? TeamSupportTicketId { get; init; }
+    public bool PendingAttachmentResolution { get; init; }
+    public IReadOnlyList<TicketAttachmentViewModel> Attachments { get; init; } = [];
 }
 
 public class RagKnowledgeBaseSolutionViewModel

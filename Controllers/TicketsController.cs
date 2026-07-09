@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyPenny.Models.Tickets;
 using MoneyPenny.Options;
+using MoneyPenny.Services.Cv;
+using MoneyPenny.Services.Ocr;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.TeamSupport;
 using MoneyPenny.Services.Tickets;
@@ -15,18 +17,30 @@ public class TicketsController : Controller
     private readonly ITicketService _ticketService;
     private readonly ITicketIngestionService _ingestionService;
     private readonly ITeamSupportAttachmentService _attachmentService;
+    private readonly ICommentImageOcrService _commentImageOcrService;
+    private readonly ICommentImageMessageBoxService _commentImageMessageBoxService;
+    private readonly IImageTextExtractionService _imageTextExtractionService;
     private readonly TeamSupportApiOptions _teamSupportOptions;
+    private readonly RagOptions _ragOptions;
 
     public TicketsController(
         ITicketService ticketService,
         ITicketIngestionService ingestionService,
         ITeamSupportAttachmentService attachmentService,
-        IOptions<TeamSupportApiOptions> teamSupportOptions)
+        ICommentImageOcrService commentImageOcrService,
+        ICommentImageMessageBoxService commentImageMessageBoxService,
+        IImageTextExtractionService imageTextExtractionService,
+        IOptions<TeamSupportApiOptions> teamSupportOptions,
+        IOptions<RagOptions> ragOptions)
     {
         _ticketService = ticketService;
         _ingestionService = ingestionService;
         _attachmentService = attachmentService;
+        _commentImageOcrService = commentImageOcrService;
+        _commentImageMessageBoxService = commentImageMessageBoxService;
+        _imageTextExtractionService = imageTextExtractionService;
         _teamSupportOptions = teamSupportOptions.Value;
+        _ragOptions = ragOptions.Value;
     }
 
     public async Task<IActionResult> Index(
@@ -129,6 +143,138 @@ public class TicketsController : Controller
             isImage = item.IsImage,
             proxyUrl = Url.Action("Attachment", "Tickets", new { url = item.OriginalUrl })
         }));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExtractImageText(
+        [FromForm] string url,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest(new { error = "La URL de la imagen es obligatoria." });
+        }
+
+        var result = await _commentImageOcrService.ExtractTextFromUrlAsync(url, cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage ?? "No se pudo extraer el texto." });
+        }
+
+        return Json(new { text = result.Text });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExtractImageTextVision(
+        [FromForm] string url,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest(new { error = "La URL de la imagen es obligatoria." });
+        }
+
+        if (!_attachmentService.IsAllowedAttachmentUrl(url))
+        {
+            return BadRequest(new { error = "La URL de la imagen no está permitida." });
+        }
+
+        if (!_ragOptions.EnableImageTextExtraction)
+        {
+            return BadRequest(new { error = "La extracción con OpenAI Vision está deshabilitada en la configuración." });
+        }
+
+        var result = await _imageTextExtractionService.ExtractAsync([url], cancellationToken);
+        var text = result.Texts.FirstOrDefault()?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            var error = string.IsNullOrWhiteSpace(result.Warning)
+                ? "No se pudo extraer texto de la imagen con OpenAI Vision."
+                : result.Warning;
+            return BadRequest(new { error });
+        }
+
+        return Json(new { text, warning = result.Warning });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DetectMessageBox(
+        [FromForm] string url,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest(new { error = "La URL de la imagen es obligatoria." });
+        }
+
+        var result = await _commentImageMessageBoxService.DetectFromUrlAsync(url, cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage ?? "No se pudo analizar la imagen." });
+        }
+
+        return Json(new
+        {
+            detected = result.Detected,
+            confidence = result.Confidence,
+            summary = result.Summary,
+            titleText = result.TitleText,
+            messageText = result.MessageText,
+            elements = result.Elements.Select(item => new
+            {
+                type = item.Type,
+                x = item.X,
+                y = item.Y,
+                width = item.Width,
+                height = item.Height,
+                score = item.Score
+            })
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DetectMessageBoxVision(
+        [FromForm] string url,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest(new { error = "La URL de la imagen es obligatoria." });
+        }
+
+        if (!_ragOptions.EnableImageTextExtraction)
+        {
+            return BadRequest(new { error = "La extracción con OpenAI Vision está deshabilitada en la configuración." });
+        }
+
+        var result = await _commentImageMessageBoxService.DetectWithVisionFromUrlAsync(url, cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage ?? "No se pudo analizar la imagen." });
+        }
+
+        return Json(new
+        {
+            detected = result.Detected,
+            confidence = result.Confidence,
+            summary = result.Summary,
+            titleText = result.TitleText,
+            messageText = result.MessageText,
+            elements = result.Elements.Select(item => new
+            {
+                type = item.Type,
+                x = item.X,
+                y = item.Y,
+                width = item.Width,
+                height = item.Height,
+                score = item.Score
+            })
+        });
     }
 
     [HttpPost]

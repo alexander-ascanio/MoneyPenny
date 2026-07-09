@@ -179,9 +179,22 @@ public class TicketService : ITicketService
             var isIndexed = await IsTicketIndexedSafeAsync(id, cancellationToken);
             var actions = await _ticketRepository.GetActionsByTicketIdAsync(id, cancellationToken);
             var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(id, cancellationToken);
-            var firstCommentImageCount = oldestComment is null
-                ? 0
-                : TicketHtmlHelper.ExtractImageSources(oldestComment.Content).Count;
+            var firstCommentImageCount = 0;
+            if (oldestComment is not null)
+            {
+                var attachments = await _attachmentService.ResolveAttachmentsAsync(
+                    oldestComment.TeamSupportActionId,
+                    ticket.TeamSupportId,
+                    oldestComment.Content,
+                    cancellationToken);
+                var attachmentSources = attachments.Select(item => new CommentImageHelper.CommentImageSource(
+                    item.OriginalUrl,
+                    item.FileName,
+                    item.IsImage));
+                firstCommentImageCount = CommentImageHelper.GetDisplayableImageUrls(
+                    oldestComment.Content,
+                    attachmentSources).Count;
+            }
 
             TokenUsageEstimateViewModel? indexWithoutImagesEstimate = null;
             TokenUsageEstimateViewModel? indexWithImagesEstimate = null;

@@ -33,6 +33,9 @@
 
         @if (Model.FirstComment is not null)
         {
+            string AttachmentProxyUrl(string originalUrl) =>
+                Url.Action("Attachment", "Tickets", new { url = originalUrl }) ?? originalUrl;
+
             <div class="card shadow-sm mb-4">
                 <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-file-earmark-richtext me-2"></i>Comentario original</span>
@@ -43,8 +46,36 @@
                         @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                     </div>
                     <div class="ticket-comment-body ticket-comment-body-html">
-                        @Html.Raw(TicketHtmlHelper.PrepareCommentHtml(Model.FirstComment.OriginalContent))
+                        @Html.Raw(TicketHtmlHelper.PrepareCommentHtmlForDisplay(
+                            Model.FirstComment.OriginalContent,
+                            AttachmentProxyUrl))
                     </div>
+                    @if (Model.FirstComment.Attachments.Any())
+                    {
+                        <div class="ticket-comment-attachments">
+                            @foreach (var attachment in Model.FirstComment.Attachments)
+                            {
+                                var proxyUrl = AttachmentProxyUrl(attachment.OriginalUrl);
+                                var label = attachment.FileName ?? "Adjunto";
+                                <a class="ticket-comment-attachment-link" href="@proxyUrl" target="_blank" rel="noopener">
+                                    <i class="bi bi-paperclip" aria-hidden="true"></i>
+                                    <span>@label</span>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else if (Model.FirstComment.PendingAttachmentResolution)
+                    {
+                        <div class="ticket-comment-attachments ticket-comment-attachments-pending"
+                             data-action-id="@Model.FirstComment.TeamSupportActionId"
+                             data-ticket-id="@Model.FirstComment.TeamSupportTicketId"
+                             data-content="@Model.FirstComment.OriginalContent">
+                            <span class="text-muted small">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Buscando adjuntos en TeamSupport...
+                            </span>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -384,4 +415,55 @@
             });
         })();
     </script>
+
+    @if (Model.FirstComment?.PendingAttachmentResolution == true)
+    {
+        <script>
+            (function () {
+                const pendingBlocks = document.querySelectorAll('.ticket-comment-attachments-pending');
+                if (!pendingBlocks.length) {
+                    return;
+                }
+
+                pendingBlocks.forEach(async function (block) {
+                    const actionId = block.dataset.actionId;
+                    const ticketId = block.dataset.ticketId || '';
+                    const content = block.dataset.content || '';
+                    if (!actionId) {
+                        block.remove();
+                        return;
+                    }
+
+                    try {
+                        const params = new URLSearchParams({
+                            teamSupportActionId: actionId,
+                            teamSupportTicketId: ticketId,
+                            content: content
+                        });
+                        const response = await fetch(`/Tickets/ResolveActionAttachments?${params.toString()}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('resolve failed');
+                        }
+
+                        const attachments = await response.json();
+                        if (!attachments.length) {
+                            block.innerHTML = '<span class="text-muted small"><i class="bi bi-paperclip me-1"></i>Este comentario referencia un adjunto en TeamSupport que no está sincronizado.</span>';
+                            return;
+                        }
+
+                        block.classList.remove('ticket-comment-attachments-pending');
+                        block.innerHTML = attachments.map(function (attachment) {
+                            const label = attachment.fileName || 'Adjunto';
+                            return `<a class="ticket-comment-attachment-link" href="${attachment.proxyUrl}" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i><span>${label}</span></a>`;
+                        }).join('');
+                    } catch {
+                        block.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-circle me-1"></i>No se pudieron cargar los adjuntos de TeamSupport.</span>';
+                    }
+                });
+            })();
+        </script>
+    }
 }

@@ -7,6 +7,8 @@ public class TicketFirstCommentRow
     public string Title { get; init; } = string.Empty;
     public string? Product { get; init; }
     public int TicketActionId { get; init; }
+    public string? TeamSupportActionId { get; init; }
+    public string? TeamSupportTicketId { get; init; }
     public string Content { get; init; } = string.Empty;
     public DateTime ActionCreatedAt { get; init; }
     public bool IsKnowledgeBase { get; init; }

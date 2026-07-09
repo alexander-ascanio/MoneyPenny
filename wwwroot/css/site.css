@@ -710,6 +710,108 @@ body.tickets-col-resizing * {
   border-top: 1px dashed #e2e8f0;
 }
 
+.ticket-comment-images-action {
+  margin: 0 1rem 1rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.ticket-comment-images-btn {
+  font-weight: 600;
+}
+
+.comment-image-ocr-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.comment-image-ocr-panel:last-child {
+  margin-bottom: 0;
+}
+
+.comment-image-ocr-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.comment-image-ocr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.comment-image-ocr-title {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.comment-image-ocr-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  overflow: auto;
+  max-height: 28rem;
+}
+
+.comment-image-ocr-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.35rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.comment-image-ocr-result {
+  margin-top: 0.85rem;
+}
+
+.comment-image-ocr-result-vision {
+  margin-top: 0.65rem;
+}
+
+.comment-image-ocr-result-opencv {
+  margin-top: 0.65rem;
+}
+
+.comment-image-ocr-result-opencv-vision {
+  margin-top: 0.65rem;
+}
+
+.comment-image-ocr-result-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.comment-image-ocr-result-text {
+  margin: 0;
+  padding: 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #1e293b;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 16rem;
+  overflow: auto;
+}
+
 .ticket-comments-empty {
   color: #94a3b8;
 }

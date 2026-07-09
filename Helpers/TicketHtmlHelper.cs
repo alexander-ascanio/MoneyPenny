@@ -287,14 +287,22 @@ public static class TicketHtmlHelper
         return html;
     }
 
-    public static IReadOnlyList<string> ExtractImageSources(string? content)
+    public static IReadOnlyList<string> ExtractImageSources(string? content) =>
+        ExtractImageSourcesFromHtml(content, PrepareCommentHtmlForIndexing);
+
+    public static IReadOnlyList<string> ExtractCommentImageSources(string? content) =>
+        ExtractImageSourcesFromHtml(content, PrepareCommentHtml);
+
+    private static IReadOnlyList<string> ExtractImageSourcesFromHtml(
+        string? content,
+        Func<string?, string> htmlPreparer)
     {
         if (string.IsNullOrWhiteSpace(content))
         {
             return [];
         }
 
-        var html = PrepareCommentHtmlForIndexing(content);
+        var html = htmlPreparer(content);
         var matches = ImageSourceRegex.Matches(html);
         var sources = new List<string>();
 

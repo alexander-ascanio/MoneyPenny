@@ -202,6 +202,8 @@ public class TicketRepository : ITicketRepository
                 t."ProductName",
                 t."IsKnowledgeBase",
                 ta."Id" AS action_id,
+                ta."TeamSupportActionId",
+                t."TeamSupportId",
                 ta."Content",
                 ta."CreatedAt"
             FROM ticket_actions ta
@@ -220,6 +222,8 @@ public class TicketRepository : ITicketRepository
                 fc."ProductName",
                 fc."IsKnowledgeBase",
                 fc.action_id,
+                fc."TeamSupportActionId",
+                fc."TeamSupportId",
                 fc."Content",
                 fc."CreatedAt"
             FROM (
@@ -254,8 +258,10 @@ public class TicketRepository : ITicketRepository
                     Product = reader.IsDBNull(3) ? null : reader.GetString(3),
                     IsKnowledgeBase = !reader.IsDBNull(4) && reader.GetBoolean(4),
                     TicketActionId = reader.GetInt32(5),
-                    Content = reader.GetString(6),
-                    ActionCreatedAt = reader.GetDateTime(7)
+                    TeamSupportActionId = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    TeamSupportTicketId = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    Content = reader.GetString(8),
+                    ActionCreatedAt = reader.GetDateTime(9)
                 });
             }
 
@@ -371,6 +377,8 @@ public class TicketRepository : ITicketRepository
             Product = ticket.Product,
             IsKnowledgeBase = ticket.IsKnowledgeBase,
             TicketActionId = action.Id,
+            TeamSupportActionId = action.TeamSupportActionId,
+            TeamSupportTicketId = ticket.TeamSupportId,
             Content = action.Content,
             ActionCreatedAt = action.CreatedAt
         };
@@ -390,7 +398,8 @@ public class TicketRepository : ITicketRepository
 
         var imageSampleSize = Math.Min(50, take);
         var imageContents = await GetFirstCommentContentsSampleAsync(imageSampleSize, onlyKnowledgeBaseScope, cancellationToken);
-        var totalImages = imageContents.Sum(content => TicketHtmlHelper.ExtractImageSources(content).Count);
+        var totalImages = imageContents.Sum(content =>
+            CommentImageHelper.GetDisplayableImageUrls(content).Count);
 
         return new FirstCommentCorpusStats
         {

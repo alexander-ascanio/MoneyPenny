@@ -117,6 +117,10 @@
                                 commentIndex++;
                                 var commentNumber = totalComments - commentIndex + 1;
                                 var hasContent = !string.IsNullOrWhiteSpace(comment.Content);
+                                var commentImages = CommentImageHelper.GetCommentImages(
+                                    comment.Content,
+                                    comment.Attachments,
+                                    AttachmentProxyUrl);
                                 var isTicketSubjectAction = !string.IsNullOrWhiteSpace(comment.ActionType)
                                     && string.Equals(comment.ActionType, Model.Title, StringComparison.OrdinalIgnoreCase);
                                 @if (isTicketSubjectAction)
@@ -204,6 +208,25 @@
                                     {
                                         <div class="ticket-comment-footer text-muted small">
                                             <i class="bi bi-clock me-1"></i>@comment.TimeSpentMinutes.Value.ToString("0.##") min
+                                        </div>
+                                    }
+                                    @if (commentImages.Count > 0)
+                                    {
+                                        var commentImagesJson = System.Text.Json.JsonSerializer.Serialize(
+                                            commentImages.Select(item => new
+                                            {
+                                                originalUrl = item.OriginalUrl,
+                                                fileName = item.FileName,
+                                                proxyUrl = item.ProxyUrl
+                                            }));
+                                        <div class="ticket-comment-images-action">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary ticket-comment-images-btn"
+                                                    data-comment-number="@commentNumber"
+                                                    data-images="@commentImagesJson">
+                                                <i class="bi bi-images me-1" aria-hidden="true"></i>
+                                                Imágenes (@commentImages.Count)
+                                            </button>
                                         </div>
                                     }
                                 </article>
@@ -399,6 +422,25 @@
     </div>
 }
 
+<div class="modal fade" id="commentImagesModal" tabindex="-1" aria-labelledby="commentImagesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentImagesModalLabel">
+                    <i class="bi bi-images me-2"></i>Imágenes del comentario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="commentImagesModalBody">
+                <p class="text-muted mb-0">Selecciona «Imágenes» en un comentario para previsualizar sus capturas.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         (function () {
@@ -527,6 +569,211 @@
                     }).join('');
                 } catch {
                     block.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-circle me-1"></i>No se pudieron cargar los adjuntos de TeamSupport.</span>';
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const modalElement = document.getElementById('commentImagesModal');
+            const modalBody = document.getElementById('commentImagesModalBody');
+            const modalTitle = document.getElementById('commentImagesModalLabel');
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const extractUrl = '@Url.Action("ExtractImageText", "Tickets")';
+            const extractVisionUrl = '@Url.Action("ExtractImageTextVision", "Tickets")';
+            const detectMessageBoxUrl = '@Url.Action("DetectMessageBox", "Tickets")';
+            const detectMessageBoxVisionUrl = '@Url.Action("DetectMessageBoxVision", "Tickets")';
+
+            if (!modalElement || !modalBody || !tokenInput) {
+                return;
+            }
+
+            const modal = new bootstrap.Modal(modalElement);
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function renderExtractButton(className, label, iconClass) {
+                return `
+                    <button type="button"
+                            class="btn btn-sm ${className}"
+                            data-original-url="">
+                        <span class="comment-image-extract-btn-label">
+                            <i class="bi ${iconClass} me-1"></i>${label}
+                        </span>
+                        <span class="comment-image-extract-btn-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Extrayendo…
+                        </span>
+                    </button>`;
+            }
+
+            function renderImagePanel(image, index) {
+                const label = image.fileName || ('Imagen ' + (index + 1));
+                return `
+                    <article class="comment-image-ocr-panel" data-original-url="${escapeHtml(image.originalUrl)}">
+                        <div class="comment-image-ocr-header">
+                            <h6 class="comment-image-ocr-title mb-0">${escapeHtml(label)}</h6>
+                            <div class="comment-image-ocr-actions">
+                                ${renderExtractButton('btn-primary comment-image-ocr-btn', 'Extraer texto (Tesseract)', 'bi-file-earmark-text')}
+                                ${renderExtractButton('btn-outline-success comment-image-vision-btn', 'Extraer texto (Vision)', 'bi-stars')}
+                                ${renderExtractButton('btn-outline-warning comment-image-opencv-btn', 'MessageBox (OpenCV + OCR)', 'bi-bounding-box')}
+                                ${renderExtractButton('btn-outline-info comment-image-opencv-vision-btn', 'MessageBox (OpenCV + Vision)', 'bi-eye')}
+                            </div>
+                        </div>
+                        <div class="comment-image-ocr-preview">
+                            <img src="${escapeHtml(image.proxyUrl)}" alt="${escapeHtml(label)}" loading="lazy" />
+                        </div>
+                        <div class="comment-image-ocr-result comment-image-ocr-result-tesseract d-none">
+                            <div class="comment-image-ocr-result-label">Texto extraído (Tesseract)</div>
+                            <pre class="comment-image-ocr-result-text"></pre>
+                        </div>
+                        <div class="comment-image-ocr-result comment-image-ocr-result-vision d-none">
+                            <div class="comment-image-ocr-result-label">Texto extraído (OpenAI Vision)</div>
+                            <pre class="comment-image-ocr-result-text"></pre>
+                        </div>
+                        <div class="comment-image-ocr-result comment-image-ocr-result-opencv d-none">
+                            <div class="comment-image-ocr-result-label">MessageBox (OpenCV + Tesseract)</div>
+                            <pre class="comment-image-ocr-result-text"></pre>
+                        </div>
+                        <div class="comment-image-ocr-result comment-image-ocr-result-opencv-vision d-none">
+                            <div class="comment-image-ocr-result-label">MessageBox (OpenCV + Vision)</div>
+                            <pre class="comment-image-ocr-result-text"></pre>
+                        </div>
+                        <div class="comment-image-ocr-error comment-image-ocr-error-tesseract alert alert-danger py-2 px-3 small d-none mb-0" role="alert"></div>
+                        <div class="comment-image-ocr-error comment-image-ocr-error-vision alert alert-danger py-2 px-3 small d-none mb-0" role="alert"></div>
+                        <div class="comment-image-ocr-error comment-image-ocr-error-opencv alert alert-danger py-2 px-3 small d-none mb-0" role="alert"></div>
+                        <div class="comment-image-ocr-error comment-image-ocr-error-opencv-vision alert alert-danger py-2 px-3 small d-none mb-0" role="alert"></div>
+                    </article>`;
+            }
+
+            function openCommentImagesModal(commentNumber, images) {
+                modalTitle.innerHTML = '<i class="bi bi-images me-2"></i>Imágenes del comentario #' + commentNumber;
+                modalBody.innerHTML = images.map(renderImagePanel).join('');
+                modalBody.querySelectorAll('.comment-image-ocr-btn, .comment-image-vision-btn, .comment-image-opencv-btn, .comment-image-opencv-vision-btn').forEach(function (button) {
+                    const panel = button.closest('.comment-image-ocr-panel');
+                    if (panel) {
+                        button.dataset.originalUrl = panel.dataset.originalUrl || '';
+                    }
+                });
+                modal.show();
+            }
+
+            document.querySelectorAll('.ticket-comment-images-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    let images = [];
+                    try {
+                        images = JSON.parse(button.dataset.images || '[]');
+                    } catch {
+                        images = [];
+                    }
+
+                    if (!images.length) {
+                        return;
+                    }
+
+                    openCommentImagesModal(button.dataset.commentNumber || '', images);
+                });
+            });
+
+            async function runImageExtraction(button, config) {
+                const panel = button.closest('.comment-image-ocr-panel');
+                const originalUrl = button.dataset.originalUrl;
+                if (!panel || !originalUrl) {
+                    return;
+                }
+
+                const label = button.querySelector('.comment-image-extract-btn-label');
+                const loading = button.querySelector('.comment-image-extract-btn-loading');
+                const resultBlock = panel.querySelector(config.resultSelector);
+                const resultText = resultBlock?.querySelector('.comment-image-ocr-result-text');
+                const errorBlock = panel.querySelector(config.errorSelector);
+
+                button.disabled = true;
+                label?.classList.add('d-none');
+                loading?.classList.remove('d-none');
+                errorBlock?.classList.add('d-none');
+                resultBlock?.classList.add('d-none');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('url', originalUrl);
+                    formData.append('__RequestVerificationToken', tokenInput.value);
+
+                    const response = await fetch(config.endpoint, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    const payload = await response.json();
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'No se pudo extraer el texto.');
+                    }
+
+                    const text = (payload.text || payload.summary || '').trim();
+                    if (resultText) {
+                        resultText.textContent = text || '(Sin resultado)';
+                    }
+
+                    resultBlock?.classList.remove('d-none');
+                } catch (error) {
+                    if (errorBlock) {
+                        errorBlock.textContent = error.message || 'No se pudo extraer el texto.';
+                        errorBlock.classList.remove('d-none');
+                    }
+                } finally {
+                    button.disabled = false;
+                    label?.classList.remove('d-none');
+                    loading?.classList.add('d-none');
+                }
+            }
+
+            modalBody.addEventListener('click', async function (event) {
+                const tesseractButton = event.target.closest('.comment-image-ocr-btn');
+                if (tesseractButton && !tesseractButton.disabled) {
+                    await runImageExtraction(tesseractButton, {
+                        endpoint: extractUrl,
+                        resultSelector: '.comment-image-ocr-result-tesseract',
+                        errorSelector: '.comment-image-ocr-error-tesseract'
+                    });
+                    return;
+                }
+
+                const visionButton = event.target.closest('.comment-image-vision-btn');
+                if (visionButton && !visionButton.disabled) {
+                    await runImageExtraction(visionButton, {
+                        endpoint: extractVisionUrl,
+                        resultSelector: '.comment-image-ocr-result-vision',
+                        errorSelector: '.comment-image-ocr-error-vision'
+                    });
+                    return;
+                }
+
+                const opencvButton = event.target.closest('.comment-image-opencv-btn');
+                if (opencvButton && !opencvButton.disabled) {
+                    await runImageExtraction(opencvButton, {
+                        endpoint: detectMessageBoxUrl,
+                        resultSelector: '.comment-image-ocr-result-opencv',
+                        errorSelector: '.comment-image-ocr-error-opencv'
+                    });
+                    return;
+                }
+
+                const opencvVisionButton = event.target.closest('.comment-image-opencv-vision-btn');
+                if (opencvVisionButton && !opencvVisionButton.disabled) {
+                    await runImageExtraction(opencvVisionButton, {
+                        endpoint: detectMessageBoxVisionUrl,
+                        resultSelector: '.comment-image-ocr-result-opencv-vision',
+                        errorSelector: '.comment-image-ocr-error-opencv-vision'
+                    });
                 }
             });
         })();

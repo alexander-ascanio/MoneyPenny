@@ -131,7 +131,9 @@ public class TicketIngestionService : ITicketIngestionService
                     ProcessImages = processImages,
                     ImageCacheMode = ImageExtractionCacheMode.UseAndRefresh,
                     TicketId = ticket.Id,
-                    TicketActionId = oldestComment.Id
+                    TicketActionId = oldestComment.Id,
+                    TeamSupportActionId = oldestComment.TeamSupportActionId,
+                    TeamSupportTicketId = ticket.TeamSupportId
                 },
                 cancellationToken);
 

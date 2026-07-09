@@ -6,4 +6,6 @@ public class CommentContentRequest
     public ImageExtractionCacheMode ImageCacheMode { get; init; } = ImageExtractionCacheMode.UseAndRefresh;
     public int? TicketId { get; init; }
     public int? TicketActionId { get; init; }
+    public string? TeamSupportActionId { get; init; }
+    public string? TeamSupportTicketId { get; init; }
 }

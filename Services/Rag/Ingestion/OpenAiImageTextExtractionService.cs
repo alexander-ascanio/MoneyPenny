@@ -16,6 +16,15 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
         "Incluye títulos de ventanas, mensajes de error, etiquetas de campos y botones. " +
         "Responde únicamente con el texto extraído, sin explicaciones ni comentarios.";
 
+    private const string MessageBoxTitlePrompt =
+        "Extrae el título de esta barra de una ventana MessageBox de Windows. " +
+        "Responde únicamente con el texto del título, sin explicaciones.";
+
+    private const string MessageBoxMessagePrompt =
+        "Este recorte corresponde al cuerpo de una ventana MessageBox de Windows. " +
+        "Extrae exactamente el mensaje de error o aviso visible. " +
+        "Responde únicamente con el texto del mensaje, sin explicaciones.";
+
     private const int MaxImageBytes = 5 * 1024 * 1024;
 
     private static readonly JsonSerializerOptions VisionJsonOptions = new()
@@ -77,7 +86,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
                     continue;
                 }
 
-                var text = await CallVisionApiAsync(dataUrl, cancellationToken);
+                var text = await CallVisionApiAsync(dataUrl, ExtractionPrompt, cancellationToken);
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     warnings.Add(
@@ -111,6 +120,31 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
             Warning = warnings.Count == 0 ? null : string.Join(" ", warnings)
         };
     }
+
+    public async Task<string?> ExtractFromBytesAsync(
+        byte[] imageBytes,
+        string? prompt = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (imageBytes.Length == 0)
+        {
+            return null;
+        }
+
+        if (imageBytes.Length > MaxImageBytes)
+        {
+            _logger.LogWarning("Recorte demasiado grande para Vision ({SizeBytes} bytes).", imageBytes.Length);
+            return null;
+        }
+
+        var contentType = GuessImageContentType(imageBytes) ?? "image/png";
+        var dataUrl = $"data:{contentType};base64,{Convert.ToBase64String(imageBytes)}";
+        var text = await CallVisionApiAsync(dataUrl, prompt ?? ExtractionPrompt, cancellationToken);
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+    }
+
+    public static string MessageBoxTitleExtractionPrompt => MessageBoxTitlePrompt;
+    public static string MessageBoxMessageExtractionPrompt => MessageBoxMessagePrompt;
 
     private async Task<string?> ResolveToDataUrlAsync(string source, CancellationToken cancellationToken)
     {
@@ -188,9 +222,12 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
         return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
     }
 
-    private async Task<string?> CallVisionApiAsync(string dataUrl, CancellationToken cancellationToken)
+    private async Task<string?> CallVisionApiAsync(
+        string dataUrl,
+        string prompt,
+        CancellationToken cancellationToken)
     {
-        var text = await CallVisionApiWithModelAsync(dataUrl, _options.VisionModel, cancellationToken);
+        var text = await CallVisionApiWithModelAsync(dataUrl, _options.VisionModel, prompt, cancellationToken);
         if (!string.IsNullOrWhiteSpace(text) && !IsVisionRefusal(text))
         {
             return text;
@@ -208,6 +245,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
         var fallbackText = await CallVisionApiWithModelAsync(
             dataUrl,
             _options.VisionFallbackModel,
+            prompt,
             cancellationToken);
 
         return IsVisionRefusal(fallbackText) ? null : fallbackText;
@@ -216,6 +254,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
     private async Task<string?> CallVisionApiWithModelAsync(
         string dataUrl,
         string model,
+        string prompt,
         CancellationToken cancellationToken)
     {
         var client = _httpClientFactory.CreateClient(OpenAiEmbeddingService.HttpClientName);
@@ -230,7 +269,7 @@ public class OpenAiImageTextExtractionService : IImageTextExtractionService
                     Role = "user",
                     Content =
                     [
-                        new OpenAiVisionContentPart { Type = "text", Text = ExtractionPrompt },
+                        new OpenAiVisionContentPart { Type = "text", Text = prompt },
                         new OpenAiVisionContentPart
                         {
                             Type = "image_url",

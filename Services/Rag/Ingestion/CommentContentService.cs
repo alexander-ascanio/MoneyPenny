@@ -2,6 +2,7 @@ using System.Text;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
 using MoneyPenny.Options;
+using MoneyPenny.Services.TeamSupport;
 using Microsoft.Extensions.Options;
 
 namespace MoneyPenny.Services.Rag.Ingestion;
@@ -10,17 +11,20 @@ public class CommentContentService : ICommentContentService
 {
     private readonly IImageTextExtractionService _imageTextExtractionService;
     private readonly ICommentImageTextCacheRepository _imageTextCacheRepository;
+    private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly RagOptions _options;
     private readonly ILogger<CommentContentService> _logger;
 
     public CommentContentService(
         IImageTextExtractionService imageTextExtractionService,
         ICommentImageTextCacheRepository imageTextCacheRepository,
+        ITeamSupportAttachmentService attachmentService,
         IOptions<RagOptions> options,
         ILogger<CommentContentService> logger)
     {
         _imageTextExtractionService = imageTextExtractionService;
         _imageTextCacheRepository = imageTextCacheRepository;
+        _attachmentService = attachmentService;
         _options = options.Value;
         _logger = logger;
     }
@@ -32,7 +36,7 @@ public class CommentContentService : ICommentContentService
     {
         request ??= new CommentContentRequest();
         var plainText = TicketHtmlHelper.ToPlainText(htmlContent);
-        var imageSources = TicketHtmlHelper.ExtractImageSources(htmlContent);
+        var imageSources = await ResolveDisplayableImageUrlsAsync(htmlContent, request, cancellationToken);
 
         if (!request.ProcessImages || !_options.EnableImageTextExtraction || imageSources.Count == 0)
         {
@@ -138,6 +142,30 @@ public class CommentContentService : ICommentContentService
         }
 
         return BuildResult(plainText, imageEntries, textsByCacheKey, warning);
+    }
+
+    private async Task<IReadOnlyList<string>> ResolveDisplayableImageUrlsAsync(
+        string? htmlContent,
+        CommentContentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.TeamSupportActionId))
+        {
+            return CommentImageHelper.GetDisplayableImageUrls(htmlContent);
+        }
+
+        var attachments = await _attachmentService.ResolveAttachmentsAsync(
+            request.TeamSupportActionId,
+            request.TeamSupportTicketId,
+            htmlContent,
+            cancellationToken);
+
+        var attachmentSources = attachments.Select(item => new CommentImageHelper.CommentImageSource(
+            item.OriginalUrl,
+            item.FileName,
+            item.IsImage));
+
+        return CommentImageHelper.GetDisplayableImageUrls(htmlContent, attachmentSources);
     }
 
     private static CommentIndexableContent BuildResult(

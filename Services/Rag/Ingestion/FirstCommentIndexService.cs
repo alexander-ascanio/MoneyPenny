@@ -467,7 +467,9 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                     ? ImageExtractionCacheMode.UseAndRefresh
                     : ImageExtractionCacheMode.CacheOnly,
                 TicketId = row.TicketId,
-                TicketActionId = row.TicketActionId
+                TicketActionId = row.TicketActionId,
+                TeamSupportActionId = row.TeamSupportActionId,
+                TeamSupportTicketId = row.TeamSupportTicketId
             },
             cancellationToken);
 
@@ -483,11 +485,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 commentContent.ImageExtractionWarning);
         }
 
-        var imageCount = processImages
-            ? commentContent.ImagesExtracted > 0
-                ? commentContent.ImagesExtracted
-                : TicketHtmlHelper.ExtractImageSources(row.Content).Count
-            : 0;
+        var imageCount = processImages ? commentContent.ImagesDetected : 0;
 
         var usage = _tokenEstimateService.EstimateTicketIndex(
             document,

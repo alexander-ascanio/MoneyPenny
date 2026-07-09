@@ -8,6 +8,8 @@ using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
 using MoneyPenny.Services.Rag.Retrieval;
+using MoneyPenny.Services.Cv;
+using MoneyPenny.Services.Ocr;
 using MoneyPenny.Services.Tickets;
 using MoneyPenny.Services.TeamSupport;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +32,8 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(RagOptions.SectionName));
         services.Configure<TeamSupportApiOptions>(
             configuration.GetSection(TeamSupportApiOptions.SectionName));
+        services.Configure<TesseractOptions>(
+            configuration.GetSection(TesseractOptions.SectionName));
 
         var appDb = configuration.GetSection(ApplicationDatabaseOptions.SectionName).Get<ApplicationDatabaseOptions>()
             ?? new ApplicationDatabaseOptions();
@@ -63,6 +67,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommentImageTextCacheRepository, CommentImageTextCacheRepository>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<ITeamSupportAttachmentService, TeamSupportAttachmentService>();
+        services.AddSingleton<ITesseractOcrService, TesseractOcrService>();
+        services.AddScoped<ICommentImageOcrService, CommentImageOcrService>();
+        services.AddScoped<IMessageBoxDetectionService, MessageBoxDetectionService>();
+        services.AddScoped<ICommentImageMessageBoxService, CommentImageMessageBoxService>();
         services.AddScoped<IChunkingService, ChunkingService>();
         services.AddScoped<IImageTextExtractionService, OpenAiImageTextExtractionService>();
         services.AddScoped<ICommentContentService, CommentContentService>();
