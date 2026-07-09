@@ -74,7 +74,7 @@ public class TicketsController : Controller
             Rag = rag,
             HasActions = hasActions,
             IsKnowledgeBase = isKnowledgeBase,
-            ResultLimit = string.IsNullOrWhiteSpace(limit) ? "50" : limit,
+            ResultLimit = string.IsNullOrWhiteSpace(limit) ? "100" : limit,
             SortBy = sortBy,
             SortDir = string.IsNullOrWhiteSpace(sortDir) ? "desc" : sortDir
         };

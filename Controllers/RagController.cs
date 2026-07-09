@@ -56,6 +56,7 @@ public class RagController : Controller
         string? ticketNumber,
         bool knowledgeBaseOnly = false,
         string? gptResult = null,
+        bool focusGpt = false,
         CancellationToken cancellationToken = default)
     {
         if (ticketId is null or <= 0)
@@ -76,7 +77,7 @@ public class RagController : Controller
             TempData["WarningMessage"] = "La respuesta recién generada ya no está en caché. Se mostrará la última respuesta guardada si existe.";
         }
 
-        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, knowledgeBaseOnly, cancellationToken);
+        return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, knowledgeBaseOnly, focusGpt, cancellationToken);
     }
 
     [HttpPost]
@@ -112,6 +113,7 @@ public class RagController : Controller
             generateGptAnswer: true,
             knowledgeBaseOnly,
             userId,
+            focusGpt: false,
             cancellationToken);
 
         var cacheKey = _ragAskResultCache.Store(userId, new RagAskCachedResult { Response = response });
@@ -219,6 +221,7 @@ public class RagController : Controller
         string? ticketNumber,
         bool generateGptAnswer,
         bool knowledgeBaseOnly,
+        bool focusGpt,
         CancellationToken cancellationToken)
     {
         if (ticketId is null or <= 0)
@@ -246,6 +249,7 @@ public class RagController : Controller
             generateGptAnswer,
             knowledgeBaseOnly,
             userId,
+            focusGpt,
             cancellationToken);
 
         return View("Ask", response);
@@ -271,6 +275,7 @@ public class RagController : Controller
         bool generateGptAnswer,
         bool knowledgeBaseOnly,
         string userId,
+        bool focusGpt,
         CancellationToken cancellationToken)
     {
         var response = await _ragOrchestrator.ProcessTicketAsync(
@@ -304,10 +309,12 @@ public class RagController : Controller
                 gptEstimate,
                 "Consumo estimado de la respuesta GPT");
         }
-        else if (!generateGptAnswer && !response.HasGptAnswer)
+        else if (!generateGptAnswer && string.IsNullOrWhiteSpace(response.Answer))
         {
             await TryApplyStoredGptAnswerAsync(response, ticketId, cancellationToken);
         }
+
+        response.FocusGpt = focusGpt;
 
         response.RatedAnswers = await LoadRatedAnswersAsync(
             ticketId,

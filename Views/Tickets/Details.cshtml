@@ -334,15 +334,28 @@
                         <a asp-controller="Rag" asp-action="Ask"
                            asp-route-ticketId="@Model.Id"
                            asp-route-ticketNumber="@Model.Number"
-                           class="btn btn-primary w-100">
-                            <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
+                           asp-route-focusGpt="true"
+                           class="btn btn-primary w-100 ticket-rag-response-link">
+                            <span class="ticket-rag-response-label">
+                                <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
+                            </span>
+                            <span class="ticket-rag-response-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Cargando…
+                            </span>
                         </a>
                         <a asp-controller="Rag" asp-action="Ask"
                            asp-route-ticketId="@Model.Id"
                            asp-route-ticketNumber="@Model.Number"
                            asp-route-knowledgeBaseOnly="true"
-                           class="btn btn-outline-primary w-100 mt-2">
-                            <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                           class="btn btn-outline-primary w-100 mt-2 ticket-rag-response-link">
+                            <span class="ticket-rag-response-label">
+                                <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                            </span>
+                            <span class="ticket-rag-response-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Cargando…
+                            </span>
                         </a>
                     }
                     else
@@ -449,6 +462,32 @@
                 button.addEventListener('click', function () {
                     notIndexedAlert?.classList.remove('d-none');
                     notIndexedAlert?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            });
+
+            document.querySelectorAll('.ticket-rag-response-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (link.classList.contains('is-loading')) {
+                        return;
+                    }
+
+                    link.classList.add('is-loading');
+                    link.setAttribute('aria-busy', 'true');
+                    link.querySelector('.ticket-rag-response-label')?.classList.add('d-none');
+                    link.querySelector('.ticket-rag-response-loading')?.classList.remove('d-none');
+                });
+            });
+
+            window.addEventListener('pageshow', function (event) {
+                if (!event.persisted) {
+                    return;
+                }
+
+                document.querySelectorAll('.ticket-rag-response-link').forEach(function (link) {
+                    link.classList.remove('is-loading');
+                    link.removeAttribute('aria-busy');
+                    link.querySelector('.ticket-rag-response-label')?.classList.remove('d-none');
+                    link.querySelector('.ticket-rag-response-loading')?.classList.add('d-none');
                 });
             });
         })();

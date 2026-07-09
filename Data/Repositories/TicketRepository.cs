@@ -76,9 +76,9 @@ public class TicketRepository : ITicketRepository
 
         ordered = filters.ResultLimit switch
         {
-            "100" => ordered.Take(100),
+            "200" => ordered.Take(200),
             "all" => ordered,
-            _ => ordered.Take(50)
+            _ => ordered.Take(100)
         };
 
         return await ordered.ToListAsync(cancellationToken);

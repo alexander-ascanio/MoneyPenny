@@ -250,14 +250,6 @@
                     <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
                         <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
-                            @if (IsSelected(Model.Filters.ResultLimit, "50"))
-                            {
-                                <option value="50" selected>Últimos 50</option>
-                            }
-                            else
-                            {
-                                <option value="50">Últimos 50</option>
-                            }
                             @if (IsSelected(Model.Filters.ResultLimit, "100"))
                             {
                                 <option value="100" selected>Últimos 100</option>
@@ -265,6 +257,14 @@
                             else
                             {
                                 <option value="100">Últimos 100</option>
+                            }
+                            @if (IsSelected(Model.Filters.ResultLimit, "200"))
+                            {
+                                <option value="200" selected>Últimos 200</option>
+                            }
+                            else
+                            {
+                                <option value="200">Últimos 200</option>
                             }
                             @if (IsSelected(Model.Filters.ResultLimit, "all"))
                             {
@@ -466,7 +466,11 @@
                             <td>
                                 <a asp-action="Details" asp-route-id="@ticket.Id"
                                    class="ticket-number-link" title="Ver comentarios del ticket">
-                                    <span class="ticket-number-badge">#@ticket.Number</span>
+                                    <span class="ticket-number-link-inner">
+                                        <span class="ticket-number-badge">#@ticket.Number</span>
+                                        <span class="ticket-number-spinner spinner-border spinner-border-sm text-primary d-none"
+                                              role="status" aria-hidden="true"></span>
+                                    </span>
                                 </a>
                             </td>
                             <td>
@@ -578,6 +582,30 @@
             const sortByInput = document.getElementById('tickets-sort-by');
             const sortDirInput = document.getElementById('tickets-sort-dir');
             const table = document.getElementById('tickets-table');
+
+            document.querySelectorAll('.ticket-number-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (link.classList.contains('is-loading')) {
+                        return;
+                    }
+
+                    link.classList.add('is-loading');
+                    link.setAttribute('aria-busy', 'true');
+                    link.querySelector('.ticket-number-spinner')?.classList.remove('d-none');
+                });
+            });
+
+            window.addEventListener('pageshow', function (event) {
+                if (!event.persisted) {
+                    return;
+                }
+
+                document.querySelectorAll('.ticket-number-link').forEach(function (link) {
+                    link.classList.remove('is-loading');
+                    link.removeAttribute('aria-busy');
+                    link.querySelector('.ticket-number-spinner')?.classList.add('d-none');
+                });
+            });
 
             if (form && sortByInput && sortDirInput && table) {
                 table.querySelectorAll('th[data-sort]').forEach(function (th) {

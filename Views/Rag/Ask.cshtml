@@ -214,6 +214,7 @@
             </div>
         }
 
+        <div id="ragGptSection" class="rag-gpt-section">
         @if (Model.GptEstimate is not null)
         {
             <partial name="_TokenUsageEstimate" model="Model.GptEstimate" />
@@ -303,6 +304,7 @@
                 <partial name="_RagGroundingCheck" model="Model.GroundingReport" />
             }
         }
+        </div>
     }
 </div>
 
@@ -313,6 +315,8 @@
             const consultButton = document.getElementById('consultGptAnswerButton');
             const consultProcessing = document.getElementById('consultGptProcessing');
             const gptAnswerReadyAlert = document.getElementById('gptAnswerReadyAlert');
+            const ragGptSection = document.getElementById('ragGptSection');
+            const focusGpt = @Json.Serialize(Model.FocusGpt);
 
             if (consultForm && consultButton) {
                 consultForm.addEventListener('submit', function () {
@@ -327,13 +331,10 @@
                 });
             }
 
-            if (gptAnswerReadyAlert) {
+            if (focusGpt && ragGptSection) {
+                ragGptSection.scrollIntoView({ behavior: 'auto', block: 'start' });
+            } else if (gptAnswerReadyAlert) {
                 gptAnswerReadyAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-
-            const groundingCard = document.getElementById('ragGroundingCard');
-            if (groundingCard) {
-                groundingCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
             const rateUrl = '@Url.Action("RateAnswer", "Rag")';

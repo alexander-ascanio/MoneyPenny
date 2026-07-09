@@ -54,6 +54,7 @@ public class RagResponseViewModel
     public short? GptRating { get; set; }
     public int? KnowledgeBaseQueryLogId { get; init; }
     public short? KnowledgeBaseRating { get; init; }
+    public bool FocusGpt { get; set; }
     public IReadOnlyList<RagRatedAnswerViewModel> RatedAnswers { get; set; } = [];
     public ResponseGroundingReportViewModel? GroundingReport { get; set; }
 }

@@ -11,7 +11,7 @@ public class TicketFilterSelections
     public string? Rag { get; init; }
     public string? HasActions { get; init; }
     public string? IsKnowledgeBase { get; init; }
-    public string ResultLimit { get; init; } = "50";
+    public string ResultLimit { get; init; } = "100";
     public string? SortBy { get; init; }
     public string SortDir { get; init; } = "desc";
 
@@ -25,7 +25,7 @@ public class TicketFilterSelections
         !string.IsNullOrWhiteSpace(Rag) ||
         !string.IsNullOrWhiteSpace(HasActions) ||
         !string.IsNullOrWhiteSpace(IsKnowledgeBase) ||
-        !string.Equals(ResultLimit, "50", StringComparison.Ordinal);
+        !string.Equals(ResultLimit, "100", StringComparison.Ordinal);
 }
 
 public class TicketFilterOptions

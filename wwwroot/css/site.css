@@ -497,9 +497,30 @@ body.tickets-col-resizing * {
   color: #64748b;
 }
 
+.ticket-rag-response-link.is-loading {
+  pointer-events: none;
+  cursor: wait;
+  opacity: 0.85;
+}
+
 .ticket-number-link {
   text-decoration: none;
   display: inline-block;
+}
+
+.ticket-number-link-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ticket-number-link.is-loading {
+  pointer-events: none;
+  cursor: wait;
+}
+
+.ticket-number-link.is-loading .ticket-number-badge {
+  opacity: 0.85;
 }
 
 .ticket-number-link:hover .ticket-number-badge {
@@ -950,6 +971,10 @@ body.tickets-col-resizing * {
 
 .rag-rating-feedback {
   color: #15803d;
+}
+
+.rag-gpt-section {
+  scroll-margin-top: 1rem;
 }
 
 .rag-gpt-processing {
