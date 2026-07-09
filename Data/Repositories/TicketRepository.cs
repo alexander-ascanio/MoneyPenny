@@ -62,6 +62,13 @@ public class TicketRepository : ITicketRepository
             query = query.Where(t => t.Priority == filters.Priority);
         }
 
+        if (filters.HasActionsFilter is bool hasMultipleActions)
+        {
+            query = hasMultipleActions
+                ? query.Where(t => _context.TicketActions.Count(a => a.TicketId == t.Id) > 1)
+                : query.Where(t => _context.TicketActions.Count(a => a.TicketId == t.Id) <= 1);
+        }
+
         IQueryable<Ticket> ordered = TicketSort.Apply(
             query,
             filters.SortBy,

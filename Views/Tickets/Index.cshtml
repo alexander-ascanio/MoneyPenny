@@ -218,6 +218,36 @@
                     </div>
 
                     <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-has-actions">Tickets con Acciones:</label>
+                        <select id="filter-has-actions" name="hasActions" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.HasActions, ""))
+                            {
+                                <option value="" selected>Todos</option>
+                            }
+                            else
+                            {
+                                <option value="">Todos</option>
+                            }
+                            @if (IsSelected(Model.Filters.HasActions, "true"))
+                            {
+                                <option value="true" selected>Sí</option>
+                            }
+                            else
+                            {
+                                <option value="true">Sí</option>
+                            }
+                            @if (IsSelected(Model.Filters.HasActions, "false"))
+                            {
+                                <option value="false" selected>No</option>
+                            }
+                            else
+                            {
+                                <option value="false">No</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
                         <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                             @if (IsSelected(Model.Filters.ResultLimit, "50"))

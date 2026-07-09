@@ -135,6 +135,7 @@ public class TicketService : ITicketService
         Status = filters.Status,
         Priority = filters.Priority,
         Rag = filters.Rag,
+        HasActions = filters.HasActions,
         IsKnowledgeBase = filters.IsKnowledgeBase,
         ResultLimit = filters.ResultLimit,
         SortBy = filters.SortBy,

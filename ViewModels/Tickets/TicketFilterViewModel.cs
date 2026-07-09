@@ -9,6 +9,7 @@ public class TicketFilterSelections
     public string? Status { get; init; }
     public string? Priority { get; init; }
     public string? Rag { get; init; }
+    public string? HasActions { get; init; }
     public string? IsKnowledgeBase { get; init; }
     public string ResultLimit { get; init; } = "50";
     public string? SortBy { get; init; }
@@ -22,6 +23,7 @@ public class TicketFilterSelections
         !string.IsNullOrWhiteSpace(Status) ||
         !string.IsNullOrWhiteSpace(Priority) ||
         !string.IsNullOrWhiteSpace(Rag) ||
+        !string.IsNullOrWhiteSpace(HasActions) ||
         !string.IsNullOrWhiteSpace(IsKnowledgeBase) ||
         !string.Equals(ResultLimit, "50", StringComparison.Ordinal);
 }

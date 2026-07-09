@@ -14,6 +14,8 @@ public class TicketFilters
     public string? Rag { get; set; }
     /// <summary>Valores: null/vacío (listado habitual), "true", "false".</summary>
     public string? IsKnowledgeBase { get; set; }
+    /// <summary>Valores: null/vacío (todos), "true" (más de un comentario), "false" (uno o ninguno).</summary>
+    public string? HasActions { get; set; }
     public string ResultLimit { get; set; } = "50";
     public string? SortBy { get; set; }
     public string SortDir { get; set; } = "desc";
@@ -29,6 +31,13 @@ public class TicketFilters
     };
 
     public bool? RagFilter => Rag?.Trim().ToLowerInvariant() switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null
+    };
+
+    public bool? HasActionsFilter => HasActions?.Trim().ToLowerInvariant() switch
     {
         "true" => true,
         "false" => false,
