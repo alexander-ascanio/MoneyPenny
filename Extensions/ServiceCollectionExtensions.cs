@@ -3,6 +3,7 @@ using MoneyPenny.Data;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag;
+using MoneyPenny.Services.Rag.Validation;
 using MoneyPenny.Services.Rag.Embeddings;
 using MoneyPenny.Services.Rag.Generation;
 using MoneyPenny.Services.Rag.Ingestion;
@@ -82,6 +83,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRetrievalService, PgVectorRetrievalService>();
         services.AddScoped<IGenerationService, OpenAiGenerationService>();
         services.AddScoped<IRagOrchestrator, RagOrchestrator>();
+        services.AddScoped<IResponseGroundingChecker, ResponseGroundingChecker>();
         services.AddSingleton<IRagAskResultCache, RagAskResultCache>();
 
         return services;

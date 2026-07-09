@@ -353,4 +353,17 @@ public class VectorRepository : IVectorRepository
             .ThenByDescending(l => l.Id)
             .ToListAsync(cancellationToken);
     }
+
+    public Task<RagQueryLog?> GetLatestQueryLogByTicketAsync(
+        int ticketId,
+        RagResponseType responseType,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.RagQueryLogs
+            .AsNoTracking()
+            .Where(l => l.TicketId == ticketId && l.ResponseType == responseType)
+            .OrderByDescending(l => l.CreatedAt)
+            .ThenByDescending(l => l.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

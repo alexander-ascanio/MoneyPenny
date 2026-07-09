@@ -875,6 +875,32 @@ body.tickets-col-resizing * {
   color: #1e293b;
 }
 
+.rag-grounding-rule-id {
+  cursor: help;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.15em;
+  color: #0f766e;
+}
+
+.rag-grounding-rule-id:hover,
+.rag-grounding-rule-id:focus {
+  color: #0d9488;
+  outline: none;
+}
+
+.rag-grounding-tooltip .tooltip-inner {
+  max-width: 320px;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  padding: 0.5rem 0.65rem;
+}
+
+.rag-grounding-check-item strong {
+  font-weight: 600;
+}
+
 .rag-answer-rating {
   display: flex;
   flex-wrap: wrap;

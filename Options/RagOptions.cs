@@ -32,4 +32,5 @@ public class RagOptions
     public int ChatEstimatedOutputTokens { get; set; } = 400;
     public int RagAskEstimatedContextTokens { get; set; } = 2500;
     public int RagAskEstimatedSystemTokens { get; set; } = 150;
+    public RagGroundingCheckOptions GroundingCheck { get; set; } = new();
 }

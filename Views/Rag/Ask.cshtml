@@ -1,4 +1,5 @@
 @model MoneyPenny.ViewModels.Rag.RagResponseViewModel
+@using MoneyPenny.ViewModels.Rag
 
 @{
     ViewData["Title"] = "Respuesta RAG";
@@ -231,7 +232,7 @@
                     id="consultGptAnswerButton"
                     @(!Model.ContextItems.Any() ? "disabled" : null)>
                 <span class="consult-gpt-btn-label">
-                    <i class="bi bi-robot me-1"></i>Consultar respuesta GPT
+                    <i class="bi bi-robot me-1"></i>@(Model.HasGptAnswer ? "Regenerar respuesta GPT" : "Consultar respuesta GPT")
                 </span>
                 <span class="consult-gpt-btn-loading d-none">
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -265,12 +266,29 @@
                 <partial name="_TokenUsageEstimate" model="Model.LastRunEstimate" />
             }
 
-            <div class="alert alert-success d-flex align-items-center mb-4" id="gptAnswerReadyAlert" role="status">
-                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                <span>Respuesta GPT generada correctamente.</span>
-            </div>
+            @if (Model.GptAnswerFromHistory)
+            {
+                <div class="alert alert-info d-flex align-items-center mb-4" id="gptAnswerReadyAlert" role="status">
+                    <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
+                    <span>
+                        Última respuesta GPT guardada para este ticket
+                        @if (Model.GptAnswerSavedAt is not null)
+                        {
+                            <span class="text-muted">(@Model.GptAnswerSavedAt.Value.ToLocalTime().ToString("g"))</span>
+                        }
+                        . Puedes regenerarla con el botón de arriba.
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-success d-flex align-items-center mb-4" id="gptAnswerReadyAlert" role="status">
+                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                    <span>Respuesta GPT generada correctamente.</span>
+                </div>
+            }
 
-            <div class="card shadow-sm mb-4" id="gptAnswerCard">
+            <div class="card shadow-sm mb-4@(Model.GroundingReport?.Verdict == ResponseGroundingVerdict.Fail ? " border-start border-danger border-4" : "")" id="gptAnswerCard">
                 <div class="card-header rag-section-header">
                     <i class="bi bi-robot me-2"></i>Respuesta GPT
                 </div>
@@ -279,6 +297,11 @@
                     <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = Model.GptQueryLogId ?? 0, Rating = Model.GptRating }" />
                 </div>
             </div>
+
+            @if (Model.GroundingReport is not null)
+            {
+                <partial name="_RagGroundingCheck" model="Model.GroundingReport" />
+            }
         }
     }
 </div>
@@ -306,6 +329,11 @@
 
             if (gptAnswerReadyAlert) {
                 gptAnswerReadyAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            const groundingCard = document.getElementById('ragGroundingCard');
+            if (groundingCard) {
+                groundingCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
 
             const rateUrl = '@Url.Action("RateAnswer", "Rag")';

@@ -4,6 +4,7 @@ using MoneyPenny.Data.Repositories;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag;
+using MoneyPenny.Services.Rag.Validation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
 using MoneyPenny.ViewModels.Rag;
@@ -24,6 +25,7 @@ public class RagController : Controller
     private readonly ITicketRepository _ticketRepository;
     private readonly IVectorRepository _vectorRepository;
     private readonly IRagAskResultCache _ragAskResultCache;
+    private readonly IResponseGroundingChecker _groundingChecker;
     private readonly RagOptions _ragOptions;
 
     public RagController(
@@ -34,6 +36,7 @@ public class RagController : Controller
         ITicketRepository ticketRepository,
         IVectorRepository vectorRepository,
         IRagAskResultCache ragAskResultCache,
+        IResponseGroundingChecker groundingChecker,
         IOptions<RagOptions> ragOptions)
     {
         _ragOrchestrator = ragOrchestrator;
@@ -43,6 +46,7 @@ public class RagController : Controller
         _ticketRepository = ticketRepository;
         _vectorRepository = vectorRepository;
         _ragAskResultCache = ragAskResultCache;
+        _groundingChecker = groundingChecker;
         _ragOptions = ragOptions.Value;
     }
 
@@ -69,7 +73,7 @@ public class RagController : Controller
                 return View("Ask", cached.Response);
             }
 
-            TempData["WarningMessage"] = "La respuesta GPT ya no está en caché. Pulsa «Consultar respuesta GPT» de nuevo.";
+            TempData["WarningMessage"] = "La respuesta recién generada ya no está en caché. Se mostrará la última respuesta guardada si existe.";
         }
 
         return await RenderAskAsync(ticketId, ticketNumber, generateGptAnswer: false, knowledgeBaseOnly, cancellationToken);
@@ -300,6 +304,10 @@ public class RagController : Controller
                 gptEstimate,
                 "Consumo estimado de la respuesta GPT");
         }
+        else if (!generateGptAnswer && !response.HasGptAnswer)
+        {
+            await TryApplyStoredGptAnswerAsync(response, ticketId, cancellationToken);
+        }
 
         response.RatedAnswers = await LoadRatedAnswersAsync(
             ticketId,
@@ -308,7 +316,49 @@ public class RagController : Controller
             response.KnowledgeBaseQueryLogId,
             cancellationToken);
 
+        ApplyGroundingReport(response);
+
         return response;
+    }
+
+    private void ApplyGroundingReport(RagResponseViewModel response)
+    {
+        if (!response.HasGptAnswer || string.IsNullOrWhiteSpace(response.Answer))
+        {
+            return;
+        }
+
+        response.GroundingReport = _groundingChecker.Evaluate(new ResponseGroundingRequest
+        {
+            Answer = response.Answer,
+            FirstCommentContent = response.FirstComment?.Content,
+            ContextItems = response.ContextItems,
+            TicketNumber = response.TicketNumber,
+            KnowledgeBaseSolutionText = response.KnowledgeBaseSolution?.Text
+        });
+    }
+
+    private async Task TryApplyStoredGptAnswerAsync(
+        RagResponseViewModel response,
+        int ticketId,
+        CancellationToken cancellationToken)
+    {
+        var log = await _vectorRepository.GetLatestQueryLogByTicketAsync(
+            ticketId,
+            RagResponseType.Gpt,
+            cancellationToken);
+
+        if (log is null || string.IsNullOrWhiteSpace(log.Answer))
+        {
+            return;
+        }
+
+        response.Answer = log.Answer;
+        response.HasGptAnswer = true;
+        response.GptQueryLogId = log.Id;
+        response.GptRating = log.Rating;
+        response.GptAnswerFromHistory = true;
+        response.GptAnswerSavedAt = log.CreatedAt;
     }
 
     private async Task<IReadOnlyList<RagRatedAnswerViewModel>> LoadRatedAnswersAsync(

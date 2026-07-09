@@ -1,0 +1,130 @@
+@model MoneyPenny.ViewModels.Rag.ResponseGroundingReportViewModel
+@using MoneyPenny.ViewModels.Rag
+
+@{
+    var headerBadgeClass = Model.Verdict switch
+    {
+        ResponseGroundingVerdict.Pass => "text-bg-success",
+        ResponseGroundingVerdict.Warn => "text-bg-warning text-dark",
+        _ => "text-bg-danger"
+    };
+
+    var bannerClass = Model.Verdict switch
+    {
+        ResponseGroundingVerdict.Pass => "alert-success",
+        ResponseGroundingVerdict.Warn => "alert-warning",
+        _ => "alert-danger"
+    };
+}
+
+@functions {
+    static string StatusIcon(ResponseGroundingVerdict status) => status switch
+    {
+        ResponseGroundingVerdict.Pass => "bi-check-circle-fill text-success",
+        ResponseGroundingVerdict.Warn => "bi-exclamation-triangle-fill text-warning",
+        _ => "bi-x-octagon-fill text-danger"
+    };
+
+    static string CheckHelpText(string id) => id switch
+    {
+        "R1" => "Evalúa la similitud de los tickets recuperados (embeddings) respecto al comentario #1. "
+            + "Pass ≥ 55 %, warn 45–55 %, fail < 45 % o sin contexto. Un retrieval débil aumenta respuestas genéricas.",
+        "R2" => "Comprueba que cada ticket citado en la respuesta (#143011, ticket 129550…) exista en el contexto "
+            + "recuperado o sea el ticket actual. Detecta referencias a casos que no se enviaron a GPT.",
+        "R3" => "Verifica que datos concretos (IPs, rutas UNC, .pfx/.p12, puertos, contraseñas numéricas, productos) "
+            + "aparezcan en el comentario indexado o en los fragmentos de tickets similares.",
+        "R4" => "Mide si la respuesta menciona términos clave del síntoma del cliente extraídos del comentario #1 "
+            + "(p. ej. certificado, e-factura, error). Pass ≥ 40 % de términos clave cubiertos.",
+        "R5" => "Divide la respuesta en afirmaciones y comprueba solapamiento léxico (Jaccard ≥ 0,18) con el corpus "
+            + "de evidencia. Detecta pasos o consejos sin anclaje en comentario #1 ni tickets similares.",
+        "R6" => "Compara la longitud de la respuesta con la evidencia disponible. Si la respuesta es muy extensa "
+            + "y el contexto es limitado, puede indicar relleno o extrapolación más allá de los datos.",
+        _ => "Comprobación de fundamentación de la respuesta GPT."
+    };
+}
+
+<div class="card shadow-sm mb-4 rag-grounding-card" id="ragGroundingCard">
+    <div class="card-header rag-section-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span><i class="bi bi-shield-check me-2"></i>Comprobación técnica (sin coste)</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill @headerBadgeClass">@Model.VerdictLabel</span>
+            <span class="badge rounded-pill text-bg-light text-dark">@Model.Score/100</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="alert @bannerClass border-0 py-2 small mb-3" role="status">
+            @Model.BannerMessage
+        </div>
+
+        <ul class="list-unstyled small mb-3 rag-grounding-checks">
+            @foreach (var check in Model.Checks)
+            {
+                <li class="rag-grounding-check-item mb-2">
+                    <i class="bi @StatusIcon(check.Status) me-2" aria-hidden="true"></i>
+                    <strong>
+                        <span class="rag-grounding-rule-id"
+                              role="button"
+                              tabindex="0"
+                              data-bs-toggle="tooltip"
+                              data-bs-placement="top"
+                              data-bs-html="true"
+                              title="@CheckHelpText(check.Id)"
+                              aria-label="@check.Id: @CheckHelpText(check.Id)">@check.Id</span>
+                        @check.Title:
+                    </strong>
+                    <span>@check.Message</span>
+                </li>
+            }
+        </ul>
+
+        @if (Model.UnsupportedClaims.Any() || Model.OrphanEntities.Any() || Model.InvalidTicketCitations.Any())
+        {
+            <details class="rag-grounding-details small mb-3" @(Model.Verdict != ResponseGroundingVerdict.Pass ? "open" : null)>
+                <summary class="text-muted mb-2">Ver detalle</summary>
+                @if (Model.UnsupportedClaims.Any())
+                {
+                    <p class="mb-1"><strong>Afirmaciones dudosas:</strong></p>
+                    <ul class="mb-2">
+                        @foreach (var claim in Model.UnsupportedClaims)
+                        {
+                            <li>@claim</li>
+                        }
+                    </ul>
+                }
+                @if (Model.OrphanEntities.Any())
+                {
+                    <p class="mb-1"><strong>Datos técnicos no respaldados:</strong> @string.Join(", ", Model.OrphanEntities)</p>
+                }
+                @if (Model.InvalidTicketCitations.Any())
+                {
+                    <p class="mb-1"><strong>Citas inválidas:</strong> @string.Join(", ", Model.InvalidTicketCitations.Select(n => $"#{n}"))</p>
+                }
+            </details>
+        }
+
+        <p class="text-muted small mb-0">
+            Evidencia analizada: comentario indexado (@Model.EvidenceSummary.FirstCommentChars.ToString("N0") caracteres)
+            + @Model.EvidenceSummary.ContextTicketCount ticket(s) similar(es).
+            Mejor similitud: @Model.EvidenceSummary.MaxSimilarity.ToString("P1").
+            Síntoma: @Model.EvidenceSummary.SymptomTermsMatched/@Model.EvidenceSummary.SymptomTermsTotal términos clave.
+            Esta comprobación no sustituye la revisión del agente.
+            <span class="d-none d-md-inline">· Pasa el cursor sobre <strong>R1</strong>–<strong>R6</strong> para ver qué evalúa cada regla.</span>
+        </p>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const card = document.getElementById('ragGroundingCard');
+        if (!card || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        card.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            new bootstrap.Tooltip(element, {
+                customClass: 'rag-grounding-tooltip',
+                trigger: 'hover focus'
+            });
+        });
+    })();
+</script>

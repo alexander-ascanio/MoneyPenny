@@ -56,4 +56,9 @@ public interface IVectorRepository
         int ticketId,
         RagResponseType responseType,
         CancellationToken cancellationToken = default);
+
+    Task<RagQueryLog?> GetLatestQueryLogByTicketAsync(
+        int ticketId,
+        RagResponseType responseType,
+        CancellationToken cancellationToken = default);
 }

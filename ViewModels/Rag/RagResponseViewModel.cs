@@ -35,8 +35,10 @@ public class RagKnowledgeBaseSolutionViewModel
 
 public class RagResponseViewModel
 {
-    public string Answer { get; init; } = string.Empty;
-    public bool HasGptAnswer { get; init; }
+    public string Answer { get; set; } = string.Empty;
+    public bool HasGptAnswer { get; set; }
+    public bool GptAnswerFromHistory { get; set; }
+    public DateTime? GptAnswerSavedAt { get; set; }
     public IReadOnlyList<RagContextItemViewModel> ContextItems { get; init; } = [];
     public RagKnowledgeBaseSolutionViewModel? KnowledgeBaseSolution { get; init; }
     public RagFirstCommentViewModel? FirstComment { get; init; }
@@ -48,9 +50,10 @@ public class RagResponseViewModel
     public TokenUsageEstimateViewModel? LastRunEstimate { get; set; }
     /// <summary>Texto enviado a GPT como contexto de tickets similares (si difiere del listado UI).</summary>
     public string? GptContextText { get; init; }
-    public int? GptQueryLogId { get; init; }
-    public short? GptRating { get; init; }
+    public int? GptQueryLogId { get; set; }
+    public short? GptRating { get; set; }
     public int? KnowledgeBaseQueryLogId { get; init; }
     public short? KnowledgeBaseRating { get; init; }
     public IReadOnlyList<RagRatedAnswerViewModel> RatedAnswers { get; set; } = [];
+    public ResponseGroundingReportViewModel? GroundingReport { get; set; }
 }
