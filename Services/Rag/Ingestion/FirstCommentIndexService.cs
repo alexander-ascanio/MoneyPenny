@@ -466,6 +466,7 @@ public class FirstCommentIndexService : IFirstCommentIndexService
                 ImageCacheMode = processImages
                     ? ImageExtractionCacheMode.UseAndRefresh
                     : ImageExtractionCacheMode.CacheOnly,
+                RefreshImageTextCache = processImages,
                 TicketId = row.TicketId,
                 TicketActionId = row.TicketActionId,
                 TeamSupportActionId = row.TeamSupportActionId,

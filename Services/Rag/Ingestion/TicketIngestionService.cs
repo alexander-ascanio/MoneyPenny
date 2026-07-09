@@ -130,6 +130,7 @@ public class TicketIngestionService : ITicketIngestionService
                 {
                     ProcessImages = processImages,
                     ImageCacheMode = ImageExtractionCacheMode.UseAndRefresh,
+                    RefreshImageTextCache = processImages,
                     TicketId = ticket.Id,
                     TicketActionId = oldestComment.Id,
                     TeamSupportActionId = oldestComment.TeamSupportActionId,

@@ -14,12 +14,11 @@ public static class CommentImageHelper
     {
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var url in TicketHtmlHelper.ExtractCommentImageSources(content))
+        // Imágenes embebidas en el HTML del comentario (antes del pie de firma).
+        // No aplicar el filtro UUID: TeamSupport suele nombrar capturas con GUID y sí se muestran en Details.
+        foreach (var url in TicketHtmlHelper.ExtractImageSources(content))
         {
-            if (TicketHtmlHelper.ShouldDisplayAsCommentAttachment(url))
-            {
-                urls.Add(url);
-            }
+            urls.Add(url);
         }
 
         if (attachments is not null)

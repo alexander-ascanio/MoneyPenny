@@ -2,6 +2,7 @@ using System.Text;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Helpers;
 using MoneyPenny.Options;
+using MoneyPenny.Services.Cv;
 using MoneyPenny.Services.TeamSupport;
 using Microsoft.Extensions.Options;
 
@@ -10,6 +11,7 @@ namespace MoneyPenny.Services.Rag.Ingestion;
 public class CommentContentService : ICommentContentService
 {
     private readonly IImageTextExtractionService _imageTextExtractionService;
+    private readonly ICommentImageMessageBoxService _messageBoxService;
     private readonly ICommentImageTextCacheRepository _imageTextCacheRepository;
     private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly RagOptions _options;
@@ -17,12 +19,14 @@ public class CommentContentService : ICommentContentService
 
     public CommentContentService(
         IImageTextExtractionService imageTextExtractionService,
+        ICommentImageMessageBoxService messageBoxService,
         ICommentImageTextCacheRepository imageTextCacheRepository,
         ITeamSupportAttachmentService attachmentService,
         IOptions<RagOptions> options,
         ILogger<CommentContentService> logger)
     {
         _imageTextExtractionService = imageTextExtractionService;
+        _messageBoxService = messageBoxService;
         _imageTextCacheRepository = imageTextCacheRepository;
         _attachmentService = attachmentService;
         _options = options.Value;
@@ -59,9 +63,9 @@ public class CommentContentService : ICommentContentService
             .ToArray();
 
         var cacheKeys = imageEntries.Select(entry => entry.CacheKey).ToArray();
-        var cachedTexts = await _imageTextCacheRepository.GetByImageSourcesAsync(
-            cacheKeys,
-            cancellationToken);
+        var cachedTexts = request.RefreshImageTextCache
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : await _imageTextCacheRepository.GetByImageSourcesAsync(cacheKeys, cancellationToken);
 
         var textsByCacheKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in imageEntries)
@@ -81,40 +85,48 @@ public class CommentContentService : ICommentContentService
         if (missingEntries.Length > 0
             && request.ImageCacheMode == ImageExtractionCacheMode.UseAndRefresh)
         {
-            var extraction = await _imageTextExtractionService.ExtractAsync(
-                missingEntries.Select(entry => entry.Source).ToArray(),
-                cancellationToken);
-            extractionWarning = extraction.Warning;
-            for (var i = 0; i < missingEntries.Length; i++)
+            var fallbackEntries = new List<ImageSourceEntry>(missingEntries.Length);
+
+            foreach (var entry in missingEntries)
             {
-                var extractedText = i < extraction.Texts.Count ? extraction.Texts[i] : string.Empty;
-                if (string.IsNullOrWhiteSpace(extractedText))
+                var messageBoxText = await TryExtractMessageBoxTextAsync(entry.Source, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(messageBoxText))
                 {
+                    textsByCacheKey[entry.CacheKey] = messageBoxText;
+                    await TrySaveImageTextCacheAsync(request, entry.CacheKey, messageBoxText, cancellationToken);
                     continue;
                 }
 
-                var entry = missingEntries[i];
-                textsByCacheKey[entry.CacheKey] = extractedText;
+                fallbackEntries.Add(entry);
+            }
 
-                if (request.TicketId is not null && request.TicketActionId is not null)
+            if (fallbackEntries.Count > 0)
+            {
+                var extraction = await _imageTextExtractionService.ExtractAsync(
+                    fallbackEntries.Select(entry => entry.Source).ToArray(),
+                    cancellationToken);
+                extractionWarning = extraction.Warning;
+                for (var i = 0; i < fallbackEntries.Count; i++)
                 {
-                    await _imageTextCacheRepository.SaveAsync(
-                        request.TicketId.Value,
-                        request.TicketActionId.Value,
-                        entry.CacheKey,
-                        extractedText,
-                        _options.VisionModel,
-                        cancellationToken);
+                    var extractedText = i < extraction.Texts.Count ? extraction.Texts[i] : string.Empty;
+                    if (string.IsNullOrWhiteSpace(extractedText))
+                    {
+                        continue;
+                    }
+
+                    var entry = fallbackEntries[i];
+                    textsByCacheKey[entry.CacheKey] = extractedText;
+                    await TrySaveImageTextCacheAsync(request, entry.CacheKey, extractedText, cancellationToken);
                 }
             }
 
-            if (textsByCacheKey.Count == 0 && !string.IsNullOrWhiteSpace(extraction.Warning))
+            if (textsByCacheKey.Count == 0 && !string.IsNullOrWhiteSpace(extractionWarning))
             {
                 return BuildResult(
                     plainText,
                     imageEntries,
                     textsByCacheKey,
-                    extraction.Warning);
+                    extractionWarning);
             }
         }
 
@@ -142,6 +154,66 @@ public class CommentContentService : ICommentContentService
         }
 
         return BuildResult(plainText, imageEntries, textsByCacheKey, warning);
+    }
+
+    private async Task<string?> TryExtractMessageBoxTextAsync(
+        string imageSource,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _messageBoxService.DetectWithVisionFromUrlAsync(imageSource, cancellationToken);
+            if (!result.Success || !result.Detected)
+            {
+                return null;
+            }
+
+            return FormatMessageBoxText(result.TitleText, result.MessageText);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                ex,
+                "No se pudo extraer MessageBox de {ImageSource}.",
+                imageSource.Length <= 120 ? imageSource : imageSource[..120] + "...");
+            return null;
+        }
+    }
+
+    private static string? FormatMessageBoxText(string? titleText, string? messageText)
+    {
+        var parts = new List<string>(2);
+        if (!string.IsNullOrWhiteSpace(titleText))
+        {
+            parts.Add(titleText.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(messageText))
+        {
+            parts.Add(messageText.Trim());
+        }
+
+        return parts.Count == 0 ? null : string.Join(Environment.NewLine, parts);
+    }
+
+    private async Task TrySaveImageTextCacheAsync(
+        CommentContentRequest request,
+        string cacheKey,
+        string extractedText,
+        CancellationToken cancellationToken)
+    {
+        if (request.TicketId is null || request.TicketActionId is null)
+        {
+            return;
+        }
+
+        await _imageTextCacheRepository.SaveAsync(
+            request.TicketId.Value,
+            request.TicketActionId.Value,
+            cacheKey,
+            extractedText,
+            _options.VisionModel,
+            cancellationToken);
     }
 
     private async Task<IReadOnlyList<string>> ResolveDisplayableImageUrlsAsync(
