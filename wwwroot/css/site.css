@@ -109,6 +109,18 @@ body {
   padding-right: 0.25rem;
 }
 
+.tickets-filters-align-spacer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0.25rem;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
 .tickets-filter-item {
   display: inline-flex;
   align-items: center;
