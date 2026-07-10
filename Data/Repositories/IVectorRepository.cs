@@ -61,4 +61,14 @@ public interface IVectorRepository
         int ticketId,
         RagResponseType responseType,
         CancellationToken cancellationToken = default);
+
+    Task<int> CountRatedQueryLogsAsync(
+        RagResponseType? responseType = null,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<RagQueryLog>> GetRatedQueryLogsPageAsync(
+        int skip,
+        int take,
+        RagResponseType? responseType = null,
+        CancellationToken cancellationToken = default);
 }

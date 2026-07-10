@@ -1,0 +1,82 @@
+@model MoneyPenny.ViewModels.Home.ApiDocsViewModel
+@{
+    ViewData["Title"] = "API del portal";
+}
+
+<div class="api-docs-page">
+    <div class="api-docs-header mb-4">
+        <a asp-action="Index" class="api-docs-back-link">
+            <i class="bi bi-arrow-left"></i> Volver al inicio
+        </a>
+        <h1 class="api-docs-title">
+            <i class="bi bi-braces-asterisk"></i> API del portal
+        </h1>
+        <p class="api-docs-intro">@Model.Intro</p>
+        <div class="api-docs-badges">
+            <span class="api-docs-badge"><i class="bi bi-shield-lock"></i> Autenticación requerida</span>
+            <span class="api-docs-badge"><i class="bi bi-filetype-json"></i> Respuesta JSON</span>
+        </div>
+    </div>
+
+    @foreach (var group in Model.Groups)
+    {
+        <section class="api-docs-group mb-5">
+            <div class="api-docs-group-header">
+                <h2 class="h4 mb-1">@group.Title</h2>
+                <p class="text-muted mb-0">@group.Description</p>
+            </div>
+
+            @foreach (var endpoint in group.Endpoints)
+            {
+                var methodClass = endpoint.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase)
+                    ? "api-method-post"
+                    : "api-method-get";
+
+                <article class="api-endpoint-card" id="@BuildAnchor(group.Title, endpoint.Path)">
+                    <div class="api-endpoint-head">
+                        <span class="api-method @methodClass">@endpoint.HttpMethod</span>
+                        <code class="api-endpoint-path">@endpoint.Path</code>
+                    </div>
+                    <p class="api-endpoint-summary">@endpoint.Summary</p>
+
+                    @if (!string.IsNullOrWhiteSpace(endpoint.Notes))
+                    {
+                        <p class="api-endpoint-notes"><i class="bi bi-info-circle"></i> @endpoint.Notes</p>
+                    }
+
+                    @if (endpoint.RequiresAntiForgery)
+                    {
+                        <p class="api-endpoint-csrf">
+                            <i class="bi bi-shield-check"></i>
+                            Requiere token antifalsificación (<code>RequestVerificationToken</code>).
+                        </p>
+                    }
+
+                    @if (endpoint.RequestFields.Count > 0)
+                    {
+                        <h3 class="api-fields-title">Parámetros de entrada</h3>
+                        @await Html.PartialAsync("_ApiFieldTable", endpoint.RequestFields)
+                    }
+
+                    @if (endpoint.ResponseFields.Count > 0)
+                    {
+                        <h3 class="api-fields-title">Campos de respuesta</h3>
+                        @await Html.PartialAsync("_ApiFieldTable", endpoint.ResponseFields)
+                    }
+                </article>
+            }
+        </section>
+    }
+</div>
+
+@functions {
+    private static string BuildAnchor(string groupTitle, string path)
+    {
+        var slug = $"{groupTitle}-{path}".ToLowerInvariant()
+            .Replace("/", "-")
+            .Replace(" ", "-")
+            .Replace("—", "")
+            .Replace("#", "");
+        return slug;
+    }
+}

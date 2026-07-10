@@ -4,6 +4,7 @@ using MoneyPenny.Data.Repositories;
 using MoneyPenny.Models.Rag;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag;
+using MoneyPenny.Services.Rag.Export;
 using MoneyPenny.Services.Rag.Validation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
@@ -26,6 +27,7 @@ public class RagController : Controller
     private readonly IVectorRepository _vectorRepository;
     private readonly IRagAskResultCache _ragAskResultCache;
     private readonly IResponseGroundingChecker _groundingChecker;
+    private readonly IRatedTicketsExportService _ratedTicketsExportService;
     private readonly RagOptions _ragOptions;
 
     public RagController(
@@ -37,6 +39,7 @@ public class RagController : Controller
         IVectorRepository vectorRepository,
         IRagAskResultCache ragAskResultCache,
         IResponseGroundingChecker groundingChecker,
+        IRatedTicketsExportService ratedTicketsExportService,
         IOptions<RagOptions> ragOptions)
     {
         _ragOrchestrator = ragOrchestrator;
@@ -47,6 +50,7 @@ public class RagController : Controller
         _vectorRepository = vectorRepository;
         _ragAskResultCache = ragAskResultCache;
         _groundingChecker = groundingChecker;
+        _ratedTicketsExportService = ratedTicketsExportService;
         _ragOptions = ragOptions.Value;
     }
 
@@ -125,6 +129,36 @@ public class RagController : Controller
             knowledgeBaseOnly,
             gptResult = cacheKey
         });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> RatedTickets(
+        int page = 1,
+        int pageSize = 50,
+        RagResponseType? responseType = RagResponseType.Gpt,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 50;
+        }
+        else if (pageSize > 200)
+        {
+            pageSize = 200;
+        }
+
+        var result = await _ratedTicketsExportService.GetRatedTicketsAsync(
+            page,
+            pageSize,
+            responseType,
+            cancellationToken);
+
+        return Json(result);
     }
 
     [HttpPost]

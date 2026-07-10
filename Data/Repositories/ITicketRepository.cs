@@ -1,4 +1,5 @@
 using MoneyPenny.Models.Tickets;
+using MoneyPenny.Services.Rag.Export;
 using MoneyPenny.ViewModels.Tickets;
 
 namespace MoneyPenny.Data.Repositories;
@@ -52,6 +53,10 @@ public interface ITicketRepository
         IEnumerable<int> ticketIds,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IndexedTicketsMonthCount>> GetTicketCountsByCreatedMonthAsync(
+        IReadOnlyCollection<int> ticketIds,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<int, TicketExportLookup>> GetTicketExportLookupsByIdsAsync(
         IReadOnlyCollection<int> ticketIds,
         CancellationToken cancellationToken = default);
 }

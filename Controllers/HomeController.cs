@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MoneyPenny.Models;
+using MoneyPenny.ViewModels.Home;
 
 namespace MoneyPenny.Controllers;
 
@@ -9,6 +11,12 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         return View();
+    }
+
+    [Authorize]
+    public IActionResult ApiDocs()
+    {
+        return View(ApiDocumentationCatalog.Build());
     }
 
     public IActionResult Privacy()

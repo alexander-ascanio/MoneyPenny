@@ -3,6 +3,7 @@ using MoneyPenny.Data;
 using MoneyPenny.Data.Repositories;
 using MoneyPenny.Options;
 using MoneyPenny.Services.Rag;
+using MoneyPenny.Services.Rag.Export;
 using MoneyPenny.Services.Rag.Validation;
 using MoneyPenny.Services.Rag.Embeddings;
 using MoneyPenny.Services.Rag.Generation;
@@ -68,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICommentImageTextCacheRepository, CommentImageTextCacheRepository>();
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<ITeamSupportAttachmentService, TeamSupportAttachmentService>();
+        services.AddScoped<ITeamSupportTicketApiClient, TeamSupportTicketApiClient>();
+        services.AddScoped<IRatedTicketsExportService, RatedTicketsExportService>();
         services.AddSingleton<ITesseractOcrService, TesseractOcrService>();
         services.AddScoped<ICommentImageOcrService, CommentImageOcrService>();
         services.AddScoped<IMessageBoxDetectionService, MessageBoxDetectionService>();

@@ -1,5 +1,6 @@
 using MoneyPenny.Helpers;
 using MoneyPenny.Models.Tickets;
+using MoneyPenny.Services.Rag.Export;
 using MoneyPenny.ViewModels.Tickets;
 using Microsoft.EntityFrameworkCore;
 
@@ -690,5 +691,38 @@ public class TicketRepository : ITicketRepository
             .OrderBy(value => value)
             .Select(value => value!)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<int, TicketExportLookup>> GetTicketExportLookupsByIdsAsync(
+        IReadOnlyCollection<int> ticketIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (ticketIds.Count == 0)
+        {
+            return new Dictionary<int, TicketExportLookup>();
+        }
+
+        var rows = await _context.Tickets
+            .AsNoTracking()
+            .Where(t => ticketIds.Contains(t.Id))
+            .Select(t => new
+            {
+                t.Id,
+                t.TeamSupportId,
+                t.Number,
+                t.CreatedAt,
+                t.Status
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(
+            row => row.Id,
+            row => new TicketExportLookup
+            {
+                TeamSupportId = row.TeamSupportId,
+                Number = row.Number,
+                CreatedAt = row.CreatedAt,
+                Status = row.Status
+            });
     }
 }

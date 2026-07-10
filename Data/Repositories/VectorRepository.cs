@@ -366,4 +366,39 @@ public class VectorRepository : IVectorRepository
             .ThenByDescending(l => l.Id)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    public Task<int> CountRatedQueryLogsAsync(
+        RagResponseType? responseType = null,
+        CancellationToken cancellationToken = default)
+    {
+        return BuildRatedQueryLogsQuery(responseType).CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RagQueryLog>> GetRatedQueryLogsPageAsync(
+        int skip,
+        int take,
+        RagResponseType? responseType = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await BuildRatedQueryLogsQuery(responseType)
+            .OrderByDescending(l => l.RatedAt)
+            .ThenByDescending(l => l.Id)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    private IQueryable<RagQueryLog> BuildRatedQueryLogsQuery(RagResponseType? responseType)
+    {
+        var query = _context.RagQueryLogs
+            .AsNoTracking()
+            .Where(l => l.Rating != null && l.TicketId != null);
+
+        if (responseType.HasValue)
+        {
+            query = query.Where(l => l.ResponseType == responseType.Value);
+        }
+
+        return query;
+    }
 }
