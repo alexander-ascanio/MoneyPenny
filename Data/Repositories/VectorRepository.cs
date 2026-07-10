@@ -401,4 +401,23 @@ public class VectorRepository : IVectorRepository
 
         return query;
     }
+
+    public async Task UpdateQueryLogTeamSupportActionIdAsync(
+        int queryLogId,
+        string? teamSupportActionId,
+        CancellationToken cancellationToken = default)
+    {
+        var log = await _context.RagQueryLogs
+            .FirstOrDefaultAsync(l => l.Id == queryLogId, cancellationToken);
+
+        if (log is null)
+        {
+            return;
+        }
+
+        log.TeamSupportActionId = string.IsNullOrWhiteSpace(teamSupportActionId)
+            ? null
+            : teamSupportActionId.Trim();
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

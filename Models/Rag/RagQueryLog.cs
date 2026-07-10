@@ -19,5 +19,6 @@ public class RagQueryLog
     public short? Rating { get; set; }
     public string? RatedByUserId { get; set; }
     public DateTime? RatedAt { get; set; }
+    public string? TeamSupportActionId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

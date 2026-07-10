@@ -901,9 +901,9 @@ body.tickets-col-resizing * {
   padding-bottom: 0.65rem;
 }
 
-#gptAnswerCard .rag-answer-rating {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+.rag-ts-action-card .rag-ts-action-rating {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
   border-top: 1px solid #e2e8f0;
   margin-bottom: 0;
 }
@@ -1876,4 +1876,12 @@ a .home-feature-card {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8rem;
   color: #0f766e;
+}
+
+.rag-ts-action-card {
+  border-left: 4px solid #64748b;
+}
+
+.rag-ts-action-comment {
+  margin-bottom: 0;
 }

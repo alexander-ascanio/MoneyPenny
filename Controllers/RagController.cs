@@ -8,6 +8,7 @@ using MoneyPenny.Services.Rag.Export;
 using MoneyPenny.Services.Rag.Validation;
 using MoneyPenny.Services.Rag.Ingestion;
 using MoneyPenny.Services.Rag.Pricing;
+using MoneyPenny.Services.TeamSupport;
 using MoneyPenny.ViewModels.Rag;
 using MoneyPenny.ViewModels.Shared;
 using Microsoft.Extensions.Options;
@@ -28,6 +29,7 @@ public class RagController : Controller
     private readonly IRagAskResultCache _ragAskResultCache;
     private readonly IResponseGroundingChecker _groundingChecker;
     private readonly IRatedTicketsExportService _ratedTicketsExportService;
+    private readonly ITeamSupportActionApiClient _teamSupportActionApiClient;
     private readonly RagOptions _ragOptions;
 
     public RagController(
@@ -40,6 +42,7 @@ public class RagController : Controller
         IRagAskResultCache ragAskResultCache,
         IResponseGroundingChecker groundingChecker,
         IRatedTicketsExportService ratedTicketsExportService,
+        ITeamSupportActionApiClient teamSupportActionApiClient,
         IOptions<RagOptions> ragOptions)
     {
         _ragOrchestrator = ragOrchestrator;
@@ -51,6 +54,7 @@ public class RagController : Controller
         _ragAskResultCache = ragAskResultCache;
         _groundingChecker = groundingChecker;
         _ratedTicketsExportService = ratedTicketsExportService;
+        _teamSupportActionApiClient = teamSupportActionApiClient;
         _ragOptions = ragOptions.Value;
     }
 
@@ -359,7 +363,95 @@ public class RagController : Controller
 
         ApplyGroundingReport(response);
 
+        await TryLoadInsertedTeamSupportActionAsync(response, cancellationToken);
+
+        ApplyTeamSupportActionRatingContext(response);
+
         return response;
+    }
+
+    private static void ApplyTeamSupportActionRatingContext(RagResponseViewModel response)
+    {
+        if (response.InsertedTeamSupportAction is null || response.GptQueryLogId is not > 0)
+        {
+            return;
+        }
+
+        response.InsertedTeamSupportAction.QueryLogId = response.GptQueryLogId;
+        response.InsertedTeamSupportAction.Rating = response.GptRating;
+    }
+
+    private async Task TryLoadInsertedTeamSupportActionAsync(
+        RagResponseViewModel response,
+        CancellationToken cancellationToken)
+    {
+        if (!response.HasGptAnswer || string.IsNullOrWhiteSpace(response.GptTeamSupportActionId))
+        {
+            return;
+        }
+
+        if (response.InsertedTeamSupportAction?.LoadedFromApi == true)
+        {
+            return;
+        }
+
+        var teamSupportTicketId = ResolveTeamSupportTicketIdForAction(response);
+        if (string.IsNullOrWhiteSpace(teamSupportTicketId))
+        {
+            response.InsertedTeamSupportAction = new GptTeamSupportActionViewModel
+            {
+                ActionId = response.GptTeamSupportActionId,
+                LoadError = "No se pudo resolver el identificador del ticket en TeamSupport."
+            };
+            return;
+        }
+
+        var actionInfo = await _teamSupportActionApiClient.GetTicketActionAsync(
+            teamSupportTicketId,
+            response.GptTeamSupportActionId,
+            cancellationToken);
+
+        response.InsertedTeamSupportAction = MapTeamSupportAction(actionInfo, response.GptTeamSupportActionId);
+    }
+
+    private static string? ResolveTeamSupportTicketIdForAction(RagResponseViewModel response)
+    {
+        if (!string.IsNullOrWhiteSpace(response.FirstComment?.TeamSupportTicketId))
+        {
+            return response.FirstComment.TeamSupportTicketId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(response.TicketNumber))
+        {
+            return response.TicketNumber;
+        }
+
+        return response.TicketId > 0 ? response.TicketId.ToString() : null;
+    }
+
+    private static GptTeamSupportActionViewModel MapTeamSupportAction(
+        TeamSupportActionInfo actionInfo,
+        string? fallbackActionId)
+    {
+        if (!actionInfo.Found)
+        {
+            return new GptTeamSupportActionViewModel
+            {
+                ActionId = fallbackActionId,
+                LoadError = actionInfo.ErrorMessage ?? "No se pudo cargar el comentario desde TeamSupport."
+            };
+        }
+
+        return new GptTeamSupportActionViewModel
+        {
+            ActionId = actionInfo.ActionId ?? fallbackActionId,
+            DescriptionHtml = actionInfo.DescriptionHtml,
+            CreatorName = actionInfo.CreatorName,
+            CreatedAt = actionInfo.CreatedAt,
+            IsPrivate = actionInfo.IsPrivate,
+            Source = actionInfo.Source,
+            LoadedFromApi = true
+        };
     }
 
     private void ApplyGroundingReport(RagResponseViewModel response)
@@ -400,6 +492,8 @@ public class RagController : Controller
         response.GptRating = log.Rating;
         response.GptAnswerFromHistory = true;
         response.GptAnswerSavedAt = log.CreatedAt;
+        response.GptTeamSupportActionId = log.TeamSupportActionId;
+        response.GptTeamSupportActionInserted = !string.IsNullOrWhiteSpace(log.TeamSupportActionId);
     }
 
     private async Task<IReadOnlyList<RagRatedAnswerViewModel>> LoadRatedAnswersAsync(

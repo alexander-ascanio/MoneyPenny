@@ -2,7 +2,9 @@
 
 @if (Model.QueryLogId > 0)
 {
-    <div class="rag-answer-rating" data-query-log-id="@Model.QueryLogId">
+    <div class="rag-answer-rating rag-ts-action-rating"
+         data-query-log-id="@Model.QueryLogId"
+         data-rate-url="@(Model.RateAnswerUrl ?? Url.Action("RateAnswer", "Rag"))">
         <div class="rag-answer-rating-row">
             <div class="rag-answer-rating-main">
                 <span class="text-muted small me-2">¿Te parece acertada la respuesta?</span>

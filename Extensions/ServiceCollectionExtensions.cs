@@ -70,6 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<ITeamSupportAttachmentService, TeamSupportAttachmentService>();
         services.AddScoped<ITeamSupportTicketApiClient, TeamSupportTicketApiClient>();
+        services.AddScoped<ITeamSupportActionApiClient, TeamSupportActionApiClient>();
         services.AddScoped<IRatedTicketsExportService, RatedTicketsExportService>();
         services.AddSingleton<ITesseractOcrService, TesseractOcrService>();
         services.AddScoped<ICommentImageOcrService, CommentImageOcrService>();

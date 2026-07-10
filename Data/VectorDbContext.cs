@@ -57,6 +57,7 @@ public class VectorDbContext : DbContext
             entity.HasKey(l => l.Id);
             entity.Property(l => l.UserId).HasMaxLength(450);
             entity.Property(l => l.RatedByUserId).HasMaxLength(450);
+            entity.Property(l => l.TeamSupportActionId).HasMaxLength(50);
             entity.Property(l => l.ResponseType)
                 .HasConversion<int>()
                 .HasDefaultValue(RagResponseType.Gpt);

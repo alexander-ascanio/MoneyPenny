@@ -40,6 +40,7 @@ public class RagOrchestrator : IRagOrchestrator
     private readonly ITicketRepository _ticketRepository;
     private readonly ICommentContentService _commentContentService;
     private readonly ITeamSupportAttachmentService _attachmentService;
+    private readonly ITeamSupportActionApiClient _teamSupportActionApiClient;
     private readonly RagOptions _options;
 
     public RagOrchestrator(
@@ -49,6 +50,7 @@ public class RagOrchestrator : IRagOrchestrator
         ITicketRepository ticketRepository,
         ICommentContentService commentContentService,
         ITeamSupportAttachmentService attachmentService,
+        ITeamSupportActionApiClient teamSupportActionApiClient,
         IOptions<RagOptions> options)
     {
         _retrievalService = retrievalService;
@@ -57,6 +59,7 @@ public class RagOrchestrator : IRagOrchestrator
         _ticketRepository = ticketRepository;
         _commentContentService = commentContentService;
         _attachmentService = attachmentService;
+        _teamSupportActionApiClient = teamSupportActionApiClient;
         _options = options.Value;
     }
 
@@ -151,6 +154,22 @@ public class RagOrchestrator : IRagOrchestrator
                 ResponseType = RagResponseType.Gpt
             }, cancellationToken: cancellationToken);
 
+        var actionInsertResult = await TryInsertPrivateGptActionAsync(
+            firstComment,
+            request,
+            answer,
+            cancellationToken);
+
+        if (gptLog is not null
+            && actionInsertResult.Success
+            && !string.IsNullOrWhiteSpace(actionInsertResult.ActionId))
+        {
+            await _vectorRepository.UpdateQueryLogTeamSupportActionIdAsync(
+                gptLog.Id,
+                actionInsertResult.ActionId,
+                cancellationToken);
+        }
+
         return new RagResponseViewModel
         {
             Answer = answer,
@@ -165,8 +184,51 @@ public class RagOrchestrator : IRagOrchestrator
             GptQueryLogId = gptLog?.Id,
             GptRating = gptLog?.Rating,
             KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
-            KnowledgeBaseRating = knowledgeBaseLog?.Rating
+            KnowledgeBaseRating = knowledgeBaseLog?.Rating,
+            GptTeamSupportActionInserted = actionInsertResult.Success,
+            GptTeamSupportActionId = actionInsertResult.ActionId,
+            GptTeamSupportActionWarning = actionInsertResult.Success ? null : actionInsertResult.ErrorMessage
         };
+    }
+
+    private async Task<TeamSupportActionCreateResult> TryInsertPrivateGptActionAsync(
+        RagFirstCommentViewModel firstComment,
+        AskTicketViewModel request,
+        string answer,
+        CancellationToken cancellationToken)
+    {
+        var teamSupportTicketId = ResolveTeamSupportTicketId(firstComment, request);
+        var commentHtml = TeamSupportCommentHtmlHelper.ToPrivateCommentHtml(answer);
+        if (string.IsNullOrWhiteSpace(commentHtml))
+        {
+            return new TeamSupportActionCreateResult
+            {
+                Success = false,
+                ErrorMessage = "La respuesta GPT está vacía; no se insertó comentario en TeamSupport."
+            };
+        }
+
+        return await _teamSupportActionApiClient.CreatePrivateCommentAsync(
+            teamSupportTicketId,
+            commentHtml,
+            cancellationToken: cancellationToken);
+    }
+
+    private static string ResolveTeamSupportTicketId(
+        RagFirstCommentViewModel firstComment,
+        AskTicketViewModel request)
+    {
+        if (!string.IsNullOrWhiteSpace(firstComment.TeamSupportTicketId))
+        {
+            return firstComment.TeamSupportTicketId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TicketNumber))
+        {
+            return request.TicketNumber;
+        }
+
+        return request.TicketId.ToString();
     }
 
     public async Task<RagThresholdComparisonViewModel> CompareThresholdsAsync(

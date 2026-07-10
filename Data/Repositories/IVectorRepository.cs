@@ -71,4 +71,9 @@ public interface IVectorRepository
         int take,
         RagResponseType? responseType = null,
         CancellationToken cancellationToken = default);
+
+    Task UpdateQueryLogTeamSupportActionIdAsync(
+        int queryLogId,
+        string? teamSupportActionId,
+        CancellationToken cancellationToken = default);
 }

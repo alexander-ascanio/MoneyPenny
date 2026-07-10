@@ -1,0 +1,83 @@
+@model MoneyPenny.ViewModels.Rag.GptTeamSupportActionViewModel
+@{
+    var rateAnswerUrl = ViewData["RateAnswerUrl"] as string ?? Url.Action("RateAnswer", "Rag");
+}
+
+@if (Model is not null)
+{
+    <div class="card shadow-sm mb-4 rag-ts-action-card" id="ragInsertedTeamSupportActionCard">
+        <div class="card-header rag-section-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-chat-left-lock me-2"></i>Comentario en TeamSupport (API-TS)</span>
+            <div class="d-flex align-items-center gap-2">
+                @if (Model.IsPrivate)
+                {
+                    <span class="badge text-bg-secondary">Interno</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.ActionId))
+                {
+                    <span class="badge text-bg-light border text-dark">Acción @Model.ActionId</span>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.LoadedFromApi && !string.IsNullOrWhiteSpace(Model.DescriptionHtml))
+            {
+                <p class="text-muted small mb-3">
+                    Consultado en tiempo real desde API-TS
+                    @if (!string.IsNullOrWhiteSpace(Model.Source))
+                    {
+                        <span>· origen <strong>@Model.Source</strong></span>
+                    }
+                    .
+                </p>
+                <article class="ticket-comment-card ticket-comment-internal rag-ts-action-comment">
+                    <div class="ticket-comment-top">
+                        <div class="ticket-comment-top-left">
+                            <span class="ticket-comment-avatar">
+                                <i class="bi bi-robot"></i>
+                            </span>
+                            <div>
+                                <div class="ticket-comment-name">@(Model.CreatorName ?? "MoneyPenny")</div>
+                                @if (Model.CreatedAt is not null)
+                                {
+                                    <div class="ticket-comment-meta">
+                                        Comentario añadido el
+                                        <time datetime="@Model.CreatedAt.Value.ToString("o")">
+                                            @Model.CreatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </time>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="ticket-comment-top-right">
+                            <span class="ticket-comment-visibility ticket-comment-visibility-internal">Interno</span>
+                        </div>
+                    </div>
+                    <hr class="ticket-comment-divider" />
+                    <div class="ticket-comment-body ticket-comment-body-html">
+                        @Html.Raw(TicketHtmlHelper.PrepareCommentHtmlForDisplay(Model.DescriptionHtml, url => url))
+                    </div>
+                </article>
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.LoadError))
+            {
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    @Model.LoadError
+                </div>
+            }
+
+            @if (Model.QueryLogId is > 0)
+            {
+                <partial name="_RagAnswerRating"
+                         model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel
+                         {
+                             QueryLogId = Model.QueryLogId.Value,
+                             Rating = Model.Rating,
+                             ShowNotAnswerableOption = true,
+                             RateAnswerUrl = rateAnswerUrl
+                         }" />
+            }
+        </div>
+    </div>
+}

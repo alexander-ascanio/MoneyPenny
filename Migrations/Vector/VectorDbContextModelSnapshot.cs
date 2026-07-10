@@ -161,6 +161,10 @@ namespace MoneyPenny.Migrations.Vector
                     b.Property<int?>("TicketId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TeamSupportActionId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)

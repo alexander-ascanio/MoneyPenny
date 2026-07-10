@@ -57,4 +57,8 @@ public class RagResponseViewModel
     public bool FocusGpt { get; set; }
     public IReadOnlyList<RagRatedAnswerViewModel> RatedAnswers { get; set; } = [];
     public ResponseGroundingReportViewModel? GroundingReport { get; set; }
+    public bool GptTeamSupportActionInserted { get; set; }
+    public string? GptTeamSupportActionId { get; set; }
+    public string? GptTeamSupportActionWarning { get; set; }
+    public GptTeamSupportActionViewModel? InsertedTeamSupportAction { get; set; }
 }
