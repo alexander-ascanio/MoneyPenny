@@ -67,7 +67,15 @@
     <div class="alert @alertClass">@Model.SuccessMessage</div>
 }
 
-<div class="mb-4">
+<div class="mb-4 first-comment-counts-section first-comment-counts-loading"
+     data-first-comment-counts
+     data-counts-url="@Url.Action("FirstCommentCounts")"
+     aria-busy="true"
+     aria-live="polite">
+    <div class="alert alert-light border first-comment-counts-status mb-3 py-2 px-3 small text-muted">
+        <span class="spinner-border spinner-border-sm me-1 text-primary" role="status" aria-hidden="true"></span>
+        Calculando contadores de tickets…
+    </div>
     <h5 class="text-muted mb-3">
         <i class="bi bi-ticket-perforated me-1"></i>
         Tickets del listado
@@ -77,12 +85,16 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <div class="text-muted small">Con comentario #1</div>
-                    <div class="display-6">@FormatCount(Model.TotalTicketsWithFirstComment)</div>
+                    <div class="display-6" data-count-display="totalTicketsWithFirstComment">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm h-100 border-success indexed-summary-card"
+            <div class="card shadow-sm h-100 border-success indexed-summary-card first-comment-counts-pending"
                  role="button"
                  tabindex="0"
                  data-indexed-summary
@@ -91,7 +103,11 @@
                  title="Ver resumen por mes">
                 <div class="card-body">
                     <div class="text-muted small">Ya indexados <i class="bi bi-box-arrow-up-right ms-1 small"></i></div>
-                    <div class="display-6 text-success">@FormatCount(Model.IndexedTickets)</div>
+                    <div class="display-6 text-success" data-count-display="indexedTickets">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-success" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -99,15 +115,17 @@
             <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
                     <div class="text-muted small">Pendientes</div>
-                    <div class="display-6 text-warning">@FormatCount(Model.PendingTickets)</div>
+                    <div class="display-6 text-warning" data-count-display="pendingTickets">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="mb-4">
-    <h5 class="text-muted mb-3">
+    <h5 class="text-muted mb-3 mt-2">
         <i class="bi bi-book me-1"></i>
         Knowledge Base
     </h5>
@@ -120,12 +138,16 @@
             <div class="card shadow-sm h-100 border-info">
                 <div class="card-body">
                     <div class="text-muted small">Con comentario #1</div>
-                    <div class="display-6 text-info">@FormatCount(Model.KnowledgeBaseTotalTicketsWithFirstComment)</div>
+                    <div class="display-6 text-info" data-count-display="knowledgeBaseTotalTicketsWithFirstComment">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-info" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card shadow-sm h-100 border-success indexed-summary-card"
+            <div class="card shadow-sm h-100 border-success indexed-summary-card first-comment-counts-pending"
                  role="button"
                  tabindex="0"
                  data-indexed-summary
@@ -134,7 +156,11 @@
                  title="Ver resumen por mes">
                 <div class="card-body">
                     <div class="text-muted small">Ya indexados <i class="bi bi-box-arrow-up-right ms-1 small"></i></div>
-                    <div class="display-6 text-success">@FormatCount(Model.KnowledgeBaseIndexedTickets)</div>
+                    <div class="display-6 text-success" data-count-display="knowledgeBaseIndexedTickets">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-success" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -142,7 +168,11 @@
             <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
                     <div class="text-muted small">Pendientes</div>
-                    <div class="display-6 text-warning">@FormatCount(Model.KnowledgeBasePendingTickets)</div>
+                    <div class="display-6 text-warning" data-count-display="knowledgeBasePendingTickets">
+                        <span class="first-comment-count-loading">
+                            <span class="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,6 +439,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/rag-token-estimate.js" asp-append-version="true"></script>
+    <script src="~/js/first-comment-index-counts.js" asp-append-version="true"></script>
     <script src="~/js/first-comment-index-progress.js" asp-append-version="true"></script>
     <script src="~/js/first-comment-indexed-summary.js" asp-append-version="true"></script>
     <script>

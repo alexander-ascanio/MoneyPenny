@@ -217,6 +217,7 @@
     }
 
     window.MoneyPennyFirstCommentIndex = {
+        ...(window.MoneyPennyFirstCommentIndex || {}),
         getBulkTicketsToIndex,
         fetchBulkTicketsToIndexCount,
         getSingleTicketsToIndex,
@@ -291,6 +292,18 @@
 
             if (state.countLoading && countUrl) {
                 renderEstimate(output, ['Calculando tickets a procesar…'], {
+                    embeddingTokens: 0,
+                    visionTokens: 0,
+                    chatTokens: 0,
+                    cost: 0
+                });
+                return;
+            }
+
+            const countsReady = !document.querySelector('[data-first-comment-counts].first-comment-counts-loading');
+
+            if (!countsReady) {
+                renderEstimate(output, ['Calculando contadores de tickets…'], {
                     embeddingTokens: 0,
                     visionTokens: 0,
                     chatTokens: 0,
@@ -377,6 +390,19 @@
                 el.addEventListener('change', onFormOptionChange);
                 el.addEventListener('input', onFormOptionChange);
             }
+        });
+
+        document.addEventListener('firstCommentCountsUpdated', function () {
+            try {
+                state.corpus = JSON.parse(root.dataset.corpus || '{}');
+            } catch {
+                state.corpus = {};
+            }
+
+            state.exactCount = null;
+            state.countError = null;
+            scheduleBulkCountRefresh();
+            update();
         });
 
         if (onlyKnowledgeBase) {

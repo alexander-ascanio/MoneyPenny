@@ -407,15 +407,12 @@ public class RagController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> FirstCommentIndex(
-        string? jobId,
-        CancellationToken cancellationToken)
+    public IActionResult FirstCommentIndex(string? jobId)
     {
         var model = new FirstCommentIndexViewModel
         {
             PricingConfig = BuildPricingConfig()
         };
-        await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(jobId))
         {
@@ -423,7 +420,8 @@ public class RagController : Controller
             var job = _bulkIndexJobStore.GetJob(userId, jobId);
             if (job?.Status == FirstCommentBulkIndexJobStatus.Completed && job.Result is not null)
             {
-                return await RenderFirstCommentIndexAsync(model, job.Result, cancellationToken);
+                ApplyFirstCommentIndexResult(model, job.Result);
+                return View(model);
             }
 
             if (job?.Status == FirstCommentBulkIndexJobStatus.Failed)
@@ -433,6 +431,24 @@ public class RagController : Controller
         }
 
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FirstCommentCounts(CancellationToken cancellationToken)
+    {
+        var counts = await _firstCommentIndexService.GetCountsAsync(
+            onlyTicketsListScope: true,
+            cancellationToken);
+
+        return Json(new
+        {
+            totalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment,
+            indexedTickets = counts.IndexedTickets,
+            pendingTickets = counts.PendingTickets,
+            knowledgeBaseTotalTicketsWithFirstComment = counts.KnowledgeBaseTotalTicketsWithFirstComment,
+            knowledgeBaseIndexedTickets = counts.KnowledgeBaseIndexedTickets,
+            knowledgeBasePendingTickets = counts.KnowledgeBasePendingTickets
+        });
     }
 
     [HttpGet]
@@ -583,7 +599,7 @@ public class RagController : Controller
         if (string.IsNullOrWhiteSpace(model.TargetTicketNumber))
         {
             ModelState.AddModelError(nameof(model.TargetTicketNumber), "Indica un número de ticket.");
-            await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
+            model.PricingConfig = BuildPricingConfig();
             return View("FirstCommentIndex", model);
         }
 
@@ -598,16 +614,15 @@ public class RagController : Controller
             },
             cancellationToken);
 
-        return await RenderFirstCommentIndexAsync(model, result, cancellationToken);
+        model.PricingConfig = BuildPricingConfig();
+        ApplyFirstCommentIndexResult(model, result);
+        return View("FirstCommentIndex", model);
     }
 
-    private async Task<IActionResult> RenderFirstCommentIndexAsync(
+    private void ApplyFirstCommentIndexResult(
         FirstCommentIndexViewModel model,
-        FirstCommentIndexResult result,
-        CancellationToken cancellationToken)
+        FirstCommentIndexResult result)
     {
-        await PopulateFirstCommentIndexModelAsync(model, cancellationToken);
-
         model.LastRunEstimate = result.UsageEstimate is null
             ? null
             : TokenUsageEstimateViewModel.FromEstimate(
@@ -659,24 +674,6 @@ public class RagController : Controller
         {
             model.SuccessMessage = "No se indexó ningún ticket.";
         }
-
-        return View("FirstCommentIndex", model);
-    }
-
-    private async Task PopulateFirstCommentIndexModelAsync(
-        FirstCommentIndexViewModel model,
-        CancellationToken cancellationToken)
-    {
-        var counts = await _firstCommentIndexService.GetCountsAsync(
-            onlyTicketsListScope: true,
-            cancellationToken);
-        model.TotalTicketsWithFirstComment = counts.TotalTicketsWithFirstComment;
-        model.IndexedTickets = counts.IndexedTickets;
-        model.PendingTickets = counts.PendingTickets;
-        model.KnowledgeBaseTotalTicketsWithFirstComment = counts.KnowledgeBaseTotalTicketsWithFirstComment;
-        model.KnowledgeBaseIndexedTickets = counts.KnowledgeBaseIndexedTickets;
-        model.KnowledgeBasePendingTickets = counts.KnowledgeBasePendingTickets;
-        model.PricingConfig = BuildPricingConfig();
     }
 
     private RagTokenPricingConfigViewModel BuildPricingConfig() => new()

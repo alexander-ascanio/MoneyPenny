@@ -977,6 +977,18 @@ body.tickets-col-resizing * {
   scroll-margin-top: 1rem;
 }
 
+.first-comment-counts-loading .indexed-summary-card.first-comment-counts-pending {
+  pointer-events: none;
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.first-comment-counts-loading [data-count-display] {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+}
+
 .rag-gpt-processing {
   display: flex;
   flex-direction: column;
