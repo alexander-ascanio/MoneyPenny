@@ -12,4 +12,5 @@ public class RagRatedAnswerViewModel
     public DateTime RatedAt { get; init; }
 
     public bool IsPositive => Rating == RagQueryLog.RatingGood;
+    public bool IsNotAnswerable => Rating == RagQueryLog.RatingNotAnswerable;
 }

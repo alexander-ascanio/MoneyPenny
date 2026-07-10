@@ -212,19 +212,12 @@ public class ResponseGroundingChecker : IResponseGroundingChecker
         var cited = ExtractCitedTicketNumbers(answer);
         if (cited.Count == 0)
         {
-            return answer.Length >= 80
-                ? Check(
-                    "R2",
-                    ResponseGroundingVerdict.Warn,
-                    10,
-                    "Citas de tickets",
-                    "La respuesta no cita tickets de referencia del contexto.")
-                : Check(
-                    "R2",
-                    ResponseGroundingVerdict.Pass,
-                    15,
-                    "Citas de tickets",
-                    "No se detectaron citas de tickets.");
+            return Check(
+                "R2",
+                ResponseGroundingVerdict.Pass,
+                15,
+                "Citas de tickets",
+                "No se detectaron citas de tickets (adecuado para respuestas dirigidas al cliente).");
         }
 
         foreach (var number in cited)

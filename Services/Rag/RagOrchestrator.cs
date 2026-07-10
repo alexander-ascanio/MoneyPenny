@@ -30,7 +30,7 @@ public interface IRagOrchestrator
 public class RagOrchestrator : IRagOrchestrator
 {
     public const string DefaultGenerationQuestion =
-        "Propón una solución o pasos de resolución para el problema descrito en el comentario del cliente.";
+        "Redacta un mensaje de respuesta para el cliente que resuelva o oriente sobre el problema descrito en su comentario inicial.";
 
     public const string KnowledgeBasePromptVersion = "kb-solution-v1";
 

@@ -96,6 +96,13 @@
                     <p>Indexación masiva, estimación de tokens y comparación de umbrales de similitud.</p>
                 </div>
             </div>
+            <div class="col-md-6 col-xl-4">
+                <div class="home-feature-card home-feature-card-rose">
+                    <div class="home-feature-icon"><i class="bi bi-shield-check"></i></div>
+                    <h3 class="h6">Comprobación de respuesta</h3>
+                    <p>Valida cada respuesta GPT con reglas R1–R6: contexto recuperado, datos técnicos, síntoma del cliente y proporcionalidad. Puntuación y veredicto sin coste de API.</p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -157,6 +164,17 @@
                         <div>
                             <h3 class="h6 mb-1">OpenAI</h3>
                             <p class="mb-0">Embeddings, chat <code>gpt-4o-mini</code> y Vision para capturas. Config en <code>ExternalApis:OpenAI</code> y <code>Rag</code>.</p>
+                        </div>
+                    </article>
+                    <article class="home-int-card">
+                        <div class="home-int-icon home-int-icon-grounding"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <h3 class="h6 mb-1">Comprobador de fundamentación</h3>
+                            <p class="mb-0">
+                                Tras generar la respuesta GPT en <code>/Rag/Ask</code>, evalúa si está anclada al contexto
+                                (reglas R1–R6, puntuación 0–100, Pass/Warn/Fail). Motor local sin llamadas extra a OpenAI;
+                                umbrales en <code>Rag:GroundingCheck</code>.
+                            </p>
                         </div>
                     </article>
                     <article class="home-int-card mb-0">

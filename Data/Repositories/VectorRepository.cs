@@ -310,7 +310,7 @@ public class VectorRepository : IVectorRepository
         short rating,
         CancellationToken cancellationToken = default)
     {
-        if (rating is not (RagQueryLog.RatingGood or RagQueryLog.RatingBad or RagQueryLog.RatingClear))
+        if (rating is not (RagQueryLog.RatingGood or RagQueryLog.RatingBad or RagQueryLog.RatingNotAnswerable or RagQueryLog.RatingClear))
         {
             return false;
         }

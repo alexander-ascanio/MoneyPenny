@@ -4,6 +4,8 @@ public class RagQueryLog
 {
     public const short RatingGood = 1;
     public const short RatingBad = -1;
+    /// <summary>El agente indica que MoneyPenny no podrá responder este ticket.</summary>
+    public const short RatingNotAnswerable = -2;
     /// <summary>Valor enviado desde la UI para quitar la valoración (se persiste como null).</summary>
     public const short RatingClear = 0;
 

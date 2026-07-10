@@ -293,9 +293,9 @@
                 <div class="card-header rag-section-header">
                     <i class="bi bi-robot me-2"></i>Respuesta GPT
                 </div>
-                <div class="card-body rag-answer">
-                    @Model.Answer
-                    <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = Model.GptQueryLogId ?? 0, Rating = Model.GptRating }" />
+                <div class="card-body">
+                    <div class="rag-answer-text">@Model.Answer.TrimEnd()</div>
+                    <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = Model.GptQueryLogId ?? 0, Rating = Model.GptRating, ShowNotAnswerableOption = true }" />
                 </div>
             </div>
 
@@ -339,6 +339,7 @@
 
             const rateUrl = '@Url.Action("RateAnswer", "Rag")';
             const ratingClear = @MoneyPenny.Models.Rag.RagQueryLog.RatingClear;
+            const ratingNotAnswerable = @MoneyPenny.Models.Rag.RagQueryLog.RatingNotAnswerable;
             const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
             const token = tokenInput?.value ?? '';
 
@@ -349,6 +350,29 @@
                     btn.classList.toggle('active', isActive);
                     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
                 });
+            }
+
+            function ratingFeedbackMessage(rating) {
+                if (rating === ratingNotAnswerable) {
+                    return 'Marcado: este ticket no podrá ser respondido por MoneyPenny';
+                }
+
+                if (rating === ratingClear) {
+                    return 'Valoración eliminada';
+                }
+
+                return 'Gracias por tu valoración';
+            }
+
+            function applyRatedAnswerStyles(ratedItem, rating) {
+                if (!ratedItem) {
+                    return;
+                }
+
+                const text = ratedItem.querySelector('.rag-rated-answer-text');
+                ratedItem.classList.toggle('rag-rated-answer-positive', rating > 0);
+                text?.classList.toggle('rag-rated-answer-text-negative', rating === @MoneyPenny.Models.Rag.RagQueryLog.RatingBad);
+                text?.classList.toggle('rag-rated-answer-text-not-answerable', rating === ratingNotAnswerable);
             }
 
             function setFeedback(feedback, message, visible) {
@@ -419,18 +443,12 @@
 
                             if (requestedRating === ratingClear) {
                                 setRatingButtons(container, ratingClear);
-                                setFeedback(feedback, 'Valoración eliminada', true);
+                                setFeedback(feedback, ratingFeedbackMessage(ratingClear), true);
                                 updateRatedAnswersSection(ratedItem);
                             } else {
                                 setRatingButtons(container, requestedRating);
-                                setFeedback(feedback, 'Gracias por tu valoración', true);
-
-                                if (ratedItem) {
-                                    ratedItem.classList.toggle('rag-rated-answer-positive', requestedRating > 0);
-                                    ratedItem.querySelector('.rag-rated-answer-text')?.classList.toggle(
-                                        'rag-rated-answer-text-negative',
-                                        requestedRating < 0);
-                                }
+                                setFeedback(feedback, ratingFeedbackMessage(requestedRating), true);
+                                applyRatedAnswerStyles(ratedItem, requestedRating);
                             }
                         } catch {
                             setFeedback(feedback, 'No se pudo guardar la valoración', true);

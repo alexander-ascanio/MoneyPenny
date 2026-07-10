@@ -890,10 +890,22 @@ body.tickets-col-resizing * {
   padding: 0.4rem 0.65rem;
 }
 
-.rag-answer {
+.rag-answer,
+.rag-answer-text {
   white-space: pre-wrap;
   line-height: 1.6;
   color: #1e293b;
+}
+
+#gptAnswerCard .card-body {
+  padding-bottom: 0.65rem;
+}
+
+#gptAnswerCard .rag-answer-rating {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  margin-bottom: 0;
 }
 
 .rag-grounding-rule-id {
@@ -922,11 +934,31 @@ body.tickets-col-resizing * {
   font-weight: 600;
 }
 
-.rag-answer-rating {
+.rag-answer-rating-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.rag-answer-rating-main {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rag-answer-not-answerable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .rag-rating-btn {
@@ -961,6 +993,23 @@ body.tickets-col-resizing * {
 .rag-rating-btn.active.rag-rating-down {
   background: #fee2e2;
   border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.rag-rating-btn.rag-rating-not-answerable {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.rag-rating-btn.rag-rating-not-answerable:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.rag-rating-btn.active.rag-rating-not-answerable {
+  background: #fee2e2;
+  border-color: #f87171;
   color: #b91c1c;
 }
 
@@ -1095,6 +1144,7 @@ body.tickets-col-resizing * {
 .rag-rated-answer-item .rag-answer-rating {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 .rag-rated-answer-date {
@@ -1137,6 +1187,10 @@ body.tickets-col-resizing * {
 
 .rag-rated-answer-text-negative {
   color: #64748b;
+}
+
+.rag-rated-answer-text-not-answerable {
+  color: #b91c1c;
 }
 
 .rag-response-page .rag-reference-card {
@@ -1420,6 +1474,9 @@ body.tickets-col-resizing * {
 .home-feature-card-orange { border-top: 4px solid #f97316; }
 .home-feature-card-orange .home-feature-icon { background: #ffedd5; color: #ea580c; }
 
+.home-feature-card-rose { border-top: 4px solid #f43f5e; }
+.home-feature-card-rose .home-feature-icon { background: #ffe4e6; color: #e11d48; }
+
 .home-stack-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1573,6 +1630,7 @@ body.tickets-col-resizing * {
 
 .home-int-icon-ts { background: linear-gradient(135deg, #3b82f6, #6366f1); }
 .home-int-icon-ai { background: linear-gradient(135deg, #8b5cf6, #d946ef); }
+.home-int-icon-grounding { background: linear-gradient(135deg, #f43f5e, #fb7185); }
 .home-int-icon-tools { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
 
 .home-int-card h3 {

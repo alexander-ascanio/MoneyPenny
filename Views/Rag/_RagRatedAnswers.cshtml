@@ -12,7 +12,7 @@
                 @foreach (var item in Model)
                 {
                     <div class="rag-rated-answer-item" data-query-log-id="@item.QueryLogId">
-                        <div class="rag-rated-answer-text@(item.IsPositive ? "" : " rag-rated-answer-text-negative")">@item.Answer</div>
+                        <div class="rag-rated-answer-text@(item.IsPositive ? "" : item.IsNotAnswerable ? " rag-rated-answer-text-not-answerable" : " rag-rated-answer-text-negative")">@item.Answer</div>
                         <partial name="_RagAnswerRating" model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel { QueryLogId = item.QueryLogId, Rating = item.Rating }" />
                         @if (item.RatedAt != default)
                         {
