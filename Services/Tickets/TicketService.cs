@@ -67,7 +67,7 @@ public class TicketService : ITicketService
             var items = tickets.Select(t => new TicketListItemViewModel
             {
                 Id = t.Id,
-                Number = t.Number,
+                Number = t.Number ?? string.Empty,
                 Title = t.Title,
                 Status = t.Status,
                 Priority = t.Priority,
@@ -226,7 +226,7 @@ public class TicketService : ITicketService
             return new TicketDetailViewModel
             {
                 Id = ticket.Id,
-                Number = ticket.Number,
+                Number = ticket.Number ?? string.Empty,
                 Title = ticket.Title,
                 Description = ticket.Description,
                 Status = ticket.Status,

@@ -6,6 +6,7 @@ using MoneyPenny.ViewModels.Home;
 
 namespace MoneyPenny.Controllers;
 
+[Authorize]
 public class HomeController : Controller
 {
     public IActionResult Index()
@@ -13,17 +14,18 @@ public class HomeController : Controller
         return View();
     }
 
-    [Authorize]
     public IActionResult ApiDocs()
     {
         return View(ApiDocumentationCatalog.Build());
     }
 
+    [AllowAnonymous]
     public IActionResult Privacy()
     {
         return View();
     }
 
+    [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

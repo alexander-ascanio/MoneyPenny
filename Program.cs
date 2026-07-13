@@ -1,36 +1,151 @@
-using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
+using System.Text.Json;
+using Auth0.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using MoneyPenny.Data;
 using MoneyPenny.Extensions;
 using MoneyPenny.Models;
 using MoneyPenny.Options;
+using MoneyPenny.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddMoneyPennyDatabases(builder.Configuration);
 builder.Services.AddMoneyPennyServices(builder.Configuration);
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+builder.Services
+    .AddAuth0WebAppAuthentication(options =>
+    {
+        options.Domain = builder.Configuration["Auth0:Domain"]!;
+        options.ClientId = builder.Configuration["Auth0:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Auth0:ClientSecret"]!;
+        options.Scope = "openid profile email";
+    });
+
+builder.Services.Configure<HubRdAccessSettings>(
+    builder.Configuration.GetSection("HubRdAccess"));
+
+var hubRdConfig = builder.Configuration.GetSection("HubRdAccess");
+builder.Services.AddHttpClient<HubRdAccessService>(client =>
 {
-    var identityConfig = builder.Configuration.GetSection("Identity");
-
-    options.Password.RequireDigit = bool.Parse(identityConfig["Password:RequireDigit"] ?? "true");
-    options.Password.RequiredLength = int.Parse(identityConfig["Password:RequiredLength"] ?? "6");
-    options.Password.RequireNonAlphanumeric = bool.Parse(identityConfig["Password:RequireNonAlphanumeric"] ?? "false");
-    options.Password.RequireUppercase = bool.Parse(identityConfig["Password:RequireUppercase"] ?? "false");
-    options.Password.RequireLowercase = bool.Parse(identityConfig["Password:RequireLowercase"] ?? "false");
-
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.Parse(identityConfig["Lockout:DefaultLockoutTimeSpan"] ?? "00:05:00");
-    options.Lockout.MaxFailedAccessAttempts = int.Parse(identityConfig["Lockout:MaxFailedAccessAttempts"] ?? "5");
+    client.Timeout = TimeSpan.FromSeconds(
+        int.Parse(hubRdConfig["TimeoutSeconds"] ?? "10"));
 })
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
-
-builder.Services.ConfigureApplicationCookie(options =>
+.ConfigurePrimaryHttpMessageHandler(() =>
 {
-    options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
+    var handler = new HttpClientHandler();
+    if (builder.Environment.IsDevelopment())
+        handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+    return handler;
+});
+
+builder.Services.Configure<OpenIdConnectOptions>(
+    Auth0Constants.AuthenticationScheme, options =>
+{
+    options.Events ??= new OpenIdConnectEvents();
+    var existingOnTokenValidated = options.Events.OnTokenValidated;
+
+    options.Events.OnTokenValidated = async context =>
+    {
+        if (existingOnTokenValidated != null)
+            await existingOnTokenValidated(context);
+
+        if (context.Principal?.Identity is not ClaimsIdentity identity)
+            return;
+
+        var email = identity.FindFirst(ClaimTypes.Email)?.Value
+                    ?? identity.FindFirst("email")?.Value;
+
+        if (string.IsNullOrEmpty(email))
+            return;
+
+        var accessService = context.HttpContext.RequestServices
+            .GetRequiredService<HubRdAccessService>();
+
+        var accessResult = await accessService.CheckAccessAsync(email);
+
+        var debugJson = accessResult != null
+            ? JsonSerializer.Serialize(accessResult, new JsonSerializerOptions { WriteIndented = false })
+            : "API call failed (null response)";
+        identity.AddClaim(new Claim("hubrd_debug", debugJson));
+        identity.AddClaim(new Claim("hubrd_checked_at",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()));
+
+        if (accessResult is { HasAccess: true })
+        {
+            var role = !string.IsNullOrEmpty(accessResult.Role)
+                ? accessResult.Role.ToLowerInvariant()
+                : "usuario";
+            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+            identity.AddClaim(new Claim("hubrd_role", role));
+        }
+        else
+        {
+            identity.AddClaim(new Claim("hubrd_access", "denied"));
+            identity.AddClaim(new Claim("hubrd_reason",
+                accessResult?.Reason ?? "api_error"));
+        }
+    };
+});
+
+var revalidateMinutes = int.Parse(hubRdConfig["RevalidateIntervalMinutes"] ?? "30");
+
+builder.Services.Configure<CookieAuthenticationOptions>(
+    CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Account/Welcome";
     options.AccessDeniedPath = "/Account/AccessDenied";
+
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        if (context.Principal?.Identity is not ClaimsIdentity identity)
+            return;
+
+        var checkedAtStr = identity.FindFirst("hubrd_checked_at")?.Value;
+        if (string.IsNullOrEmpty(checkedAtStr))
+            return;
+
+        var checkedAt = DateTimeOffset.FromUnixTimeSeconds(long.Parse(checkedAtStr));
+        if (DateTimeOffset.UtcNow - checkedAt < TimeSpan.FromMinutes(revalidateMinutes))
+            return;
+
+        var email = identity.FindFirst(ClaimTypes.Email)?.Value
+                    ?? identity.FindFirst("email")?.Value;
+        if (string.IsNullOrEmpty(email))
+            return;
+
+        var accessService = context.HttpContext.RequestServices
+            .GetRequiredService<HubRdAccessService>();
+        var accessResult = await accessService.CheckAccessAsync(email);
+
+        var claimsToRemove = identity.Claims
+            .Where(c => c.Type is "hubrd_access" or "hubrd_reason" or "hubrd_checked_at"
+                        or "hubrd_debug" or "hubrd_role" || c.Type == ClaimTypes.Role)
+            .ToList();
+        foreach (var c in claimsToRemove) identity.RemoveClaim(c);
+
+        identity.AddClaim(new Claim("hubrd_checked_at",
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()));
+
+        if (accessResult is { HasAccess: true })
+        {
+            var role = !string.IsNullOrEmpty(accessResult.Role)
+                ? accessResult.Role.ToLowerInvariant()
+                : "usuario";
+            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+            identity.AddClaim(new Claim("hubrd_role", role));
+        }
+        else
+        {
+            identity.AddClaim(new Claim("hubrd_access", "denied"));
+            identity.AddClaim(new Claim("hubrd_reason",
+                accessResult?.Reason ?? "api_error"));
+        }
+
+        context.ShouldRenew = true;
+    };
 });
 
 var mvcBuilder = builder.Services.AddControllersWithViews();
@@ -56,8 +171,6 @@ using (var scope = app.Services.CreateScope())
 
         var context = services.GetRequiredService<ApplicationDbContext>();
         var vectorContext = services.GetRequiredService<VectorDbContext>();
-        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
         if (appDbConfig.ApplyMigrationsOnStartup)
         {
@@ -81,7 +194,7 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
-        await DbSeeder.SeedDataAsync(context, userManager, roleManager, appDbConfig.EnableSeed);
+        await DbSeeder.SeedDataAsync(context, appDbConfig.EnableSeed);
         logger.LogInformation("Inicialización de base de datos completada.");
     }
     catch (Exception ex)
@@ -102,6 +215,24 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Bloquea a usuarios autenticados en Auth0 pero sin acceso según HubRD.
+app.Use(async (context, next) =>
+{
+    var user = context.User;
+    if (user.Identity?.IsAuthenticated == true
+        && user.HasClaim("hubrd_access", "denied"))
+    {
+        var path = context.Request.Path.Value ?? "";
+        var allowedPaths = new[] { "/Account/AccessDenied", "/Account/Logout", "/Account/Welcome" };
+        if (!allowedPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            context.Response.Redirect("/Account/AccessDenied");
+            return;
+        }
+    }
+    await next();
+});
 
 app.MapStaticAssets();
 

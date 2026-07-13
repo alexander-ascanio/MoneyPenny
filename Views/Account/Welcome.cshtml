@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Bienvenido";
+}
+
+<style>
+    .welcome-container {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .welcome-card {
+        max-width: 500px;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    .welcome-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    .welcome-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div class="welcome-container">
+    <div class="welcome-card shadow-lg">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="welcome-header">
+                <div class="welcome-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h2 class="fw-bold mb-0">¡Ya estás autenticado!</h2>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-success">
+                    <i class="bi bi-person-check-fill me-2"></i>
+                    Usuario: <strong>@User.Identity.Name</strong>
+                </div>
+                <div class="d-grid gap-2">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg">
+                        <i class="bi bi-house-door me-2"></i>Ir a MoneyPenny
+                    </a>
+                    <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-secondary">
+                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="welcome-header">
+                <div class="welcome-icon">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <h2 class="fw-bold mb-2">Bienvenido</h2>
+                <p class="mb-0">MoneyPenny - Telematel</p>
+            </div>
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3">Acceso Seguro</h5>
+                <p class="card-text text-muted mb-4">
+                    Para acceder al portal, necesitas autenticarte con tu cuenta corporativa.
+                </p>
+                <div class="d-grid">
+                    <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión con Auth0
+                    </a>
+                </div>
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Conexión segura mediante Auth0
+                    </small>
+                </div>
+            </div>
+        }
+    </div>
+</div>

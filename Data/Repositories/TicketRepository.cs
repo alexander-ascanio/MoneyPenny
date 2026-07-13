@@ -24,7 +24,7 @@ public class TicketRepository : ITicketRepository
         if (!string.IsNullOrWhiteSpace(filters.Search))
         {
             query = query.Where(t =>
-                t.Number.Contains(filters.Search) ||
+                (t.Number != null && t.Number.Contains(filters.Search)) ||
                 t.Title.Contains(filters.Search) ||
                 t.Description.Contains(filters.Search));
         }
@@ -385,7 +385,7 @@ public class TicketRepository : ITicketRepository
         return new TicketFirstCommentRow
         {
             TicketId = ticket.Id,
-            TicketNumber = ticket.Number,
+            TicketNumber = ticket.Number ?? string.Empty,
             Title = ticket.Title,
             Product = ticket.Product,
             IsKnowledgeBase = ticket.IsKnowledgeBase,
@@ -720,7 +720,7 @@ public class TicketRepository : ITicketRepository
             row => new TicketExportLookup
             {
                 TeamSupportId = row.TeamSupportId,
-                Number = row.Number,
+                Number = row.Number ?? string.Empty,
                 CreatedAt = row.CreatedAt,
                 Status = row.Status
             });

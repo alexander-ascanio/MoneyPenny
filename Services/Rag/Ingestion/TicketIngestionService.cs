@@ -64,7 +64,7 @@ public class TicketIngestionService : ITicketIngestionService
         var chunks = _chunkingService.SplitIntoChunks(
             document,
             ticket.Id,
-            ticket.Number,
+            ticket.Number ?? string.Empty,
             isKnowledgeBase: ticket.IsKnowledgeBase);
         await _vectorRepository.SaveChunksAsync(chunks, cancellationToken);
 
@@ -164,7 +164,7 @@ public class TicketIngestionService : ITicketIngestionService
         try
         {
             var syncResult = await _firstCommentIndexService.IndexTicketAsync(
-                ticket.Number,
+                ticket.Number ?? string.Empty,
                 new FirstCommentIndexOptions
                 {
                     ProcessImages = processImages,
