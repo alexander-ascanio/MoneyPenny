@@ -62,6 +62,29 @@ public static class ApiDocumentationCatalog
                             Field("success", "bool", true, "true si se guardó correctamente."),
                             Field("rating", "short|null", false, "Valoración almacenada; null si se eliminó (rating=0).")
                         ]
+                    },
+                    new ApiEndpointViewModel
+                    {
+                        HttpMethod = "GET / POST",
+                        Path = "/Rag/ProcessTicket",
+                        Summary = "Indexa un ticket, genera respuesta GPT y ejecuta la comprobación técnica (R1–R6).",
+                        Notes = "Combina «Indexar ticket» y «Ver respuesta basada en GPT». Si el comentario #1 tiene capturas utilizables (sin firmas/logotipos), extrae su texto con Vision automáticamente; si no, indexa solo el texto. No inserta comentarios en TeamSupport; el proceso termina con la comprobación técnica.",
+                        RequestFields =
+                        [
+                            Field("ticketId", "int", false, "Id interno del ticket. Obligatorio si no se indica ticketNumber."),
+                            Field("ticketNumber", "string", false, "Número de ticket TeamSupport (con o sin #). Obligatorio si no se indica ticketId."),
+                            Field("processImages", "bool", false, "Permite Vision automática cuando hay capturas utilizables. Por defecto true; pase false para forzar indexación solo texto.")
+                        ],
+                        ResponseFields =
+                        [
+                            Field("success", "bool", true, "true si la indexación y la respuesta GPT fueron correctas."),
+                            Field("errorMessage", "string", false, "Mensaje de error si success=false."),
+                            Field("ticket", "object", false, "Datos del ticket (id, number, title, status, priority, customer, createdAt)."),
+                            Field("indexing", "object", false, "Resultado de indexación (chunkCount, processImages, imagesDetected, imagesExtracted)."),
+                            Field("gpt", "object", false, "Respuesta GPT (answer, queryLogId, contextTicketCount)."),
+                            Field("groundingCheck", "object", false, "Comprobación técnica R1–R6 (verdict, score, verdictLabel, checks, unsupportedClaims, html)."),
+                            Field("groundingCheck.html", "string", false, "HTML autocontenido para pegar en un comentario TeamSupport (mismo aspecto que la tarjeta del portal).")
+                        ]
                     }
                 ]
             },

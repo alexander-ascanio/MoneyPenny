@@ -285,9 +285,27 @@
         </div>
 
         <div class="col-lg-4">
+            <div class="ticket-rag-sidebar-sticky">
             <div class="card border-0 shadow-sm ticket-rag-panel">
                 <div class="card-header bg-white border-0 pt-3 pb-0">
-                    <h5 class="mb-0"><i class="bi bi-robot me-2 text-success"></i>Acciones RAG</h5>
+                    <h5 class="mb-0 d-flex align-items-center gap-1">
+                        <span><i class="bi bi-robot me-2 text-success"></i>Acciones RAG</span>
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 rag-actions-help-btn"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="left"
+                                data-bs-custom-class="rag-actions-tooltip"
+                                data-bs-title="RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con tickets similares ya indexados.
+
+Vectorización: el comentario #1 del ticket se transforma en embeddings (vectores numéricos) y se almacena en PostgreSQL con pgvector.
+
+Chunks: el texto se divide en fragmentos solapados para recuperar solo las partes más relevantes en cada consulta.
+
+Al pulsar «Ver respuesta basada en GPT», MoneyPenny busca los chunks más similares y los envía como contexto al modelo."
+                                aria-label="Qué significa RAG">
+                            <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
+                        </button>
+                    </h5>
                 </div>
                 <div class="card-body d-grid gap-3">
                     <div class="ticket-rag-status">
@@ -368,6 +386,39 @@
                         </button>
                     }
                 </div>
+            </div>
+
+            <div class="card border-0 shadow-sm ticket-rag-process-card mt-3">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-lightning-charge me-2 text-primary"></i>Procesamiento RAG (API)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Indexa el ticket y genera la respuesta GPT con comprobación técnica (R1–R6).
+                        Si hay capturas utilizables en el comentario #1, extrae su texto con Vision automáticamente.
+                    </p>
+                    <button type="button"
+                            class="btn btn-primary w-100"
+                            id="processTicketRagButton"
+                            data-ticket-id="@Model.Id"
+                            data-ticket-number="@Model.Number"
+                            data-process-url="@Url.Action("ProcessTicket", "Rag")"
+                            data-has-usable-images="@(Model.FirstCommentImageCount > 0 ? "true" : "false")">
+                        <span class="process-ticket-rag-label">
+                            <i class="bi bi-play-fill me-1"></i> Indexar y generar respuesta GPT
+                        </span>
+                        <span class="process-ticket-rag-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Procesando…
+                        </span>
+                    </button>
+                    <div class="alert alert-danger border-0 mt-3 mb-0 d-none" id="processTicketRagError" role="alert"></div>
+                    <div class="d-none mt-3" id="processTicketRagResult">
+                        <div class="ticket-rag-process-summary mb-2" id="processTicketRagSummary"></div>
+                        <pre class="ticket-rag-process-json mb-0" id="processTicketRagJson"></pre>
+                    </div>
+                </div>
+            </div>
             </div>
         </div>
     </div>
@@ -541,7 +592,17 @@
                 });
 
                 document.getElementById('confirmProcessImagesButton').addEventListener('click', function () {
-                    processImagesInput.value = choiceWithVision.checked ? 'true' : 'false';
+                    const withVision = choiceWithVision.checked;
+                    processImagesInput.value = withVision ? 'true' : 'false';
+
+                    if (typeof window.__imageProcessingModalOnConfirm === 'function') {
+                        const callback = window.__imageProcessingModalOnConfirm;
+                        window.__imageProcessingModalOnConfirm = null;
+                        modal.hide();
+                        callback(withVision);
+                        return;
+                    }
+
                     confirmedSubmit = true;
                     setIndexTicketLoading(true);
                     modal.hide();
@@ -550,11 +611,13 @@
 
                 document.getElementById('cancelIndexButton').addEventListener('click', function () {
                     confirmedSubmit = false;
+                    window.__imageProcessingModalOnConfirm = null;
                 });
 
                 modalElement.addEventListener('hidden.bs.modal', function () {
                     if (!confirmedSubmit) {
                         processImagesInput.value = 'true';
+                        window.__imageProcessingModalOnConfirm = null;
                     }
                 });
             } else {
@@ -562,6 +625,95 @@
                     setIndexTicketLoading(true);
                 });
             }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const button = document.getElementById('processTicketRagButton');
+            if (!button) {
+                return;
+            }
+
+            const label = button.querySelector('.process-ticket-rag-label');
+            const loading = button.querySelector('.process-ticket-rag-loading');
+            const resultBox = document.getElementById('processTicketRagResult');
+            const summaryBox = document.getElementById('processTicketRagSummary');
+            const jsonBox = document.getElementById('processTicketRagJson');
+            const errorBox = document.getElementById('processTicketRagError');
+            const processUrl = button.dataset.processUrl;
+            const ticketId = button.dataset.ticketId;
+            const ticketNumber = button.dataset.ticketNumber;
+            const hasUsableImages = button.dataset.hasUsableImages === 'true';
+
+            function setLoading(isLoading) {
+                button.disabled = isLoading;
+                label?.classList.toggle('d-none', isLoading);
+                loading?.classList.toggle('d-none', !isLoading);
+            }
+
+            function hideResult() {
+                resultBox?.classList.add('d-none');
+                errorBox?.classList.add('d-none');
+            }
+
+            function renderSummary(data) {
+                if (!summaryBox) {
+                    return;
+                }
+
+                const verdict = data.groundingCheck?.verdictLabel ?? data.groundingCheck?.verdict ?? '—';
+                const score = data.groundingCheck?.score ?? '—';
+                const chunks = data.indexing?.chunkCount ?? 0;
+                const answerPreview = (data.gpt?.answer ?? '').slice(0, 180);
+
+                summaryBox.innerHTML =
+                    '<div class="small">' +
+                    '<div><strong>Ticket:</strong> #' + (data.ticket?.number ?? '') + ' · ' + (data.ticket?.status ?? '') + '</div>' +
+                    '<div><strong>Indexación:</strong> ' + chunks + ' chunks</div>' +
+                    '<div><strong>Comprobación técnica:</strong> ' + verdict + ' (' + score + '/100)</div>' +
+                    '<div class="text-muted mt-1">' + answerPreview + (data.gpt?.answer?.length > 180 ? '…' : '') + '</div>' +
+                    '</div>';
+            }
+
+            async function runProcess(processImages) {
+                hideResult();
+                setLoading(true);
+
+                try {
+                    const params = new URLSearchParams({
+                        ticketId: ticketId,
+                        ticketNumber: ticketNumber,
+                        processImages: String(processImages)
+                    });
+                    const response = await fetch(processUrl + '?' + params.toString(), {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.errorMessage || 'No se pudo procesar el ticket.');
+                    }
+
+                    renderSummary(data);
+                    if (jsonBox) {
+                        jsonBox.textContent = JSON.stringify(data, null, 2);
+                    }
+                    resultBox?.classList.remove('d-none');
+                } catch (error) {
+                    if (errorBox) {
+                        errorBox.textContent = error.message || 'Error inesperado al procesar el ticket.';
+                        errorBox.classList.remove('d-none');
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            button.addEventListener('click', function () {
+                runProcess(hasUsableImages);
+            });
         })();
     </script>
 

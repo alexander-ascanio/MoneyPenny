@@ -36,4 +36,7 @@ public class ResponseGroundingReportViewModel
     public IReadOnlyList<string> OrphanEntities { get; init; } = [];
     public IReadOnlyList<string> InvalidTicketCitations { get; init; } = [];
     public ResponseGroundingEvidenceSummaryViewModel EvidenceSummary { get; init; } = new();
+
+    /// <summary>HTML listo para insertar en un comentario TeamSupport (p. ej. desde /Rag/ProcessTicket).</summary>
+    public string? Html { get; init; }
 }

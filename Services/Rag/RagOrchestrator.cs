@@ -154,13 +154,16 @@ public class RagOrchestrator : IRagOrchestrator
                 ResponseType = RagResponseType.Gpt
             }, cancellationToken: cancellationToken);
 
-        var actionInsertResult = await TryInsertPrivateGptActionAsync(
-            firstComment,
-            request,
-            answer,
-            cancellationToken);
+        var actionInsertResult = request.SkipTeamSupportActionInsert
+            ? new TeamSupportActionCreateResult()
+            : await TryInsertPrivateGptActionAsync(
+                firstComment,
+                request,
+                answer,
+                cancellationToken);
 
-        if (gptLog is not null
+        if (!request.SkipTeamSupportActionInsert
+            && gptLog is not null
             && actionInsertResult.Success
             && !string.IsNullOrWhiteSpace(actionInsertResult.ActionId))
         {
@@ -185,9 +188,11 @@ public class RagOrchestrator : IRagOrchestrator
             GptRating = gptLog?.Rating,
             KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
             KnowledgeBaseRating = knowledgeBaseLog?.Rating,
-            GptTeamSupportActionInserted = actionInsertResult.Success,
-            GptTeamSupportActionId = actionInsertResult.ActionId,
-            GptTeamSupportActionWarning = actionInsertResult.Success ? null : actionInsertResult.ErrorMessage
+            GptTeamSupportActionInserted = !request.SkipTeamSupportActionInsert && actionInsertResult.Success,
+            GptTeamSupportActionId = request.SkipTeamSupportActionInsert ? null : actionInsertResult.ActionId,
+            GptTeamSupportActionWarning = request.SkipTeamSupportActionInsert || actionInsertResult.Success
+                ? null
+                : actionInsertResult.ErrorMessage
         };
     }
 

@@ -486,10 +486,14 @@ body.tickets-col-resizing * {
   font-weight: 500;
 }
 
-.ticket-rag-panel {
-  border-radius: 0.75rem;
+.ticket-rag-sidebar-sticky {
   position: sticky;
   top: 1rem;
+  align-self: flex-start;
+}
+
+.ticket-rag-panel {
+  border-radius: 0.75rem;
 }
 
 .ticket-rag-status {
@@ -501,6 +505,27 @@ body.tickets-col-resizing * {
   pointer-events: none;
   cursor: wait;
   opacity: 0.85;
+}
+
+.ticket-rag-process-card {
+  border-radius: 0.75rem;
+}
+
+.ticket-rag-process-json {
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ticket-rag-process-summary {
+  font-size: 0.875rem;
+  color: #334155;
 }
 
 .ticket-number-link {
@@ -928,6 +953,26 @@ body.tickets-col-resizing * {
   font-size: 0.8125rem;
   line-height: 1.45;
   padding: 0.5rem 0.65rem;
+}
+
+.rag-actions-help-btn {
+  line-height: 1;
+  vertical-align: middle;
+  text-decoration: none;
+}
+
+.rag-actions-help-btn:hover,
+.rag-actions-help-btn:focus {
+  text-decoration: none;
+}
+
+.rag-actions-tooltip .tooltip-inner {
+  max-width: 340px;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  padding: 0.55rem 0.7rem;
+  white-space: pre-line;
 }
 
 .rag-grounding-check-item strong {

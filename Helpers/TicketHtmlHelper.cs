@@ -303,6 +303,7 @@ public static class TicketHtmlHelper
         }
 
         var html = htmlPreparer(content);
+        var signatureStartIndex = FindHtmlFooterStartIndex(html);
         var matches = ImageSourceRegex.Matches(html);
         var sources = new List<string>();
 
@@ -312,7 +313,20 @@ public static class TicketHtmlHelper
                 : match.Groups[2].Success ? match.Groups[2].Value
                 : match.Groups[3].Value;
             source = SanitizeImageSource(source);
-            if (string.IsNullOrWhiteSpace(source) || IsLikelySignatureImageUrl(source))
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                continue;
+            }
+
+            if (signatureStartIndex.HasValue
+                && match.Index >= signatureStartIndex.Value
+                && match.Index >= 15)
+            {
+                continue;
+            }
+
+            if (IsLikelySignatureImageUrl(source)
+                || IsLikelyDecorativeSignatureImage(match.Value, source))
             {
                 continue;
             }
@@ -335,9 +349,26 @@ public static class TicketHtmlHelper
             "logo_firma",
             "logo-firma",
             "/firma.",
+            "/firma/",
             "marcas-firma",
             "email-signature",
             "/signature/",
+            "/logo.",
+            "/logo/",
+            "-logo.",
+            "_logo.",
+            "logo.png",
+            "logo.jpg",
+            "logo.gif",
+            "logo.jpeg",
+            "logo.webp",
+            "logotipo",
+            "/logos/",
+            "company-logo",
+            "company_logo",
+            "email_logo",
+            "banner_logo",
+            "footer_logo",
             "recycle.png",
             "linkedin.com/in/",
             "facebook.com/",
@@ -347,6 +378,91 @@ public static class TicketHtmlHelper
 
         return markers.Any(marker => source.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool IsLikelyDecorativeSignatureImage(string imgTagHtml, string source)
+    {
+        if (string.IsNullOrWhiteSpace(imgTagHtml))
+        {
+            return false;
+        }
+
+        var altMatch = ImageTagAltRegex.Match(imgTagHtml);
+        if (altMatch.Success)
+        {
+            var alt = altMatch.Groups["value"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(alt)
+                && SignatureImageAltMarkers.Any(marker =>
+                    alt.Contains(marker, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        var width = ReadImageTagDimension(imgTagHtml, "width");
+        var height = ReadImageTagDimension(imgTagHtml, "height");
+        if (width is > 0 and <= 420
+            && height is > 0 and <= 220
+            && LooksLikeLogoImageUrl(source))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool LooksLikeLogoImageUrl(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return false;
+        }
+
+        string[] logoHints =
+        [
+            "logo",
+            "logotipo",
+            "firma",
+            "signature",
+            "brand",
+            "marca",
+            "footer",
+            "piedepagina",
+            "cabecera"
+        ];
+
+        var path = source.Split('?', '#')[0];
+        return logoHints.Any(hint => path.Contains(hint, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int? ReadImageTagDimension(string imgTagHtml, string dimensionName)
+    {
+        foreach (Match match in ImageTagDimensionRegex.Matches(imgTagHtml))
+        {
+            if (!match.Groups["name"].Value.Equals(dimensionName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (int.TryParse(match.Groups["value"].Value, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    private static readonly string[] SignatureImageAltMarkers =
+    [
+        "logo",
+        "logotipo",
+        "firma",
+        "signature",
+        "company",
+        "empresa",
+        "banner",
+        "marca"
+    ];
 
     public static string SanitizeImageSource(string source)
     {
@@ -403,7 +519,143 @@ public static class TicketHtmlHelper
             }
         }
 
+        var plainTextSignatureIndex = FindPlainTextDerivedSignatureStartIndexInHtml(html);
+        if (plainTextSignatureIndex >= minBodyChars)
+        {
+            earliest = earliest.HasValue
+                ? Math.Min(earliest.Value, plainTextSignatureIndex.Value)
+                : plainTextSignatureIndex;
+        }
+
         return earliest;
+    }
+
+    private static int? FindPlainTextDerivedSignatureStartIndexInHtml(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return null;
+        }
+
+        var plain = ConvertHtmlToPlainLinesForSignatureScan(html);
+        if (string.IsNullOrWhiteSpace(plain))
+        {
+            return null;
+        }
+
+        var lines = plain.Split('\n');
+        var substantiveLinesBefore = 0;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                continue;
+            }
+
+            if (!IsLikelySignatureBlockStart(trimmed, lines, i, substantiveLinesBefore))
+            {
+                substantiveLinesBefore++;
+                continue;
+            }
+
+            var htmlIndex = FindApproximateHtmlIndexForPlainTextLine(html, trimmed);
+            if (htmlIndex.HasValue)
+            {
+                return htmlIndex;
+            }
+
+            if (TryFindSignatureLineNeedle(trimmed, out var needle))
+            {
+                htmlIndex = html.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+                if (htmlIndex >= 0)
+                {
+                    return htmlIndex;
+                }
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    private static string ConvertHtmlToPlainLinesForSignatureScan(string html)
+    {
+        html = System.Net.WebUtility.HtmlDecode(html);
+        html = Regex.Replace(html, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"</p>", "\n", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"</div>", "\n", RegexOptions.IgnoreCase);
+        html = StripHtmlTags(html);
+        html = Regex.Replace(html, @"[ \t]+", " ");
+        html = Regex.Replace(html, @"\r", string.Empty);
+        return html.Trim();
+    }
+
+    private static int? FindApproximateHtmlIndexForPlainTextLine(string html, string line)
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return null;
+        }
+
+        var candidates = new List<string> { trimmed };
+        if (trimmed.Length > 48)
+        {
+            candidates.Add(trimmed[..48]);
+        }
+
+        var words = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2)
+        {
+            candidates.Add(string.Join(' ', words.Take(2)));
+        }
+
+        if (words.Length >= 3)
+        {
+            candidates.Add(string.Join(' ', words.Take(3)));
+        }
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var index = html.IndexOf(candidate, StringComparison.OrdinalIgnoreCase);
+            if (index >= 0)
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryFindSignatureLineNeedle(string line, out string needle)
+    {
+        needle = string.Empty;
+        if (IsPersonNameLine(line))
+        {
+            var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length >= 2)
+            {
+                needle = string.Join(' ', words.Take(2));
+                return true;
+            }
+        }
+
+        if (IsDepartmentLine(line))
+        {
+            needle = line.Length <= 40 ? line : line[..40];
+            return true;
+        }
+
+        if (IsAllCapsCompanyTagline(line))
+        {
+            needle = line.Length <= 32 ? line : line[..32];
+            return true;
+        }
+
+        return false;
     }
 
     private static readonly string[] HtmlSignatureBlockMarkers =
@@ -469,6 +721,14 @@ public static class TicketHtmlHelper
 
     private static readonly Regex ImageSourceRegex = new(
         @"<img\b[^>]*\bsrc\s*=\s*(?:""([^""]+)""|'([^']+)'|([^\s>]+))",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ImageTagDimensionRegex = new(
+        @"\b(?<name>width|height)\s*=\s*[""']?(?<value>\d+)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ImageTagAltRegex = new(
+        @"\balt\s*=\s*(?:""(?<value>[^""]*)""|'(?<value>[^']*)'|(?<value>[^\s>]+))",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static string SanitizeForIndexing(string text)

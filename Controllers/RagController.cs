@@ -29,6 +29,7 @@ public class RagController : Controller
     private readonly IRagAskResultCache _ragAskResultCache;
     private readonly IResponseGroundingChecker _groundingChecker;
     private readonly IRatedTicketsExportService _ratedTicketsExportService;
+    private readonly ITicketRagProcessService _ticketRagProcessService;
     private readonly ITeamSupportActionApiClient _teamSupportActionApiClient;
     private readonly RagOptions _ragOptions;
 
@@ -42,6 +43,7 @@ public class RagController : Controller
         IRagAskResultCache ragAskResultCache,
         IResponseGroundingChecker groundingChecker,
         IRatedTicketsExportService ratedTicketsExportService,
+        ITicketRagProcessService ticketRagProcessService,
         ITeamSupportActionApiClient teamSupportActionApiClient,
         IOptions<RagOptions> ragOptions)
     {
@@ -54,6 +56,7 @@ public class RagController : Controller
         _ragAskResultCache = ragAskResultCache;
         _groundingChecker = groundingChecker;
         _ratedTicketsExportService = ratedTicketsExportService;
+        _ticketRagProcessService = ticketRagProcessService;
         _teamSupportActionApiClient = teamSupportActionApiClient;
         _ragOptions = ragOptions.Value;
     }
@@ -133,6 +136,44 @@ public class RagController : Controller
             knowledgeBaseOnly,
             gptResult = cacheKey
         });
+    }
+
+    [HttpGet]
+    [HttpPost]
+    public async Task<IActionResult> ProcessTicket(
+        int? ticketId,
+        string? ticketNumber,
+        bool processImages = true,
+        CancellationToken cancellationToken = default)
+    {
+        if (ticketId is not > 0 && string.IsNullOrWhiteSpace(ticketNumber))
+        {
+            return BadRequest(new TicketRagProcessResultViewModel
+            {
+                Success = false,
+                ErrorMessage = "Indica ticketId o ticketNumber."
+            });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+        var result = await _ticketRagProcessService.ProcessTicketAsync(
+            ticketId,
+            ticketNumber,
+            userId,
+            processImages,
+            cancellationToken);
+
+        if (!result.Success && result.Ticket is null)
+        {
+            return NotFound(result);
+        }
+
+        if (!result.Success)
+        {
+            return BadRequest(result);
+        }
+
+        return Json(result);
     }
 
     [HttpGet]

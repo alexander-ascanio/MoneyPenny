@@ -1,3 +1,5 @@
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment HostEnvironment
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,7 +84,14 @@
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Welcome">Iniciar Sesión</a>
+                                @if (HostEnvironment.IsDevelopment())
+                                {
+                                    <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Iniciar Sesión</a>
+                                }
+                                else
+                                {
+                                    <a class="nav-link text-dark" asp-controller="Account" asp-action="Welcome">Iniciar Sesión</a>
+                                }
                             </li>
                         }
                     </ul>

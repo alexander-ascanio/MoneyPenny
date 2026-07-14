@@ -9,8 +9,14 @@
   <ItemGroup>
     <Compile Remove="scripts\**" />
     <Compile Remove="_tmp_bench\**" />
-    <Compile Remove="_build_verify\**" />
-    <Compile Remove="_build_tmp\**" />
+    <Compile Remove="_build*\**" />
+    <Compile Remove="build-verify\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="_build*\**" />
+    <None Remove="_build*\**" />
+    <EmbeddedResource Remove="_build*\**" />
   </ItemGroup>
 
   <ItemGroup>

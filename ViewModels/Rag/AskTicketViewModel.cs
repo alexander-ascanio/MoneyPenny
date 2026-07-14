@@ -8,4 +8,5 @@ public class AskTicketViewModel
     public bool KnowledgeBaseOnly { get; set; }
     public double? MinScoreOverride { get; set; }
     public bool SkipQueryLog { get; set; }
+    public bool SkipTeamSupportActionInsert { get; set; }
 }
