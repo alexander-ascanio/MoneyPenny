@@ -140,6 +140,7 @@ public class RagController : Controller
 
     [HttpGet]
     [HttpPost]
+    [Authorize(Policy = "ApiOrUser")]
     public async Task<IActionResult> ProcessTicket(
         int? ticketId,
         string? ticketNumber,
@@ -821,7 +822,7 @@ public class RagController : Controller
         {
             model.SuccessMessage = string.IsNullOrWhiteSpace(model.TargetTicketNumber)
                 ? "No se indexó ningún ticket (todos omitidos o sin contenido)."
-                : $"Ticket #{model.TargetTicketNumber.Trim().TrimStart('#')}: omitido (ya indexado o sin contenido indexable).";
+                : $"Ticket #{model.TargetTicketNumber.Trim().TrimStart('#')}: omitido (ya indexado o sin contenido).";
         }
         else if (result.TicketsIndexed > 0)
         {
