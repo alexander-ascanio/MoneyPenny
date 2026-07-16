@@ -5,6 +5,7 @@ namespace MoneyPenny.Helpers;
 public static class TicketListScope
 {
     public const string ExcludedCustomer = "TELEMATEL INTERNO";
+    public const string UnknownCompanyCustomer = "_Unknown Company";
     public const string ExcludedGroup = "Telematel – Knowledge Base";
 
     public const string SqlFilter = """

@@ -23,8 +23,8 @@
     </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+    <header class="app-header sticky-top">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow">
             <div class="container-fluid">
                 @{
                     var hubRdDebugJson = User.FindFirst("hubrd_debug")?.Value;
@@ -99,7 +99,7 @@
             </div>
         </nav>
     </header>
-    <div class="container-fluid px-3 px-lg-4">
+    <div class="container-fluid px-3 px-lg-4 app-content">
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

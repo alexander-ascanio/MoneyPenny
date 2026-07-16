@@ -81,6 +81,11 @@ public class TicketService : ITicketService
                 IsIndexed = indexedIds.Contains(t.Id)
             }).ToList();
 
+            if (filters.IndexedFilter is bool firstCommentIndexed)
+            {
+                items = items.Where(t => t.IsFirstCommentIndexed == firstCommentIndexed).ToList();
+            }
+
             if (filters.RagFilter is bool ragIndexed)
             {
                 items = items.Where(t => t.IsIndexed == ragIndexed).ToList();
@@ -130,10 +135,12 @@ public class TicketService : ITicketService
     {
         GroupName = filters.GroupName,
         CustomerName = filters.CustomerName,
+        ShowUnknownCompany = filters.ShowUnknownCompany,
         Customer = filters.Customer,
         Product = filters.Product,
         Status = filters.Status,
         Priority = filters.Priority,
+        Indexed = filters.Indexed,
         Rag = filters.Rag,
         HasActions = filters.HasActions,
         IsKnowledgeBase = filters.IsKnowledgeBase,

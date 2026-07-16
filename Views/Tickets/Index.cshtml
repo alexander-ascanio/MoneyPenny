@@ -188,36 +188,6 @@
                     </div>
 
                     <div class="tickets-filter-item">
-                        <label class="tickets-filter-label" for="filter-rag">RAG:</label>
-                        <select id="filter-rag" name="rag" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
-                            @if (IsSelected(Model.Filters.Rag, ""))
-                            {
-                                <option value="" selected>Todos</option>
-                            }
-                            else
-                            {
-                                <option value="">Todos</option>
-                            }
-                            @if (IsSelected(Model.Filters.Rag, "true"))
-                            {
-                                <option value="true" selected>Indexado</option>
-                            }
-                            else
-                            {
-                                <option value="true">Indexado</option>
-                            }
-                            @if (IsSelected(Model.Filters.Rag, "false"))
-                            {
-                                <option value="false" selected>No indexado</option>
-                            }
-                            else
-                            {
-                                <option value="false">No indexado</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-has-actions">Tickets con Acciones:</label>
                         <select id="filter-has-actions" name="hasActions" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                             @if (IsSelected(Model.Filters.HasActions, ""))
@@ -247,34 +217,66 @@
                         </select>
                     </div>
 
-                    <div class="tickets-filter-item">
-                        <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
-                        <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
-                            @if (IsSelected(Model.Filters.ResultLimit, "100"))
-                            {
-                                <option value="100" selected>Últimos 100</option>
-                            }
-                            else
-                            {
-                                <option value="100">Últimos 100</option>
-                            }
-                            @if (IsSelected(Model.Filters.ResultLimit, "200"))
-                            {
-                                <option value="200" selected>Últimos 200</option>
-                            }
-                            else
-                            {
-                                <option value="200">Últimos 200</option>
-                            }
-                            @if (IsSelected(Model.Filters.ResultLimit, "all"))
-                            {
-                                <option value="all" selected>Todos</option>
-                            }
-                            else
-                            {
-                                <option value="all">Todos</option>
-                            }
-                        </select>
+                    <div class="tickets-filter-group tickets-filter-group-end">
+                        <div class="tickets-filter-item">
+                            <label class="tickets-filter-label" for="filter-indexed">Indexado:</label>
+                            <select id="filter-indexed" name="indexed" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                                @if (IsSelected(Model.Filters.Indexed, ""))
+                                {
+                                    <option value="" selected>Todos</option>
+                                }
+                                else
+                                {
+                                    <option value="">Todos</option>
+                                }
+                                @if (IsSelected(Model.Filters.Indexed, "true"))
+                                {
+                                    <option value="true" selected>Sí</option>
+                                }
+                                else
+                                {
+                                    <option value="true">Sí</option>
+                                }
+                                @if (IsSelected(Model.Filters.Indexed, "false"))
+                                {
+                                    <option value="false" selected>No</option>
+                                }
+                                else
+                                {
+                                    <option value="false">No</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="tickets-filter-item">
+                            <label class="tickets-filter-label" for="filter-rag">RAG:</label>
+                            <select id="filter-rag" name="rag" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                                @if (IsSelected(Model.Filters.Rag, ""))
+                                {
+                                    <option value="" selected>Todos</option>
+                                }
+                                else
+                                {
+                                    <option value="">Todos</option>
+                                }
+                                @if (IsSelected(Model.Filters.Rag, "true"))
+                                {
+                                    <option value="true" selected>Sí</option>
+                                }
+                                else
+                                {
+                                    <option value="true">Sí</option>
+                                }
+                                @if (IsSelected(Model.Filters.Rag, "false"))
+                                {
+                                    <option value="false" selected>No</option>
+                                }
+                                else
+                                {
+                                    <option value="false">No</option>
+                                }
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -349,6 +351,58 @@
                             }
                         </select>
                     </div>
+
+                    <div class="tickets-filter-item">
+                        <label class="tickets-filter-label" for="filter-show-unknown-company">Mostrar tickets de cliente _Unknown Company:</label>
+                        <select id="filter-show-unknown-company" name="showUnknownCompany" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.ShowUnknownCompany, "false"))
+                            {
+                                <option value="false" selected>No</option>
+                            }
+                            else
+                            {
+                                <option value="false">No</option>
+                            }
+                            @if (IsSelected(Model.Filters.ShowUnknownCompany, "true"))
+                            {
+                                <option value="true" selected>Sí</option>
+                            }
+                            else
+                            {
+                                <option value="true">Sí</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="tickets-filter-item tickets-filter-item-end">
+                        <label class="tickets-filter-label" for="filter-limit">Mostrar:</label>
+                        <select id="filter-limit" name="limit" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                            @if (IsSelected(Model.Filters.ResultLimit, "100"))
+                            {
+                                <option value="100" selected>Últimos 100</option>
+                            }
+                            else
+                            {
+                                <option value="100">Últimos 100</option>
+                            }
+                            @if (IsSelected(Model.Filters.ResultLimit, "200"))
+                            {
+                                <option value="200" selected>Últimos 200</option>
+                            }
+                            else
+                            {
+                                <option value="200">Últimos 200</option>
+                            }
+                            @if (IsSelected(Model.Filters.ResultLimit, "all"))
+                            {
+                                <option value="all" selected>Todos</option>
+                            }
+                            else
+                            {
+                                <option value="all">Todos</option>
+                            }
+                        </select>
+                    </div>
                 </div>
                 <input type="hidden" name="sortBy" id="tickets-sort-by" value="@Model.SortBy" />
                 <input type="hidden" name="sortDir" id="tickets-sort-dir" value="@Model.SortDir" />
@@ -357,7 +411,7 @@
     </form>
 
     <div class="tickets-table-card card border-0 shadow-sm mt-3">
-        <div class="table-responsive">
+        <div class="tickets-table-wrap">
             <table class="table tickets-table mb-0 align-middle" id="tickets-table">
                 <colgroup>
                     <col data-col="number" style="width: 7rem;" />
@@ -436,7 +490,7 @@
                             </button>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna RAG" tabindex="0"></span>
                         </th>
-                        <th class="tickets-th-resizable text-end" data-col="actions">
+                        <th class="tickets-th-resizable text-center" data-col="actions">
                             <span class="tickets-th-label">Acciones</span>
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Acciones" tabindex="0"></span>
                         </th>
@@ -521,28 +575,30 @@
                             <td class="text-center">
                                 @if (ticket.IsIndexed)
                                 {
-                                    <span class="ticket-indexed-yes" title="Documento del ticket indexado para RAG">
+                                    <span class="ticket-indexed-yes" title="Respuesta generada">
                                         <i class="bi bi-check-circle-fill"></i>
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="ticket-indexed-no" title="Documento del ticket sin indexar">
+                                    <span class="ticket-indexed-no" title="Respuesta sin generar">
                                         <i class="bi bi-circle"></i>
                                     </span>
                                 }
                             </td>
-                            <td class="text-end">
+                            <td class="text-center">
                                 <div class="ticket-actions">
-                                    <a asp-action="Details" asp-route-id="@ticket.Id"
-                                       class="btn btn-ticket-view" title="Ver detalle">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
                                     <a asp-controller="Rag" asp-action="Ask"
                                        asp-route-ticketId="@ticket.Id"
                                        asp-route-ticketNumber="@ticket.Number"
-                                       class="btn btn-ticket-rag" title="Ver respuesta RAG">
-                                        <i class="bi bi-robot"></i>
+                                       asp-route-focusGpt="true"
+                                       class="btn btn-ticket-rag ticket-rag-response-link" title="Ver respuesta RAG">
+                                        <span class="ticket-rag-response-label">
+                                            <i class="bi bi-robot"></i>
+                                        </span>
+                                        <span class="ticket-rag-response-loading d-none" aria-hidden="true">
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        </span>
                                     </a>
                                 </div>
                             </td>
@@ -595,6 +651,19 @@
                 });
             });
 
+            document.querySelectorAll('.ticket-rag-response-link').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (link.classList.contains('is-loading')) {
+                        return;
+                    }
+
+                    link.classList.add('is-loading');
+                    link.setAttribute('aria-busy', 'true');
+                    link.querySelector('.ticket-rag-response-label')?.classList.add('d-none');
+                    link.querySelector('.ticket-rag-response-loading')?.classList.remove('d-none');
+                });
+            });
+
             window.addEventListener('pageshow', function (event) {
                 if (!event.persisted) {
                     return;
@@ -604,6 +673,13 @@
                     link.classList.remove('is-loading');
                     link.removeAttribute('aria-busy');
                     link.querySelector('.ticket-number-spinner')?.classList.add('d-none');
+                });
+
+                document.querySelectorAll('.ticket-rag-response-link').forEach(function (link) {
+                    link.classList.remove('is-loading');
+                    link.removeAttribute('aria-busy');
+                    link.querySelector('.ticket-rag-response-label')?.classList.remove('d-none');
+                    link.querySelector('.ticket-rag-response-loading')?.classList.add('d-none');
                 });
             });
 

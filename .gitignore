@@ -31,3 +31,4 @@ vector-store/
 ## OS
 Thumbs.db
 .DS_Store
+_build_verify/

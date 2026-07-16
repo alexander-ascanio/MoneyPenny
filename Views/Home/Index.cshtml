@@ -201,6 +201,118 @@
         </div>
     </div>
 
+    <section class="mb-4 mb-lg-5 home-process-map-section">
+        <h2 class="home-section-title"><i class="bi bi-diagram-2"></i> Mapa de procesos</h2>
+        <p class="text-muted mb-4">
+            Flujos de los botones <strong>Acciones RAG</strong> en el detalle de un ticket
+            (<code>/Tickets/Details</code>). Cada diagrama resume el recorrido desde el clic hasta el resultado.
+            En la indexación con imágenes, <strong>OpenCV</strong> (<code>MessageBoxDetectionService</code>) intenta recortar
+            el diálogo Windows antes de enviar texto a <strong>OpenAI Vision</strong>; si no detecta MessageBox, Vision procesa la captura completa.
+        </p>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <article class="home-process-card home-process-card-index">
+                    <header class="home-process-card-header">
+                        <span class="home-process-btn home-process-btn-success"><i class="bi bi-arrow-repeat"></i> Indexar ticket</span>
+                        <span class="home-process-endpoint">POST <code>/Tickets/IndexTicket</code></span>
+                    </header>
+                    <div class="home-process-diagram mermaid">
+flowchart TD
+    A["Clic en Indexar ticket"] --> B{"¿Imágenes utilizables<br/>en comentario #1?"}
+    B -->|Sí| C["Modal: Vision sí / no"]
+    B -->|No| D["POST IndexTicket"]
+    C --> D
+    D --> E["Cargar ticket<br/>(TicketsDatabase)"]
+    E --> F["Comentario #1: texto plano<br/>+ filtro firmas/logos/GDPR"]
+    F --> G{"processImages?"}
+    G -->|Sí| H{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
+    H -->|Detectado| I["Recortar título y mensaje<br/>del diálogo Windows"]
+    I --> J["OpenAI Vision<br/>sobre recortes"]
+    H -->|No detectado| K["OpenAI Vision<br/>imagen completa"]
+    G -->|No| L["Solo HTML del comentario"]
+    J --> M["Chunks + embeddings<br/>(OpenAI + pgvector)"]
+    K --> M
+    L --> M
+    M --> N["VectorDatabase<br/>+ sync Índice #1"]
+    N --> O["Vuelta a Details<br/>Estado: Indexado"]
+                    </div>
+                </article>
+            </div>
+            <div class="col-lg-6">
+                <article class="home-process-card home-process-card-gpt">
+                    <header class="home-process-card-header">
+                        <span class="home-process-btn home-process-btn-primary"><i class="bi bi-eye"></i> Ver respuesta basada en GPT</span>
+                        <span class="home-process-endpoint">GET <code>/Rag/Ask</code> · POST <code>/Rag/ConsultGptAnswer</code></span>
+                    </header>
+                    <div class="home-process-diagram mermaid">
+flowchart TD
+    A["Clic Ver respuesta GPT"] --> B{"¿Ticket indexado?"}
+    B -->|No| C["Botón bloqueado"]
+    B -->|Sí| D["GET /Rag/Ask<br/>focusGpt=true"]
+    D --> E["Embedding comentario #1"]
+    E --> F["Recuperar tickets similares<br/>(no KB)"]
+    F --> G["Vista Ask: contexto<br/>+ comentario indexado"]
+    G --> H["Clic Consultar respuesta GPT"]
+    H --> I["POST ConsultGptAnswer"]
+    I --> J["OpenAI genera respuesta"]
+    J --> K["rag_query_logs"]
+    K --> L["Comentario privado<br/>TeamSupport API-TS"]
+    L --> M["Comprobación técnica<br/>R1–R6"]
+    M --> N["Vista Ask: respuesta<br/>+ valoración 👍👎"]
+                    </div>
+                </article>
+            </div>
+            <div class="col-lg-6">
+                <article class="home-process-card home-process-card-kb">
+                    <header class="home-process-card-header">
+                        <span class="home-process-btn home-process-btn-outline"><i class="bi bi-book"></i> Ver respuesta basada en KB</span>
+                        <span class="home-process-endpoint">GET <code>/Rag/Ask?knowledgeBaseOnly=true</code></span>
+                    </header>
+                    <div class="home-process-diagram mermaid">
+flowchart TD
+    A["Clic Ver respuesta KB"] --> B{"¿Ticket indexado?"}
+    B -->|No| C["Botón bloqueado"]
+    B -->|Sí| D["GET /Rag/Ask<br/>knowledgeBaseOnly=true"]
+    D --> E["Embedding comentario #1"]
+    E --> F["Recuperar solo tickets<br/>Knowledge Base"]
+    F --> G["Vista Ask: contexto KB"]
+    G --> H["Extraer sección Solución<br/>del ticket más similar"]
+    H --> I["Tarjeta Respuesta KB<br/>+ valoración"]
+    I --> J{"Opcional"}
+    J --> K["Consultar respuesta GPT<br/>con contexto KB"]
+    K --> L["POST ConsultGptAnswer<br/>knowledgeBaseOnly=true"]
+                    </div>
+                </article>
+            </div>
+            <div class="col-lg-6">
+                <article class="home-process-card home-process-card-api">
+                    <header class="home-process-card-header">
+                        <span class="home-process-btn home-process-btn-api"><i class="bi bi-play-fill"></i> Indexar y generar respuesta GPT</span>
+                        <span class="home-process-endpoint">GET <code>/Rag/ProcessTicket</code></span>
+                    </header>
+                    <div class="home-process-diagram mermaid">
+flowchart TD
+    A["Clic o llamada API<br/>ProcessTicket"] --> B["Resolver ticket<br/>ticketId / ticketNumber"]
+    B --> C{"¿Capturas utilizables?"}
+    C -->|Sí| D["Indexar con Vision<br/>automático"]
+    C -->|No| E["Indexar solo texto"]
+    D --> F{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
+    F -->|Detectado| G["Recortar título/mensaje<br/>→ OpenAI Vision"]
+    F -->|No detectado| H["OpenAI Vision<br/>imagen completa"]
+    G --> I["Chunks + embeddings<br/>en VectorDatabase"]
+    H --> I
+    E --> I
+    I --> J["Recuperar contexto<br/>+ generar GPT"]
+    J --> K["rag_query_logs<br/>(sin TeamSupport)"]
+    K --> L["Comprobación técnica<br/>R1–R6 + HTML"]
+    L --> M["JSON en pantalla<br/>ticket · indexing · gpt · groundingCheck"]
+    M --> N["Uso masivo / integración<br/>externa"]
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
     <section class="home-cta">
         <div class="home-cta-glow"></div>
         <div class="home-cta-inner">
@@ -219,3 +331,30 @@
         </div>
     </section>
 </div>
+
+@section Scripts {
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#e0e7ff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#a5b4fc',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+                fontFamily: 'Segoe UI, system-ui, sans-serif',
+                fontSize: '13px'
+            },
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 12,
+                nodeSpacing: 28,
+                rankSpacing: 36
+            }
+        });
+    </script>
+}
