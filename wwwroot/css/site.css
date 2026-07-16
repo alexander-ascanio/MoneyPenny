@@ -1,5 +1,6 @@
 html {
   font-size: 14px;
+  --app-header-offset: 3.5rem;
 }
 
 @media (min-width: 768px) {
@@ -19,6 +20,15 @@ html {
 
 body {
   margin-bottom: 60px;
+}
+
+.app-header {
+  z-index: 1030;
+  background-color: #fff;
+}
+
+.app-content {
+  padding-top: 1rem;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -128,6 +138,22 @@ body {
   min-width: 0;
 }
 
+.tickets-filter-item-end {
+  margin-left: auto;
+}
+
+.tickets-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tickets-filter-group-end {
+  margin-left: auto;
+}
+
 .tickets-filter-label {
   margin: 0;
   font-size: 0.85rem;
@@ -157,12 +183,25 @@ body {
 
 .tickets-table-card {
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.tickets-table-wrap {
+  border-radius: inherit;
+}
+
+@media (max-width: 991.98px) {
+  .tickets-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .tickets-table {
   table-layout: fixed;
   width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .tickets-table thead th {
@@ -175,8 +214,11 @@ body {
   border: none;
   padding: 0.85rem 0.75rem;
   white-space: nowrap;
-  position: relative;
+  position: sticky;
+  top: var(--app-header-offset, 3.5rem);
+  z-index: 5;
   overflow: hidden;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.12);
 }
 
 .tickets-th-label {
@@ -415,7 +457,7 @@ body.tickets-col-resizing * {
 
 .ticket-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.35rem;
 }
 
@@ -446,6 +488,20 @@ body.tickets-col-resizing * {
   color: #fff;
   transform: translateY(-1px);
   opacity: 0.92;
+}
+
+.btn-ticket-rag.is-loading {
+  pointer-events: none;
+  cursor: wait;
+  opacity: 0.85;
+  transform: none;
+}
+
+.btn-ticket-rag .ticket-rag-response-loading .spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+  color: #fff;
 }
 
 /* Detail page */
@@ -488,7 +544,7 @@ body.tickets-col-resizing * {
 
 .ticket-rag-sidebar-sticky {
   position: sticky;
-  top: 1rem;
+  top: calc(var(--app-header-offset, 3.5rem) + 1rem);
   align-self: flex-start;
 }
 
@@ -1067,8 +1123,9 @@ body.tickets-col-resizing * {
   color: #15803d;
 }
 
-.rag-gpt-section {
-  scroll-margin-top: 1rem;
+.rag-gpt-section,
+.rag-gpt-actions {
+  scroll-margin-top: calc(var(--app-header-offset, 3.5rem) + 0.5rem);
 }
 
 .first-comment-counts-loading .indexed-summary-card.first-comment-counts-pending {
@@ -1460,6 +1517,93 @@ body.tickets-col-resizing * {
 
 .home-section-title i {
   color: #6366f1;
+}
+
+.home-process-map-section .home-process-card {
+  height: 100%;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.home-process-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.home-process-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.home-process-btn-success {
+  background: #198754;
+  color: #fff;
+}
+
+.home-process-btn-primary {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.home-process-btn-outline {
+  background: #fff;
+  color: #0d6efd;
+  border: 1px solid #0d6efd;
+}
+
+.home-process-btn-api {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.home-process-endpoint {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.home-process-endpoint code {
+  font-size: 0.7rem;
+  color: #475569;
+}
+
+.home-process-diagram {
+  padding: 1rem 0.75rem 1.25rem;
+  overflow-x: auto;
+  min-height: 280px;
+}
+
+.home-process-diagram .mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+.home-process-card-index .home-process-card-header {
+  border-top: 3px solid #198754;
+}
+
+.home-process-card-gpt .home-process-card-header {
+  border-top: 3px solid #0d6efd;
+}
+
+.home-process-card-kb .home-process-card-header {
+  border-top: 3px solid #6366f1;
+}
+
+.home-process-card-api .home-process-card-header {
+  border-top: 3px solid #0891b2;
 }
 
 .home-feature-card {

@@ -47,6 +47,10 @@ public class TicketRepository : ITicketRepository
         {
             query = query.Where(t => t.Customer == filters.CustomerName);
         }
+        else if (!string.Equals(filters.ShowUnknownCompany, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(t => t.Customer != TicketListScope.UnknownCompanyCustomer);
+        }
 
         if (!string.IsNullOrWhiteSpace(filters.Customer))
         {
