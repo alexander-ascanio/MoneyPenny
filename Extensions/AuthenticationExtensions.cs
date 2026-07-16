@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Auth0.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using MoneyPenny.Authentication;
 using MoneyPenny.Data;
 using MoneyPenny.Models;
 using MoneyPenny.Options;
@@ -18,6 +21,12 @@ public static class AuthenticationExtensions
         IConfiguration configuration,
         IHostEnvironment environment)
     {
+        // Esquema Bearer API (válido en todos los entornos)
+        services.AddAuthentication()
+            .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+                ApiKeyAuthenticationOptions.SchemeName,
+                _ => { });
+
         if (environment.IsDevelopment())
         {
             AddDevelopmentIdentityAuthentication(services, configuration);
@@ -26,6 +35,18 @@ public static class AuthenticationExtensions
         {
             AddProductionAuth0Authentication(services, configuration);
         }
+
+        // Política que acepta usuario autenticado por cookie O por Bearer API
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("ApiOrUser", policy =>
+                policy.AddAuthenticationSchemes(
+                        ApiKeyAuthenticationOptions.SchemeName,
+                        environment.IsDevelopment()
+                            ? IdentityConstants.ApplicationScheme
+                            : CookieAuthenticationDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser());
+        });
 
         return services;
     }
