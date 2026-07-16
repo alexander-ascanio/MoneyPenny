@@ -284,18 +284,41 @@ public class VectorRepository : IVectorRepository
     {
         if (reuseIfUnrated)
         {
-            var existing = await _context.RagQueryLogs
-                .FirstOrDefaultAsync(
-                    l => l.TicketId == log.TicketId
-                         && l.ResponseType == log.ResponseType
-                         && l.Answer == log.Answer
-                         && l.UserId == log.UserId
-                         && l.Rating == null,
-                    cancellationToken);
-
-            if (existing is not null)
+            if (log.ResponseType == RagResponseType.Context)
             {
-                return existing;
+                var existingContext = await _context.RagQueryLogs
+                    .FirstOrDefaultAsync(
+                        l => l.TicketId == log.TicketId
+                             && l.ResponseType == RagResponseType.Context
+                             && l.UserId == log.UserId
+                             && l.Rating == null,
+                        cancellationToken);
+
+                if (existingContext is not null)
+                {
+                    existingContext.Question = log.Question;
+                    existingContext.Answer = log.Answer;
+                    existingContext.PromptVersion = log.PromptVersion;
+                    existingContext.CreatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return existingContext;
+                }
+            }
+            else
+            {
+                var existing = await _context.RagQueryLogs
+                    .FirstOrDefaultAsync(
+                        l => l.TicketId == log.TicketId
+                             && l.ResponseType == log.ResponseType
+                             && l.Answer == log.Answer
+                             && l.UserId == log.UserId
+                             && l.Rating == null,
+                        cancellationToken);
+
+                if (existing is not null)
+                {
+                    return existing;
+                }
             }
         }
 
@@ -365,6 +388,17 @@ public class VectorRepository : IVectorRepository
             .OrderByDescending(l => l.CreatedAt)
             .ThenByDescending(l => l.Id)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<bool> HasQueryLogForTicketAsync(
+        int ticketId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.RagQueryLogs
+            .AsNoTracking()
+            .AnyAsync(
+                l => l.TicketId == ticketId && l.ResponseType == RagResponseType.Context,
+                cancellationToken);
     }
 
     public Task<int> CountRatedQueryLogsAsync(

@@ -41,7 +41,9 @@ public class RagOrchestrator : IRagOrchestrator
     private readonly ICommentContentService _commentContentService;
     private readonly ITeamSupportAttachmentService _attachmentService;
     private readonly ITeamSupportActionApiClient _teamSupportActionApiClient;
+    private readonly IHostEnvironment _environment;
     private readonly RagOptions _options;
+    private readonly TeamSupportApiOptions _teamSupportOptions;
 
     public RagOrchestrator(
         IRetrievalService retrievalService,
@@ -51,7 +53,9 @@ public class RagOrchestrator : IRagOrchestrator
         ICommentContentService commentContentService,
         ITeamSupportAttachmentService attachmentService,
         ITeamSupportActionApiClient teamSupportActionApiClient,
-        IOptions<RagOptions> options)
+        IHostEnvironment environment,
+        IOptions<RagOptions> options,
+        IOptions<TeamSupportApiOptions> teamSupportOptions)
     {
         _retrievalService = retrievalService;
         _generationService = generationService;
@@ -60,7 +64,9 @@ public class RagOrchestrator : IRagOrchestrator
         _commentContentService = commentContentService;
         _attachmentService = attachmentService;
         _teamSupportActionApiClient = teamSupportActionApiClient;
+        _environment = environment;
         _options = options.Value;
+        _teamSupportOptions = teamSupportOptions.Value;
     }
 
     public async Task<RagResponseViewModel> ProcessTicketAsync(
@@ -121,6 +127,15 @@ public class RagOrchestrator : IRagOrchestrator
 
         if (!request.GenerateGptAnswer)
         {
+            if (!request.SkipQueryLog && !request.KnowledgeBaseOnly)
+            {
+                await TrySaveContextQueryLogAsync(
+                    request,
+                    userId,
+                    contextItems.Count,
+                    cancellationToken);
+            }
+
             return new RagResponseViewModel
             {
                 ContextItems = contextItems,
@@ -154,7 +169,12 @@ public class RagOrchestrator : IRagOrchestrator
                 ResponseType = RagResponseType.Gpt
             }, cancellationToken: cancellationToken);
 
-        var actionInsertResult = request.SkipTeamSupportActionInsert
+        // Solo en Development (y si el flag de config lo permite): en producción no se inserta en TeamSupport.
+        var skipTeamSupportActionInsert = request.SkipTeamSupportActionInsert
+            || !_environment.IsDevelopment()
+            || !_teamSupportOptions.EnableGptAnswerPrivateActionInsert;
+
+        var actionInsertResult = skipTeamSupportActionInsert
             ? new TeamSupportActionCreateResult()
             : await TryInsertPrivateGptActionAsync(
                 firstComment,
@@ -162,7 +182,7 @@ public class RagOrchestrator : IRagOrchestrator
                 answer,
                 cancellationToken);
 
-        if (!request.SkipTeamSupportActionInsert
+        if (!skipTeamSupportActionInsert
             && gptLog is not null
             && actionInsertResult.Success
             && !string.IsNullOrWhiteSpace(actionInsertResult.ActionId))
@@ -188,9 +208,9 @@ public class RagOrchestrator : IRagOrchestrator
             GptRating = gptLog?.Rating,
             KnowledgeBaseQueryLogId = knowledgeBaseLog?.Id,
             KnowledgeBaseRating = knowledgeBaseLog?.Rating,
-            GptTeamSupportActionInserted = !request.SkipTeamSupportActionInsert && actionInsertResult.Success,
-            GptTeamSupportActionId = request.SkipTeamSupportActionInsert ? null : actionInsertResult.ActionId,
-            GptTeamSupportActionWarning = request.SkipTeamSupportActionInsert || actionInsertResult.Success
+            GptTeamSupportActionInserted = !skipTeamSupportActionInsert && actionInsertResult.Success,
+            GptTeamSupportActionId = skipTeamSupportActionInsert ? null : actionInsertResult.ActionId,
+            GptTeamSupportActionWarning = skipTeamSupportActionInsert || actionInsertResult.Success
                 ? null
                 : actionInsertResult.ErrorMessage
         };
@@ -386,6 +406,28 @@ public class RagOrchestrator : IRagOrchestrator
                 Answer = knowledgeBaseSolution.Text,
                 PromptVersion = KnowledgeBasePromptVersion,
                 ResponseType = RagResponseType.KnowledgeBase
+            },
+            reuseIfUnrated: true,
+            cancellationToken);
+    }
+
+    private Task<RagQueryLog> TrySaveContextQueryLogAsync(
+        AskTicketViewModel request,
+        string userId,
+        int contextTicketCount,
+        CancellationToken cancellationToken)
+    {
+        return _vectorRepository.SaveQueryLogAsync(
+            new RagQueryLog
+            {
+                UserId = userId,
+                TicketId = request.TicketId,
+                Question = $"Contexto RAG recuperado (ticket #{request.TicketNumber})",
+                Answer = contextTicketCount == 0
+                    ? "Sin tickets similares en contexto"
+                    : $"{contextTicketCount} ticket(s) similar(es) en contexto",
+                PromptVersion = "context-v1",
+                ResponseType = RagResponseType.Context
             },
             reuseIfUnrated: true,
             cancellationToken);

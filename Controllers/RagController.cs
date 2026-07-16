@@ -316,12 +316,6 @@ public class RagController : Controller
             ticketNumber = ticket?.Number;
         }
 
-        var notIndexedRedirect = await TryRedirectIfTicketNotIndexedAsync(ticketId.Value, cancellationToken);
-        if (notIndexedRedirect is not null)
-        {
-            return notIndexedRedirect;
-        }
-
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
         var response = await BuildAskResponseAsync(
             ticketId.Value,
@@ -339,13 +333,16 @@ public class RagController : Controller
         int ticketId,
         CancellationToken cancellationToken)
     {
-        if (await _vectorRepository.IsTicketIndexedAsync(ticketId, cancellationToken))
+        if (await _vectorRepository.IsTicketIndexedBySourceAsync(
+                ticketId,
+                DocumentChunkSource.ClientFirstComment,
+                cancellationToken))
         {
             return null;
         }
 
         TempData["WarningMessage"] =
-            "Este ticket no está indexado. Utiliza «Indexar ticket» antes de consultar la respuesta RAG.";
+            "El comentario #1 de este ticket no está indexado. Indexa el comentario #1 (Índice #1) o usa «Indexar ticket» antes de generar la respuesta GPT.";
         return RedirectToAction("Details", "Tickets", new { id = ticketId });
     }
 
@@ -381,7 +378,7 @@ public class RagController : Controller
             combinedEstimate,
             generateGptAnswer
                 ? "Consumo estimado de la consulta"
-                : "Estimación al pulsar «Consultar respuesta GPT»");
+                : "Estimación al pulsar «Generar respuesta GPT»");
 
         if (generateGptAnswer && response.HasGptAnswer)
         {
@@ -577,6 +574,9 @@ public class RagController : Controller
     }
 
     [HttpGet]
+    public IActionResult Index(string? jobId) => FirstCommentIndex(jobId);
+
+    [HttpGet]
     public IActionResult FirstCommentIndex(string? jobId)
     {
         var model = new FirstCommentIndexViewModel
@@ -591,7 +591,7 @@ public class RagController : Controller
             if (job?.Status == FirstCommentBulkIndexJobStatus.Completed && job.Result is not null)
             {
                 ApplyFirstCommentIndexResult(model, job.Result);
-                return View(model);
+                return View("FirstCommentIndex", model);
             }
 
             if (job?.Status == FirstCommentBulkIndexJobStatus.Failed)
@@ -600,7 +600,7 @@ public class RagController : Controller
             }
         }
 
-        return View(model);
+        return View("FirstCommentIndex", model);
     }
 
     [HttpGet]

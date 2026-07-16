@@ -20,11 +20,11 @@
             · Embeddings: ~@Model.EmbeddingInputTokens.ToString("N0") tok
             @if (Model.VisionApiCalls > 0)
             {
-                <span> · Vision: ~@(Model.VisionInputTokens + Model.VisionOutputTokens).ToString("N0") tok</span>
+                <span> · Vision: ~@((Model.VisionInputTokens + Model.VisionOutputTokens).ToString("N0")) tok</span>
             }
             @if (Model.ChatApiCalls > 0)
             {
-                <span> · Chat: ~@(Model.ChatInputTokens + Model.ChatOutputTokens).ToString("N0") tok</span>
+                <span> · Chat: ~@((Model.ChatInputTokens + Model.ChatOutputTokens).ToString("N0")) tok</span>
             }
         </div>
         <div class="small text-muted fst-italic mt-1 mb-0">Aproximación; el consumo real puede variar.</div>

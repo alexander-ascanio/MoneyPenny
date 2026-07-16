@@ -218,23 +218,21 @@
                     </header>
                     <div class="home-process-diagram mermaid">
 flowchart TD
-    A["Clic en Indexar ticket"] --> B{"¿Imágenes utilizables<br/>en comentario #1?"}
-    B -->|Sí| C["Modal: Vision sí / no"]
-    B -->|No| D["POST IndexTicket"]
-    C --> D
-    D --> E["Cargar ticket<br/>(TicketsDatabase)"]
-    E --> F["Comentario #1: texto plano<br/>+ filtro firmas/logos/GDPR"]
-    F --> G{"processImages?"}
-    G -->|Sí| H{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
-    H -->|Detectado| I["Recortar título y mensaje<br/>del diálogo Windows"]
-    I --> J["OpenAI Vision<br/>sobre recortes"]
-    H -->|No detectado| K["OpenAI Vision<br/>imagen completa"]
-    G -->|No| L["Solo HTML del comentario"]
-    J --> M["Chunks + embeddings<br/>(OpenAI + pgvector)"]
-    K --> M
-    L --> M
-    M --> N["VectorDatabase<br/>+ sync Índice #1"]
-    N --> O["Vuelta a Details<br/>Estado: Indexado"]
+    A["Clic en Indexar ticket"] --> B["Confirmar indexación"]
+    B --> C["POST IndexTicket<br/>processImages=true"]
+    C --> D["Cargar ticket<br/>(TicketsDatabase)"]
+    D --> E["Comentario #1: texto plano<br/>+ filtro firmas/logos/GDPR"]
+    E --> F{"¿Imágenes utilizables<br/>y Vision habilitado?"}
+    F -->|Sí| G{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
+    G -->|Detectado| H["Recortar título y mensaje<br/>del diálogo Windows"]
+    H --> I["OpenAI Vision<br/>sobre recortes"]
+    G -->|No detectado| J["OpenAI Vision<br/>imagen completa"]
+    F -->|No| K["Solo HTML del comentario"]
+    I --> L["Chunks + embeddings<br/>(OpenAI + pgvector)"]
+    J --> L
+    K --> L
+    L --> M["VectorDatabase<br/>+ sync Índice #1"]
+    M --> N["Vuelta a Details<br/>Estado: Indexado"]
                     </div>
                 </article>
             </div>
@@ -252,7 +250,7 @@ flowchart TD
     D --> E["Embedding comentario #1"]
     E --> F["Recuperar tickets similares<br/>(no KB)"]
     F --> G["Vista Ask: contexto<br/>+ comentario indexado"]
-    G --> H["Clic Consultar respuesta GPT"]
+    G --> H["Clic Generar respuesta GPT"]
     H --> I["POST ConsultGptAnswer"]
     I --> J["OpenAI genera respuesta"]
     J --> K["rag_query_logs"]
@@ -279,7 +277,7 @@ flowchart TD
     G --> H["Extraer sección Solución<br/>del ticket más similar"]
     H --> I["Tarjeta Respuesta KB<br/>+ valoración"]
     I --> J{"Opcional"}
-    J --> K["Consultar respuesta GPT<br/>con contexto KB"]
+    J --> K["Generar respuesta GPT<br/>con contexto KB"]
     K --> L["POST ConsultGptAnswer<br/>knowledgeBaseOnly=true"]
                     </div>
                 </article>

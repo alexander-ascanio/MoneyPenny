@@ -16,6 +16,8 @@ public class TicketDetailViewModel
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public bool IsIndexed { get; init; }
+    public bool IsFirstCommentIndexed { get; init; }
+    public bool HasGeneratedContext { get; init; }
     public int FirstCommentImageCount { get; init; }
     public bool PromptImageProcessingOnIndex { get; init; }
     public ViewModels.Shared.TokenUsageEstimateViewModel? IndexWithoutImagesEstimate { get; init; }
