@@ -29,9 +29,9 @@
                         <span class="ticket-number-badge">#@Model.Number</span>
                         <span class="ticket-pill @StatusClass(Model.Status)">@Model.Status</span>
                         <span class="ticket-pill @PriorityClass(Model.Priority)">@Model.Priority</span>
-                        @if (Model.IsIndexed)
+                        @if (Model.IsFirstCommentIndexed)
                         {
-                            <span class="badge rounded-pill text-bg-success">Indexado RAG</span>
+                            <span class="badge rounded-pill text-bg-success">Indexado #1</span>
                         }
                     </div>
                     @{
@@ -301,72 +301,59 @@ Vectorización: el comentario #1 del ticket se transforma en embeddings (vectore
 
 Chunks: el texto se divide en fragmentos solapados para recuperar solo las partes más relevantes en cada consulta.
 
-Al pulsar «Ver respuesta basada en GPT», MoneyPenny busca los chunks más similares y los envía como contexto al modelo."
+Al pulsar «Generar contexto», MoneyPenny busca los chunks más similares y los muestra como contexto recuperado."
                                 aria-label="Qué significa RAG">
                             <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
                         </button>
                     </h5>
                 </div>
                 <div class="card-body d-grid gap-3">
-                    <div class="ticket-rag-status">
-                        Estado de indexación:
-                        @if (Model.IsIndexed)
-                        {
-                            <span class="badge rounded-pill text-bg-success">Indexado</span>
-                        }
-                        else
-                        {
-                            <span class="badge rounded-pill text-bg-secondary">Pendiente</span>
-                        }
-                    </div>
-                    <form asp-action="IndexTicket" method="post" id="indexTicketForm">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@Model.Id" />
-                        <input type="hidden" name="processImages" id="processImagesInput" value="true" />
-                        @if (Model.PromptImageProcessingOnIndex)
-                        {
-                            <p class="text-muted small mb-3">
-                                El comentario #1 incluye @Model.FirstCommentImageCount imagen(es).
-                                Al indexar se preguntará si desea procesarlas con Vision.
-                            </p>
-                        }
-                        else if (Model.IndexWithoutImagesEstimate is not null)
-                        {
-                            <partial name="_TokenUsageEstimate" model="Model.IndexWithoutImagesEstimate" />
-                        }
-                        <button type="submit" class="btn btn-success w-100" id="indexTicketButton">
-                            <span class="index-ticket-label">
-                                <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
-                            </span>
-                            <span class="index-ticket-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                Indexando…
-                            </span>
-                        </button>
-                    </form>
+                    <a asp-action="Rag" asp-route-id="@Model.Id"
+                       class="btn btn-success w-100 ticket-rag-response-link">
+                        <span class="ticket-rag-response-label">
+                            <i class="bi bi-play-fill me-1"></i> Iniciar acciones manualmente
+                        </span>
+                        <span class="ticket-rag-response-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Cargando…
+                        </span>
+                    </a>
                     <div class="alert alert-warning border-0 mb-0 d-none" id="notIndexedRagAlert" role="alert">
-                        Este ticket no está indexado. Utiliza «Indexar ticket» antes de consultar la respuesta RAG.
+                        El comentario #1 de este ticket no está indexado. Indexa el comentario #1 desde Acciones RAG o Índice #1 antes de consultar la respuesta RAG.
                     </div>
-                    @if (Model.IsIndexed)
+                    <div class="ticket-rag-context-actions">
+                        @if (!Model.HasGeneratedContext)
+                        {
+                            @if (Model.IsFirstCommentIndexed)
+                            {
+                                <a asp-controller="Rag" asp-action="Ask"
+                                   asp-route-ticketId="@Model.Id"
+                                   asp-route-ticketNumber="@Model.Number"
+                                   class="btn btn-primary w-100 ticket-rag-response-link">
+                                    <span class="ticket-rag-response-label">
+                                        <i class="bi bi-diagram-3 me-1"></i> Generar contexto
+                                    </span>
+                                    <span class="ticket-rag-response-loading d-none">
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        Cargando…
+                                    </span>
+                                </a>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary w-100" data-rag-blocked-button>
+                                    <i class="bi bi-diagram-3 me-1"></i> Generar contexto
+                                </button>
+                            }
+                        }
+                    </div>
+                    @if (Model.IsFirstCommentIndexed)
                     {
                         <a asp-controller="Rag" asp-action="Ask"
                            asp-route-ticketId="@Model.Id"
                            asp-route-ticketNumber="@Model.Number"
-                           asp-route-focusGpt="true"
-                           class="btn btn-primary w-100 ticket-rag-response-link">
-                            <span class="ticket-rag-response-label">
-                                <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
-                            </span>
-                            <span class="ticket-rag-response-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                Cargando…
-                            </span>
-                        </a>
-                        <a asp-controller="Rag" asp-action="Ask"
-                           asp-route-ticketId="@Model.Id"
-                           asp-route-ticketNumber="@Model.Number"
                            asp-route-knowledgeBaseOnly="true"
-                           class="btn btn-outline-primary w-100 mt-2 ticket-rag-response-link">
+                           class="btn btn-outline-primary w-100 ticket-rag-response-link">
                             <span class="ticket-rag-response-label">
                                 <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
                             </span>
@@ -378,10 +365,7 @@ Al pulsar «Ver respuesta basada en GPT», MoneyPenny busca los chunks más simi
                     }
                     else
                     {
-                        <button type="button" class="btn btn-primary w-100" data-rag-blocked-button>
-                            <i class="bi bi-eye me-1"></i> Ver respuesta basada en GPT
-                        </button>
-                        <button type="button" class="btn btn-outline-primary w-100 mt-2" data-rag-blocked-button>
+                        <button type="button" class="btn btn-outline-primary w-100" data-rag-blocked-button>
                             <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
                         </button>
                     }
@@ -423,68 +407,6 @@ Al pulsar «Ver respuesta basada en GPT», MoneyPenny busca los chunks más simi
         </div>
     </div>
 </div>
-
-@if (Model.PromptImageProcessingOnIndex)
-{
-    <div class="modal fade" id="imageProcessingModal" tabindex="-1" aria-labelledby="imageProcessingModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="imageProcessingModalLabel">
-                        <i class="bi bi-image me-2"></i>Imágenes en el comentario
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-2">
-                        El primer comentario del ticket incluye
-                        <strong>@Model.FirstCommentImageCount imagen@(Model.FirstCommentImageCount == 1 ? string.Empty : "es")</strong>.
-                    </p>
-                    <p class="mb-2 text-muted">
-                        Extraer el texto de esas capturas utiliza tokens de OpenAI (visión).
-                        Elige cómo desea continuar con la indexación:
-                    </p>
-                    <div class="vstack gap-2 mb-3">
-                        <label class="border rounded p-3 mb-0 d-flex gap-2 align-items-start">
-                            <input class="form-check-input mt-1" type="radio" name="imageProcessingChoice" id="choiceWithVision" value="withVision" checked />
-                            <span>
-                                <strong>Procesar imágenes con Vision</strong>
-                                <span class="d-block text-muted small">Incluye el texto extraído de las capturas en el índice RAG.</span>
-                            </span>
-                        </label>
-                        <label class="border rounded p-3 mb-0 d-flex gap-2 align-items-start">
-                            <input class="form-check-input mt-1" type="radio" name="imageProcessingChoice" id="choiceWithoutVision" value="withoutVision" />
-                            <span>
-                                <strong>Indexar sin procesar imágenes</strong>
-                                <span class="d-block text-muted small">Solo texto HTML del comentario (sin Vision).</span>
-                            </span>
-                        </label>
-                    </div>
-                    <div id="estimateWithVision" class="mb-2">
-                        @if (Model.IndexWithImagesEstimate is not null)
-                        {
-                            <partial name="_TokenUsageEstimate" model="Model.IndexWithImagesEstimate" />
-                        }
-                    </div>
-                    <div id="estimateWithoutVision" class="mb-2 d-none">
-                        @if (Model.IndexWithoutImagesEstimate is not null)
-                        {
-                            <partial name="_TokenUsageEstimate" model="Model.IndexWithoutImagesEstimate" />
-                        }
-                    </div>
-                </div>
-                <div class="modal-footer flex-column flex-sm-row gap-2">
-                    <button type="button" class="btn btn-success w-100 w-sm-auto" id="confirmProcessImagesButton">
-                        Confirmar e indexar
-                    </button>
-                    <button type="button" class="btn btn-link text-decoration-none w-100 w-sm-auto" data-bs-dismiss="modal" id="cancelIndexButton">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
 
 <div class="modal fade" id="commentImagesModal" tabindex="-1" aria-labelledby="commentImagesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -541,90 +463,6 @@ Al pulsar «Ver respuesta basada en GPT», MoneyPenny busca los chunks más simi
                     link.querySelector('.ticket-rag-response-loading')?.classList.add('d-none');
                 });
             });
-        })();
-    </script>
-
-    <script>
-        (function () {
-            const form = document.getElementById('indexTicketForm');
-            const button = document.getElementById('indexTicketButton');
-            if (!form || !button) {
-                return;
-            }
-
-            const label = button.querySelector('.index-ticket-label');
-            const loading = button.querySelector('.index-ticket-loading');
-
-            function setIndexTicketLoading(isLoading) {
-                button.disabled = isLoading;
-                label?.classList.toggle('d-none', isLoading);
-                loading?.classList.toggle('d-none', !isLoading);
-            }
-
-            const modalElement = document.getElementById('imageProcessingModal');
-            if (modalElement) {
-                const processImagesInput = document.getElementById('processImagesInput');
-                const modal = new bootstrap.Modal(modalElement);
-                const choiceWithVision = document.getElementById('choiceWithVision');
-                const choiceWithoutVision = document.getElementById('choiceWithoutVision');
-                const estimateWithVision = document.getElementById('estimateWithVision');
-                const estimateWithoutVision = document.getElementById('estimateWithoutVision');
-                let confirmedSubmit = false;
-
-                function syncEstimateVisibility() {
-                    const withVision = choiceWithVision.checked;
-                    estimateWithVision.classList.toggle('d-none', !withVision);
-                    estimateWithoutVision.classList.toggle('d-none', withVision);
-                }
-
-                choiceWithVision.addEventListener('change', syncEstimateVisibility);
-                choiceWithoutVision.addEventListener('change', syncEstimateVisibility);
-                syncEstimateVisibility();
-
-                form.addEventListener('submit', function (event) {
-                    if (confirmedSubmit) {
-                        setIndexTicketLoading(true);
-                        return;
-                    }
-
-                    event.preventDefault();
-                    modal.show();
-                });
-
-                document.getElementById('confirmProcessImagesButton').addEventListener('click', function () {
-                    const withVision = choiceWithVision.checked;
-                    processImagesInput.value = withVision ? 'true' : 'false';
-
-                    if (typeof window.__imageProcessingModalOnConfirm === 'function') {
-                        const callback = window.__imageProcessingModalOnConfirm;
-                        window.__imageProcessingModalOnConfirm = null;
-                        modal.hide();
-                        callback(withVision);
-                        return;
-                    }
-
-                    confirmedSubmit = true;
-                    setIndexTicketLoading(true);
-                    modal.hide();
-                    form.requestSubmit();
-                });
-
-                document.getElementById('cancelIndexButton').addEventListener('click', function () {
-                    confirmedSubmit = false;
-                    window.__imageProcessingModalOnConfirm = null;
-                });
-
-                modalElement.addEventListener('hidden.bs.modal', function () {
-                    if (!confirmedSubmit) {
-                        processImagesInput.value = 'true';
-                        window.__imageProcessingModalOnConfirm = null;
-                    }
-                });
-            } else {
-                form.addEventListener('submit', function () {
-                    setIndexTicketLoading(true);
-                });
-            }
         })();
     </script>
 

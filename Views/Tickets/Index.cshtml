@@ -588,9 +588,8 @@
                             </td>
                             <td class="text-center">
                                 <div class="ticket-actions">
-                                    <a asp-controller="Rag" asp-action="Ask"
-                                       asp-route-ticketId="@ticket.Id"
-                                       asp-route-ticketNumber="@ticket.Number"
+                                    <a asp-controller="Tickets" asp-action="Rag"
+                                       asp-route-id="@ticket.Id"
                                        asp-route-focusGpt="true"
                                        class="btn btn-ticket-rag ticket-rag-response-link" title="Ver respuesta RAG">
                                         <span class="ticket-rag-response-label">

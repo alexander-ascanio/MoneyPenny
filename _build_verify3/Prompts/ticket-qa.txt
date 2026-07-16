@@ -1,0 +1,17 @@
+Ticket actual (#{{ticketNumber}}) — comentario #1 indexado:
+{{currentTicketComment}}
+
+Contexto recuperado (tickets con problema similar; comentarios posteriores al #1 del cliente, sin repetir el problema inicial):
+{{context}}
+
+Pregunta:
+{{question}}
+
+Instrucciones:
+- El comentario #1 del ticket actual es lo que escribió el cliente; tu respuesta va dirigida a él o ella.
+- El contexto recuperado incluye cómo se resolvieron casos similares en comentarios posteriores (respuestas de soporte, aclaraciones y cierre).
+- Redacta un mensaje para el cliente con la solución o los pasos que debe seguir, inspirándote en esas resoluciones previas y en el problema actual.
+- Escribe en segunda persona, como en un comentario o correo de soporte al cliente; sin encabezados tipo "Para el agente" ni listas de tareas internas.
+- No inventes pasos ni datos sin apoyo en el contexto.
+- Si no hay información suficiente, explícaselo al cliente y pide amablemente lo que necesites para continuar.
+- No cites al cliente números de ticket de referencia del contexto; son uso interno.

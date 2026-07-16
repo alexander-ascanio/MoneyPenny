@@ -69,7 +69,7 @@
 
             @if (Model.QueryLogId is > 0)
             {
-                <partial name="_RagAnswerRating"
+                <partial name="~/Views/Rag/_RagAnswerRating.cshtml"
                          model="new MoneyPenny.ViewModels.Rag.RagAnswerRatingViewModel
                          {
                              QueryLogId = Model.QueryLogId.Value,

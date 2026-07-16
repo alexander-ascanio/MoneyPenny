@@ -5,7 +5,9 @@ namespace MoneyPenny.Data;
 
 public static class PostgresConnectionHelper
 {
-    public static string BuildConnectionString(PostgresDatabaseOptions options)
+    public static string BuildConnectionString(
+        PostgresDatabaseOptions options,
+        int? timeoutSeconds = null)
     {
         var builder = new NpgsqlConnectionStringBuilder
         {
@@ -16,6 +18,11 @@ public static class PostgresConnectionHelper
             Password = options.Password,
             SslMode = Enum.Parse<SslMode>(options.SslMode ?? "Disable")
         };
+
+        if (timeoutSeconds is > 0)
+        {
+            builder.Timeout = timeoutSeconds.Value;
+        }
 
         return builder.ConnectionString;
     }

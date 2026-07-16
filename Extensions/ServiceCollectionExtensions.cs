@@ -22,12 +22,11 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddMoneyPennyDatabases(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.Configure<ApplicationDatabaseOptions>(
             configuration.GetSection(ApplicationDatabaseOptions.SectionName));
-        services.Configure<TicketsDatabaseOptions>(
-            configuration.GetSection(TicketsDatabaseOptions.SectionName));
         services.Configure<VectorDatabaseOptions>(
             configuration.GetSection(VectorDatabaseOptions.SectionName));
         services.Configure<RagOptions>(
@@ -39,10 +38,38 @@ public static class ServiceCollectionExtensions
 
         var appDb = configuration.GetSection(ApplicationDatabaseOptions.SectionName).Get<ApplicationDatabaseOptions>()
             ?? new ApplicationDatabaseOptions();
-        var ticketsDb = configuration.GetSection(TicketsDatabaseOptions.SectionName).Get<TicketsDatabaseOptions>()
+        var ticketsDbPrimary = configuration.GetSection(TicketsDatabaseOptions.SectionName).Get<TicketsDatabaseOptions>()
             ?? new TicketsDatabaseOptions();
         var vectorDb = configuration.GetSection(VectorDatabaseOptions.SectionName).Get<VectorDatabaseOptions>()
             ?? new VectorDatabaseOptions();
+
+        var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
+            builder.AddConsole();
+        });
+        var ticketsLogger = loggerFactory.CreateLogger("MoneyPenny.TicketsDatabase");
+        var ticketsDb = TicketsDatabaseConnectionResolver.Resolve(ticketsDbPrimary, environment, ticketsLogger);
+
+        services.Configure<TicketsDatabaseOptions>(options =>
+        {
+            options.Host = ticketsDb.Host;
+            options.Port = ticketsDb.Port;
+            options.Name = ticketsDb.Name;
+            options.User = ticketsDb.User;
+            options.Password = ticketsDb.Password;
+            options.SslMode = ticketsDb.SslMode;
+            options.TrustServerCertificate = ticketsDb.TrustServerCertificate;
+            options.ApplyMigrationsOnStartup = ticketsDb.ApplyMigrationsOnStartup;
+            options.EnableSeed = ticketsDb.EnableSeed;
+            options.UseLocalFallbackOnConnectionFailure = false;
+            options.FallbackHost = ticketsDbPrimary.FallbackHost;
+            options.FallbackPort = ticketsDbPrimary.FallbackPort;
+            options.FallbackName = ticketsDbPrimary.FallbackName;
+            options.FallbackUser = ticketsDbPrimary.FallbackUser;
+            options.FallbackPassword = ticketsDbPrimary.FallbackPassword;
+            options.FallbackSslMode = ticketsDbPrimary.FallbackSslMode;
+        });
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(PostgresConnectionHelper.BuildConnectionString(appDb)));

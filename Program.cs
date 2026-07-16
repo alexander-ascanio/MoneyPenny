@@ -7,7 +7,7 @@ using MoneyPenny.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMoneyPennyDatabases(builder.Configuration);
+builder.Services.AddMoneyPennyDatabases(builder.Configuration, builder.Environment);
 builder.Services.AddMoneyPennyServices(builder.Configuration);
 builder.Services.AddMoneyPennyAuthentication(builder.Configuration, builder.Environment);
 

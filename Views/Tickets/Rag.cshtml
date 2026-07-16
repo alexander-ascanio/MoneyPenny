@@ -1,0 +1,785 @@
+@model MoneyPenny.ViewModels.Tickets.TicketRagViewModel
+@using MoneyPenny.ViewModels.Rag
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+
+@{
+    ViewData["Title"] = $"Acciones RAG · Ticket {Model.Number}";
+}
+
+<div class="tickets-page ticket-detail-page">
+    <div class="ticket-detail-hero card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="ticket-number-badge">#@Model.Number</span>
+                        <span class="badge rounded-pill text-bg-success">Acciones RAG</span>
+                        @if (Model.IsFirstCommentIndexed)
+                        {
+                            <span class="badge rounded-pill text-bg-success">Indexado #1</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Title))
+                    {
+                        <h2 class="ticket-detail-title mb-1">@Model.Title</h2>
+                    }
+                    <p class="text-muted mb-0 small">
+                        ID interno: @Model.Id
+                        @if (!string.IsNullOrWhiteSpace(Model.TeamSupportId))
+                        {
+                            <span class="mx-2">·</span>
+                            <span>TS: @Model.TeamSupportId</span>
+                        }
+                    </p>
+                </div>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Volver al ticket
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success border-0 shadow-sm">@successMessage</div>
+    }
+
+    @if (TempData["WarningMessage"] is string warningMessage)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">@warningMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger border-0 shadow-sm">@Model.ErrorMessage</div>
+    }
+    else if (Model.FirstComment is null)
+    {
+        <div class="alert alert-warning border-0 shadow-sm">
+            Este ticket no tiene un comentario #1 con contenido.
+        </div>
+    }
+    else
+    {
+        string AttachmentProxyUrl(string originalUrl) =>
+            Url.Action("Attachment", "Tickets", new { url = originalUrl }) ?? originalUrl;
+
+        var canGenerateGpt = Model.HasGeneratedContext && Model.ContextItems.Any();
+
+        <div id="ragGptSection" class="rag-gpt-section mb-4">
+            @if (Model.GptEstimate is not null)
+            {
+                <partial name="_TokenUsageEstimate" model="Model.GptEstimate" />
+            }
+
+            <form asp-action="ConsultGptAnswer" method="post" class="mb-3 rag-gpt-actions" id="consultGptAnswerForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ticketId" value="@Model.Id" />
+                <input type="hidden" name="ticketNumber" value="@Model.Number" />
+                <button type="submit"
+                        class="btn btn-primary"
+                        id="consultGptAnswerButton"
+                        @(!canGenerateGpt ? "disabled" : null)>
+                    <span class="consult-gpt-btn-label">
+                        <i class="bi bi-robot me-1"></i>@(Model.HasGptAnswer ? "Regenerar respuesta GPT" : "Generar respuesta GPT")
+                    </span>
+                    <span class="consult-gpt-btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        Consultando…
+                    </span>
+                </button>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-arrow-left me-1"></i>Volver al ticket
+                </a>
+                <a asp-controller="Rag"
+                   asp-action="CompareThresholds"
+                   asp-route-ticketId="@Model.Id"
+                   asp-route-ticketNumber="@Model.Number"
+                   asp-route-knowledgeBaseOnly="false"
+                   class="btn btn-outline-info ms-2">
+                    <i class="bi bi-columns-gap me-1"></i>Comparar umbrales
+                </a>
+            </form>
+
+            <div id="consultGptProcessing" class="rag-gpt-processing d-none mb-4" role="status" aria-live="polite">
+                <div class="rag-gpt-processing-spinner spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <div class="rag-gpt-processing-title">Generando respuesta GPT…</div>
+                <div class="rag-gpt-processing-subtitle text-muted small">
+                    Recuperando contexto y consultando el modelo. Puede tardar unos segundos.
+                </div>
+            </div>
+
+            @if (Model.HasGptAnswer)
+            {
+                @if (Model.LastRunEstimate is not null)
+                {
+                    <partial name="_TokenUsageEstimate" model="Model.LastRunEstimate" />
+                }
+
+                @if (Model.GptAnswerFromHistory)
+                {
+                    <div class="alert alert-info d-flex align-items-center mb-4" id="gptAnswerReadyAlert" role="status">
+                        <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
+                        <span>
+                            Última respuesta GPT guardada para este ticket
+                            @if (Model.GptAnswerSavedAt is not null)
+                            {
+                                <span class="text-muted">(@Model.GptAnswerSavedAt.Value.ToLocalTime().ToString("g"))</span>
+                            }
+                            . Puedes regenerarla con el botón de arriba.
+                        </span>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Model.GptTeamSupportActionWarning))
+                {
+                    <div class="alert alert-warning mb-4">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        La respuesta GPT se generó, pero no se pudo insertar el comentario privado en TeamSupport (Proyecto API-TS):
+                        @Model.GptTeamSupportActionWarning
+                    </div>
+                }
+
+                <div class="card shadow-sm mb-4@(Model.GroundingReport?.Verdict == ResponseGroundingVerdict.Fail ? " border-start border-danger border-4" : "")" id="gptAnswerCard">
+                    <div class="card-header rag-section-header">
+                        <i class="bi bi-robot me-2"></i>Respuesta GPT
+                    </div>
+                    <div class="card-body">
+                        <div class="rag-answer-text">@Model.Answer.TrimEnd()</div>
+                    </div>
+                </div>
+
+                @if (Model.GroundingReport is not null)
+                {
+                    <partial name="~/Views/Rag/_RagGroundingCheck.cshtml" model="Model.GroundingReport" />
+                }
+
+                @if (Model.InsertedTeamSupportAction is not null)
+                {
+                    <partial name="~/Views/Rag/_RagInsertedTeamSupportAction.cshtml"
+                             model="Model.InsertedTeamSupportAction"
+                             view-data="@(new ViewDataDictionary(ViewData) { { "RateAnswerUrl", Url.Action("RateAnswer", "Rag") } })" />
+                }
+            }
+            else
+            {
+                <div class="alert alert-secondary mb-0" id="gptAnswerMissingAlert">
+                    @if (!Model.IsFirstCommentIndexed)
+                    {
+                        <text>La respuesta GPT aún no se ha generado. Indexa el comentario #1 y genera el contexto antes de usar «Generar respuesta GPT».</text>
+                    }
+                    else if (!Model.HasGeneratedContext)
+                    {
+                        <text>La respuesta GPT aún no se ha generado. Usa «Generar contexto» y después «Generar respuesta GPT».</text>
+                    }
+                    else if (!Model.ContextItems.Any())
+                    {
+                        <text>La respuesta GPT aún no se ha generado. No hay tickets similares en el contexto; genera o regenera el contexto antes de consultar GPT.</text>
+                    }
+                    else
+                    {
+                        <text>La respuesta GPT aún no se ha generado. Usa «Generar respuesta GPT» para obtenerla.</text>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card shadow-sm mb-4 rag-context-card">
+            <div class="card-header rag-section-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span>
+                    <i class="bi bi-diagram-3 me-2"></i>Contexto recuperado Tickets
+                </span>
+                <form asp-action="GenerateContext" method="post" id="generateContextForm" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="ticketNumber" value="@Model.Number" />
+                    <button type="submit"
+                            class="btn btn-primary btn-sm"
+                            id="generateContextButton"
+                            data-is-indexed="@(Model.IsFirstCommentIndexed ? "true" : "false")"
+                            data-has-context="@(Model.HasGeneratedContext ? "true" : "false")">
+                        <span class="generate-context-label">
+                            <i class="bi bi-diagram-3 me-1"></i> Generar contexto
+                        </span>
+                        <span class="generate-context-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Generando…
+                        </span>
+                    </button>
+                </form>
+            </div>
+            <div class="card-body">
+                @if (!Model.IsFirstCommentIndexed)
+                {
+                    <div class="alert alert-secondary mb-0" id="contextRequiresIndexAlert">
+                        El comentario #1 de este ticket aún no está indexado. Usa «Indexar ticket» para vectorizarlo antes de generar el contexto.
+                    </div>
+                }
+                else if (!Model.HasGeneratedContext)
+                {
+                    <div class="alert alert-secondary mb-0">
+                        El contexto aún no se ha generado. Usa «Generar contexto» para recuperar tickets similares.
+                    </div>
+                }
+                else if (!Model.ContextItems.Any())
+                {
+                    <div class="alert alert-warning mb-0">
+                        No se encontraron otros tickets con comentario #1 similar al actual.
+                        Indexa más tickets en <strong>Índice #1</strong> o prueba con un umbral menor (MinScore en configuración).
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-3">
+                        Lista de @Model.ContextItems.Count ticket(s) similar(es) no Knowledge Base (<code>IsKnowledgeBase = false</code> y grupo distinto de «Telematel – Knowledge Base») con comentario #1 parecido al de este caso (excluye el ticket actual).
+                        Pulsa cada fila para ver el detalle. La puntuación indica similitud coseno (más alto = más relevante).
+                    </p>
+                    <div class="rag-context-list">
+                        @foreach (var item in Model.ContextItems)
+                        {
+                            <details class="rag-context-item">
+                                <summary class="rag-context-item-summary">
+                                    <span class="rag-context-summary-main">
+                                        <i class="bi bi-chevron-right rag-context-chevron" aria-hidden="true"></i>
+                                        <a asp-controller="Tickets" asp-action="Details" asp-route-id="@item.TicketId"
+                                           class="rag-context-ticket-link"
+                                           title="Abrir ticket en otra página"
+                                           onclick="event.stopPropagation();">
+                                            Ticket #@item.TicketNumber
+                                        </a>
+                                    </span>
+                                    <span class="badge rag-score-badge">@item.Score.ToString("P1") similitud</span>
+                                </summary>
+                                <div class="rag-context-item-body">
+                                    <pre class="rag-context-snippet mb-0">@item.Content</pre>
+                                </div>
+                            </details>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4 rag-reference-card">
+            <div class="card-header rag-section-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><i class="bi bi-chat-left-quote me-2"></i>Primer comentario del ticket (indexado)</span>
+                <form asp-action="IndexTicket" method="post" id="indexTicketForm" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="processImages" id="processImagesInput" value="true" />
+                    <input type="hidden" name="returnTo" value="Rag" />
+                    <button type="submit"
+                            class="btn btn-success btn-sm"
+                            id="indexTicketButton"
+                            data-is-indexed="@(Model.IsFirstCommentIndexed ? "true" : "false")">
+                        <span class="index-ticket-label">
+                            <i class="bi bi-arrow-repeat me-1"></i> Indexar ticket
+                        </span>
+                        <span class="index-ticket-loading d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Indexando…
+                        </span>
+                    </button>
+                </form>
+            </div>
+            <div class="card-body">
+                @if (Model.IsFirstCommentIndexed && !string.IsNullOrWhiteSpace(Model.IndexedFirstCommentContent))
+                {
+                    <div class="rag-reference-meta text-muted small mb-2">
+                        @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                    <pre class="rag-context-snippet mb-0">@Model.IndexedFirstCommentContent</pre>
+                }
+                else if (Model.IsFirstCommentIndexed)
+                {
+                    <div class="alert alert-warning mb-0">
+                        El comentario #1 figura como indexado, pero no se pudo recuperar el texto del índice.
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-secondary mb-0">
+                        El comentario #1 de este ticket aún no está indexado. Usa «Indexar ticket» para vectorizarlo.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header rag-section-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark-richtext me-2"></i>Comentario original</span>
+                <span class="badge text-bg-secondary">Comentario #1</span>
+            </div>
+            <div class="card-body">
+                <div class="rag-reference-meta text-muted small mb-2">
+                    @Model.FirstComment.Author · @Model.FirstComment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                </div>
+                <div class="ticket-comment-body ticket-comment-body-html">
+                    @Html.Raw(TicketHtmlHelper.PrepareCommentHtmlForDisplay(
+                        Model.FirstComment.Content,
+                        AttachmentProxyUrl))
+                </div>
+                @if (Model.FirstComment.Attachments.Any())
+                {
+                    <div class="ticket-comment-attachments">
+                        @foreach (var attachment in Model.FirstComment.Attachments)
+                        {
+                            var proxyUrl = AttachmentProxyUrl(attachment.OriginalUrl);
+                            var label = attachment.FileName ?? "Adjunto";
+                            <a class="ticket-comment-attachment-link" href="@proxyUrl" target="_blank" rel="noopener">
+                                <i class="bi bi-paperclip" aria-hidden="true"></i>
+                                <span>@label</span>
+                            </a>
+                        }
+                    </div>
+                }
+                else if (Model.FirstComment.PendingAttachmentResolution)
+                {
+                    <div class="ticket-comment-attachments ticket-comment-attachments-pending"
+                         data-action-id="@Model.FirstComment.TeamSupportActionId"
+                         data-ticket-id="@Model.TeamSupportId"
+                         data-content="@Model.FirstComment.Content">
+                        <span class="text-muted small">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Buscando adjuntos en TeamSupport...
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="indexConfirmModal" tabindex="-1" aria-labelledby="indexConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="indexConfirmModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2 text-warning d-none" id="indexConfirmModalIconWarning"></i>
+                    <i class="bi bi-question-circle me-2 text-primary" id="indexConfirmModalIconConfirm"></i>
+                    <span id="indexConfirmModalTitle">Confirmar indexación</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-3 d-none" id="indexConfirmWarning" role="alert">
+                    Este ticket ya tiene el comentario #1 indexado.
+                </div>
+                <p class="mb-0" id="indexConfirmMessage">
+                    ¿Desea indexar el comentario #1 de este ticket?
+                </p>
+            </div>
+            <div class="modal-footer flex-column flex-sm-row gap-2">
+                <button type="button" class="btn btn-success w-100 w-sm-auto" id="confirmIndexTicketButton">
+                    Continuar
+                </button>
+                <button type="button" class="btn btn-link text-decoration-none w-100 w-sm-auto" data-bs-dismiss="modal" id="cancelIndexConfirmButton">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="generateContextConfirmModal" tabindex="-1" aria-labelledby="generateContextConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateContextConfirmModalLabel">
+                    <i class="bi bi-exclamation-triangle me-2 text-warning d-none" id="generateContextModalIconWarning"></i>
+                    <i class="bi bi-question-circle me-2 text-primary" id="generateContextModalIconConfirm"></i>
+                    <span id="generateContextModalTitle">Confirmar generación de contexto</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-3 d-none" id="generateContextWarning" role="alert">
+                    El contexto de este ticket ya está generado.
+                </div>
+                <div class="alert alert-secondary mb-0 d-none" id="generateContextRequiresIndex" role="alert">
+                    El comentario #1 de este ticket aún no está indexado. Usa «Indexar ticket» para vectorizarlo antes de generar el contexto.
+                </div>
+                <p class="mb-0" id="generateContextMessage">
+                    ¿Desea generar el contexto recuperado de tickets similares?
+                </p>
+            </div>
+            <div class="modal-footer flex-column flex-sm-row gap-2">
+                <button type="button" class="btn btn-primary w-100 w-sm-auto" id="confirmGenerateContextButton">
+                    Continuar
+                </button>
+                <button type="button" class="btn btn-link text-decoration-none w-100 w-sm-auto" data-bs-dismiss="modal" id="cancelGenerateContextButton">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const consultForm = document.getElementById('consultGptAnswerForm');
+            const consultButton = document.getElementById('consultGptAnswerButton');
+            const consultProcessing = document.getElementById('consultGptProcessing');
+            const gptAnswerReadyAlert = document.getElementById('gptAnswerReadyAlert');
+            const gptAnswerCard = document.getElementById('gptAnswerCard');
+            const focusGpt = @Json.Serialize(Model.FocusGpt);
+
+            if (consultForm && consultButton) {
+                consultForm.addEventListener('submit', function () {
+                    const label = consultButton.querySelector('.consult-gpt-btn-label');
+                    const loading = consultButton.querySelector('.consult-gpt-btn-loading');
+
+                    consultButton.disabled = true;
+                    label?.classList.add('d-none');
+                    loading?.classList.remove('d-none');
+                    consultProcessing?.classList.remove('d-none');
+                    consultProcessing?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                });
+            }
+
+            if (focusGpt && consultForm) {
+                consultForm.scrollIntoView({ behavior: 'auto', block: 'start' });
+                consultButton?.focus({ preventScroll: true });
+            } else if (gptAnswerReadyAlert) {
+                gptAnswerReadyAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else if (gptAnswerCard) {
+                gptAnswerCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const form = document.getElementById('generateContextForm');
+            const button = document.getElementById('generateContextButton');
+            if (!form || !button) {
+                return;
+            }
+
+            const label = button.querySelector('.generate-context-label');
+            const loading = button.querySelector('.generate-context-loading');
+            const isIndexed = button.dataset.isIndexed === 'true';
+            const hasContext = button.dataset.hasContext === 'true';
+            const modalElement = document.getElementById('generateContextConfirmModal');
+            const warning = document.getElementById('generateContextWarning');
+            const requiresIndex = document.getElementById('generateContextRequiresIndex');
+            const message = document.getElementById('generateContextMessage');
+            const title = document.getElementById('generateContextModalTitle');
+            const iconWarning = document.getElementById('generateContextModalIconWarning');
+            const iconConfirm = document.getElementById('generateContextModalIconConfirm');
+            const confirmButton = document.getElementById('confirmGenerateContextButton');
+            const cancelButton = document.getElementById('cancelGenerateContextButton');
+            const modal = modalElement ? new bootstrap.Modal(modalElement) : null;
+
+            let confirmed = false;
+
+            function setLoading(isLoading) {
+                button.disabled = isLoading;
+                label?.classList.toggle('d-none', isLoading);
+                loading?.classList.toggle('d-none', !isLoading);
+            }
+
+            function prepareModal() {
+                if (!isIndexed) {
+                    title.textContent = 'Indexación requerida';
+                    warning?.classList.add('d-none');
+                    requiresIndex?.classList.remove('d-none');
+                    message?.classList.add('d-none');
+                    iconWarning?.classList.remove('d-none');
+                    iconConfirm?.classList.add('d-none');
+                    confirmButton?.classList.add('d-none');
+                    if (cancelButton) {
+                        cancelButton.textContent = 'Entendido';
+                        cancelButton.classList.remove('btn-link', 'text-decoration-none');
+                        cancelButton.classList.add('btn-secondary');
+                    }
+                    return;
+                }
+
+                requiresIndex?.classList.add('d-none');
+                message?.classList.remove('d-none');
+                confirmButton?.classList.remove('d-none');
+                if (cancelButton) {
+                    cancelButton.textContent = 'Cancelar';
+                    cancelButton.classList.add('btn-link', 'text-decoration-none');
+                    cancelButton.classList.remove('btn-secondary');
+                }
+
+                if (hasContext) {
+                    title.textContent = 'Contexto ya generado';
+                    warning?.classList.remove('d-none');
+                    message.textContent =
+                        '¿Desea generar el contexto nuevamente? Se actualizará el registro de contexto de este ticket.';
+                    iconWarning?.classList.remove('d-none');
+                    iconConfirm?.classList.add('d-none');
+                    confirmButton.textContent = 'Generar nuevamente';
+                } else {
+                    title.textContent = 'Confirmar generación de contexto';
+                    warning?.classList.add('d-none');
+                    message.textContent =
+                        '¿Desea generar el contexto recuperado de tickets similares?';
+                    iconWarning?.classList.add('d-none');
+                    iconConfirm?.classList.remove('d-none');
+                    confirmButton.textContent = 'Generar contexto';
+                }
+            }
+
+            form.addEventListener('submit', function (event) {
+                if (confirmed) {
+                    setLoading(true);
+                    return;
+                }
+
+                event.preventDefault();
+                prepareModal();
+                modal?.show();
+            });
+
+            confirmButton?.addEventListener('click', function () {
+                if (!isIndexed) {
+                    return;
+                }
+
+                confirmed = true;
+                modal?.hide();
+                setLoading(true);
+                form.requestSubmit();
+            });
+
+            document.getElementById('cancelGenerateContextButton')?.addEventListener('click', function () {
+                confirmed = false;
+            });
+
+            modalElement?.addEventListener('hidden.bs.modal', function () {
+                if (!confirmed) {
+                    setLoading(false);
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const form = document.getElementById('indexTicketForm');
+            const button = document.getElementById('indexTicketButton');
+            if (!form || !button) {
+                return;
+            }
+
+            const label = button.querySelector('.index-ticket-label');
+            const loading = button.querySelector('.index-ticket-loading');
+            const isIndexed = button.dataset.isIndexed === 'true';
+            const indexConfirmModalElement = document.getElementById('indexConfirmModal');
+            const indexConfirmWarning = document.getElementById('indexConfirmWarning');
+            const indexConfirmMessage = document.getElementById('indexConfirmMessage');
+            const indexConfirmModalTitle = document.getElementById('indexConfirmModalTitle');
+            const indexConfirmModalIconWarning = document.getElementById('indexConfirmModalIconWarning');
+            const indexConfirmModalIconConfirm = document.getElementById('indexConfirmModalIconConfirm');
+            const confirmIndexTicketButton = document.getElementById('confirmIndexTicketButton');
+            const indexConfirmModal = indexConfirmModalElement
+                ? new bootstrap.Modal(indexConfirmModalElement)
+                : null;
+
+            let indexIntentConfirmed = false;
+
+            function setIndexTicketLoading(isLoading) {
+                button.disabled = isLoading;
+                label?.classList.toggle('d-none', isLoading);
+                loading?.classList.toggle('d-none', !isLoading);
+            }
+
+            function prepareIndexConfirmModal() {
+                if (isIndexed) {
+                    indexConfirmModalTitle.textContent = 'Ticket ya indexado';
+                    indexConfirmWarning?.classList.remove('d-none');
+                    indexConfirmMessage.textContent =
+                        '¿Desea volver a indexar el comentario #1? Se actualizará el índice existente.';
+                    indexConfirmModalIconWarning?.classList.remove('d-none');
+                    indexConfirmModalIconConfirm?.classList.add('d-none');
+                    confirmIndexTicketButton.textContent = 'Volver a indexar';
+                } else {
+                    indexConfirmModalTitle.textContent = 'Confirmar indexación';
+                    indexConfirmWarning?.classList.add('d-none');
+                    indexConfirmMessage.textContent =
+                        '¿Desea indexar el comentario #1 de este ticket?';
+                    indexConfirmModalIconWarning?.classList.add('d-none');
+                    indexConfirmModalIconConfirm?.classList.remove('d-none');
+                    confirmIndexTicketButton.textContent = 'Indexar';
+                }
+            }
+
+            form.addEventListener('submit', function (event) {
+                if (indexIntentConfirmed) {
+                    setIndexTicketLoading(true);
+                    return;
+                }
+
+                event.preventDefault();
+                prepareIndexConfirmModal();
+                indexConfirmModal?.show();
+            });
+
+            confirmIndexTicketButton?.addEventListener('click', function () {
+                indexIntentConfirmed = true;
+                indexConfirmModal?.hide();
+                setIndexTicketLoading(true);
+                form.requestSubmit();
+            });
+
+            document.getElementById('cancelIndexConfirmButton')?.addEventListener('click', function () {
+                indexIntentConfirmed = false;
+            });
+
+            indexConfirmModalElement?.addEventListener('hidden.bs.modal', function () {
+                if (!indexIntentConfirmed) {
+                    setIndexTicketLoading(false);
+                }
+            });
+        })();
+    </script>
+
+    @if (Model.InsertedTeamSupportAction is not null)
+    {
+        <script>
+            (function () {
+                const rateUrl = '@Url.Action("RateAnswer", "Rag")';
+                const ratingClear = @MoneyPenny.Models.Rag.RagQueryLog.RatingClear;
+                const ratingNotAnswerable = @MoneyPenny.Models.Rag.RagQueryLog.RatingNotAnswerable;
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput?.value ?? '';
+
+                function setRatingButtons(container, rating) {
+                    container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                        const btnRating = Number(btn.dataset.rating);
+                        const isActive = rating !== null && rating !== ratingClear && btnRating === rating;
+                        btn.classList.toggle('active', isActive);
+                        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    });
+                }
+
+                function ratingFeedbackMessage(rating) {
+                    if (rating === ratingNotAnswerable) {
+                        return 'Marcado: este ticket no podrá ser respondido por MoneyPenny';
+                    }
+
+                    if (rating === ratingClear) {
+                        return 'Valoración eliminada';
+                    }
+
+                    return 'Gracias por tu valoración';
+                }
+
+                document.querySelectorAll('.rag-answer-rating').forEach(function (container) {
+                    const queryLogId = container.dataset.queryLogId;
+                    const feedback = container.querySelector('.rag-rating-feedback');
+                    const containerRateUrl = container.dataset.rateUrl || rateUrl;
+
+                    container.querySelectorAll('.rag-rating-btn').forEach(function (button) {
+                        button.addEventListener('click', async function () {
+                            if (!queryLogId) {
+                                return;
+                            }
+
+                            const requestedRating = button.classList.contains('active')
+                                ? ratingClear
+                                : Number(button.dataset.rating);
+
+                            const formData = new FormData();
+                            formData.append('queryLogId', queryLogId);
+                            formData.append('rating', String(requestedRating));
+                            formData.append('__RequestVerificationToken', token);
+
+                            container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                                btn.disabled = true;
+                            });
+
+                            try {
+                                const response = await fetch(containerRateUrl, {
+                                    method: 'POST',
+                                    body: formData,
+                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error('No se pudo guardar la valoración');
+                                }
+
+                                if (requestedRating === ratingClear) {
+                                    setRatingButtons(container, ratingClear);
+                                } else {
+                                    setRatingButtons(container, requestedRating);
+                                }
+
+                                if (feedback) {
+                                    feedback.textContent = ratingFeedbackMessage(requestedRating);
+                                    feedback.hidden = false;
+                                }
+                            } catch {
+                                if (feedback) {
+                                    feedback.textContent = 'No se pudo guardar la valoración';
+                                    feedback.hidden = false;
+                                }
+                            } finally {
+                                container.querySelectorAll('.rag-rating-btn').forEach(function (btn) {
+                                    btn.disabled = false;
+                                });
+                            }
+                        });
+                    });
+                });
+            })();
+        </script>
+    }
+
+    @if (Model.FirstComment?.PendingAttachmentResolution == true)
+    {
+        <script>
+            (function () {
+                const pendingBlocks = document.querySelectorAll('.ticket-comment-attachments-pending');
+                if (!pendingBlocks.length) {
+                    return;
+                }
+
+                pendingBlocks.forEach(async function (block) {
+                    const actionId = block.dataset.actionId;
+                    const ticketId = block.dataset.ticketId || '';
+                    const content = block.dataset.content || '';
+                    if (!actionId) {
+                        block.remove();
+                        return;
+                    }
+
+                    try {
+                        const params = new URLSearchParams({
+                            teamSupportActionId: actionId,
+                            teamSupportTicketId: ticketId,
+                            content: content
+                        });
+                        const response = await fetch(`/Tickets/ResolveActionAttachments?${params.toString()}`, {
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('resolve failed');
+                        }
+
+                        const attachments = await response.json();
+                        if (!attachments.length) {
+                            block.innerHTML = '<span class="text-muted small"><i class="bi bi-paperclip me-1"></i>Este comentario referencia un adjunto en TeamSupport que no está sincronizado.</span>';
+                            return;
+                        }
+
+                        block.classList.remove('ticket-comment-attachments-pending');
+                        block.innerHTML = attachments.map(function (attachment) {
+                            const label = attachment.fileName || 'Adjunto';
+                            return `<a class="ticket-comment-attachment-link" href="${attachment.proxyUrl}" target="_blank" rel="noopener"><i class="bi bi-paperclip" aria-hidden="true"></i><span>${label}</span></a>`;
+                        }).join('');
+                    } catch {
+                        block.innerHTML = '<span class="text-muted small"><i class="bi bi-exclamation-circle me-1"></i>No se pudieron cargar los adjuntos de TeamSupport.</span>';
+                    }
+                });
+            })();
+        </script>
+    }
+}

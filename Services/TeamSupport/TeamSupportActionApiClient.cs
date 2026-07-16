@@ -27,15 +27,18 @@ public class TeamSupportActionApiClient : ITeamSupportActionApiClient
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TeamSupportApiOptions _options;
+    private readonly IHostEnvironment _environment;
     private readonly ILogger<TeamSupportActionApiClient> _logger;
 
     public TeamSupportActionApiClient(
         IHttpClientFactory httpClientFactory,
         IOptions<TeamSupportApiOptions> options,
+        IHostEnvironment environment,
         ILogger<TeamSupportActionApiClient> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -45,6 +48,18 @@ public class TeamSupportActionApiClient : ITeamSupportActionApiClient
         string? creatorName = null,
         CancellationToken cancellationToken = default)
     {
+        if (!_environment.IsDevelopment())
+        {
+            _logger.LogInformation(
+                "Omitida la inserción de comentario privado en TeamSupport fuera de Development (ticket {TicketId}).",
+                teamSupportTicketId);
+            return new TeamSupportActionCreateResult
+            {
+                Success = false,
+                ErrorMessage = "La inserción de comentarios privados en TeamSupport solo está permitida en Development."
+            };
+        }
+
         if (!_options.EnableGptAnswerPrivateActionInsert)
         {
             return new TeamSupportActionCreateResult

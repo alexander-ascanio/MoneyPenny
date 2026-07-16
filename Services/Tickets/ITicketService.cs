@@ -7,4 +7,5 @@ public interface ITicketService
 {
     Task<TicketListViewModel> GetListAsync(TicketFilters filters, CancellationToken cancellationToken = default);
     Task<TicketDetailViewModel?> GetDetailAsync(int id, CancellationToken cancellationToken = default);
+    Task<TicketRagViewModel?> GetRagDetailAsync(int id, CancellationToken cancellationToken = default);
 }

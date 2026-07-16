@@ -192,6 +192,8 @@ public class TicketService : ITicketService
             }
 
             var isIndexed = await IsTicketIndexedSafeAsync(id, cancellationToken);
+            var isFirstCommentIndexed = await IsFirstCommentIndexedSafeAsync(id, cancellationToken);
+            var hasGeneratedContext = await HasGeneratedContextSafeAsync(id, cancellationToken);
             var actions = await _ticketRepository.GetActionsByTicketIdAsync(id, cancellationToken);
             var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(id, cancellationToken);
             var firstCommentImageCount = 0;
@@ -246,6 +248,8 @@ public class TicketService : ITicketService
                 CreatedAt = ticket.CreatedAt,
                 UpdatedAt = ticket.UpdatedAt,
                 IsIndexed = isIndexed,
+                IsFirstCommentIndexed = isFirstCommentIndexed,
+                HasGeneratedContext = hasGeneratedContext,
                 FirstCommentImageCount = firstCommentImageCount,
                 PromptImageProcessingOnIndex = firstCommentImageCount > 0 && _ragOptions.EnableImageTextExtraction,
                 IndexWithoutImagesEstimate = indexWithoutImagesEstimate,
@@ -270,6 +274,101 @@ public class TicketService : ITicketService
                 Id = id,
                 ErrorMessage = BuildConnectionErrorMessage(ex)
             };
+        }
+    }
+
+    public async Task<TicketRagViewModel?> GetRagDetailAsync(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var ticket = await _ticketRepository.GetByIdAsync(id, cancellationToken);
+            if (ticket is null)
+            {
+                return null;
+            }
+
+            var oldestComment = await _ticketRepository.GetOldestActionWithContentByTicketIdAsync(id, cancellationToken);
+            TicketActionViewModel? firstComment = null;
+            if (oldestComment is not null)
+            {
+                firstComment = await MapActionAsync(oldestComment, ticket.TeamSupportId, cancellationToken);
+            }
+
+            var isFirstCommentIndexed = await IsFirstCommentIndexedSafeAsync(id, cancellationToken);
+            var hasGeneratedContext = await HasGeneratedContextSafeAsync(id, cancellationToken);
+            string? indexedContent = null;
+            if (isFirstCommentIndexed)
+            {
+                indexedContent = await TryGetIndexedFirstCommentTextSafeAsync(id, cancellationToken);
+            }
+
+            return new TicketRagViewModel
+            {
+                Id = ticket.Id,
+                Number = ticket.Number ?? string.Empty,
+                Title = ticket.Title,
+                TeamSupportId = ticket.TeamSupportId,
+                FirstComment = firstComment,
+                IsFirstCommentIndexed = isFirstCommentIndexed,
+                HasGeneratedContext = hasGeneratedContext,
+                IndexedFirstCommentContent = indexedContent
+            };
+        }
+        catch (PostgresException ex)
+        {
+            _logger.LogError(ex, "Error SQL al consultar TicketsDatabase para RAG.");
+            return new TicketRagViewModel
+            {
+                Id = id,
+                ErrorMessage = $"Error al consultar el ticket: {ex.MessageText}"
+            };
+        }
+        catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
+        {
+            _logger.LogError(ex, "No se pudo conectar a TicketsDatabase para RAG.");
+            return new TicketRagViewModel
+            {
+                Id = id,
+                ErrorMessage = BuildConnectionErrorMessage(ex)
+            };
+        }
+    }
+
+    private async Task<string?> TryGetIndexedFirstCommentTextSafeAsync(
+        int ticketId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var firstCommentChunks = await _vectorRepository.GetChunksByTicketAndSourceAsync(
+                ticketId,
+                DocumentChunkSource.ClientFirstComment,
+                cancellationToken);
+
+            var fromFirstCommentIndex = IndexedCommentTextHelper.ExtractFromClientFirstCommentIndex(
+                firstCommentChunks.Select(c => c.Content));
+            if (!string.IsNullOrWhiteSpace(fromFirstCommentIndex))
+            {
+                return fromFirstCommentIndex;
+            }
+
+            var ticketDocumentChunks = await _vectorRepository.GetChunksByTicketAndSourceAsync(
+                ticketId,
+                DocumentChunkSource.TicketDocument,
+                cancellationToken);
+
+            return IndexedCommentTextHelper.ExtractFromTicketDocumentIndex(
+                ticketDocumentChunks.Select(c => c.Content));
+        }
+        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
+            or PostgresErrorCodes.UndefinedTable
+            or PostgresErrorCodes.UndefinedColumn)
+        {
+            return null;
+        }
+        catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
+        {
+            return null;
         }
     }
 
@@ -302,8 +401,8 @@ public class TicketService : ITicketService
     {
         var detail = ex.InnerException?.Message ?? ex.Message;
         return "No se pudo conectar a la base de datos de tickets (TeamSupport). "
-            + "Verifica que tu IP esté permitida en el firewall de Azure PostgreSQL "
-            + "(servidor tmtpostgresql) y que TicketsDatabase en appsettings.Development.json sea correcto. "
+            + "En Development se intenta Azure y, si falla, el fallback local (teamsupport_local_db). "
+            + "Revisa TicketsDatabase / Fallback* en appsettings.Development.json. "
             + $"Detalle: {detail}";
     }
 
@@ -337,6 +436,45 @@ public class TicketService : ITicketService
         try
         {
             return await _vectorRepository.IsTicketIndexedAsync(id, cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
+            or PostgresErrorCodes.UndefinedTable
+            or PostgresErrorCodes.UndefinedColumn)
+        {
+            return false;
+        }
+        catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> IsFirstCommentIndexedSafeAsync(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _vectorRepository.IsTicketIndexedBySourceAsync(
+                id,
+                DocumentChunkSource.ClientFirstComment,
+                cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
+            or PostgresErrorCodes.UndefinedTable
+            or PostgresErrorCodes.UndefinedColumn)
+        {
+            return false;
+        }
+        catch (Exception ex) when (IsTicketsDatabaseConnectionError(ex))
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> HasGeneratedContextSafeAsync(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _vectorRepository.HasQueryLogForTicketAsync(id, cancellationToken);
         }
         catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.InvalidCatalogName
             or PostgresErrorCodes.UndefinedTable
