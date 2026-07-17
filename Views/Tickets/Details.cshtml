@@ -295,13 +295,13 @@
                                 data-bs-toggle="tooltip"
                                 data-bs-placement="left"
                                 data-bs-custom-class="rag-actions-tooltip"
-                                data-bs-title="RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con tickets similares ya indexados.
-
-Vectorización: el comentario #1 del ticket se transforma en embeddings (vectores numéricos) y se almacena en PostgreSQL con pgvector.
+                                data-bs-title="Vectorización: el comentario #1 del ticket se transforma en embeddings (vectores numéricos) y se almacena en PostgreSQL con pgvector.
 
 Chunks: el texto se divide en fragmentos solapados para recuperar solo las partes más relevantes en cada consulta.
 
-Al pulsar «Generar contexto», MoneyPenny busca los chunks más similares y los muestra como contexto recuperado."
+Al pulsar «Generar contexto», MoneyPenny busca los chunks más similares y los muestra como contexto recuperado.
+
+RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con tickets similares ya indexados."
                                 aria-label="Qué significa RAG">
                             <i class="bi bi-info-circle text-muted" aria-hidden="true"></i>
                         </button>
@@ -321,54 +321,6 @@ Al pulsar «Generar contexto», MoneyPenny busca los chunks más similares y los
                     <div class="alert alert-warning border-0 mb-0 d-none" id="notIndexedRagAlert" role="alert">
                         El comentario #1 de este ticket no está indexado. Indexa el comentario #1 desde Acciones RAG o Índice #1 antes de consultar la respuesta RAG.
                     </div>
-                    <div class="ticket-rag-context-actions">
-                        @if (!Model.HasGeneratedContext)
-                        {
-                            @if (Model.IsFirstCommentIndexed)
-                            {
-                                <a asp-controller="Rag" asp-action="Ask"
-                                   asp-route-ticketId="@Model.Id"
-                                   asp-route-ticketNumber="@Model.Number"
-                                   class="btn btn-primary w-100 ticket-rag-response-link">
-                                    <span class="ticket-rag-response-label">
-                                        <i class="bi bi-diagram-3 me-1"></i> Generar contexto
-                                    </span>
-                                    <span class="ticket-rag-response-loading d-none">
-                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                        Cargando…
-                                    </span>
-                                </a>
-                            }
-                            else
-                            {
-                                <button type="button" class="btn btn-primary w-100" data-rag-blocked-button>
-                                    <i class="bi bi-diagram-3 me-1"></i> Generar contexto
-                                </button>
-                            }
-                        }
-                    </div>
-                    @if (Model.IsFirstCommentIndexed)
-                    {
-                        <a asp-controller="Rag" asp-action="Ask"
-                           asp-route-ticketId="@Model.Id"
-                           asp-route-ticketNumber="@Model.Number"
-                           asp-route-knowledgeBaseOnly="true"
-                           class="btn btn-outline-primary w-100 ticket-rag-response-link">
-                            <span class="ticket-rag-response-label">
-                                <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
-                            </span>
-                            <span class="ticket-rag-response-loading d-none">
-                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                Cargando…
-                            </span>
-                        </a>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-outline-primary w-100" data-rag-blocked-button>
-                            <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
-                        </button>
-                    }
                 </div>
             </div>
 
@@ -401,6 +353,36 @@ Al pulsar «Generar contexto», MoneyPenny busca los chunks más similares y los
                         <div class="ticket-rag-process-summary mb-2" id="processTicketRagSummary"></div>
                         <pre class="ticket-rag-process-json mb-0" id="processTicketRagJson"></pre>
                     </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm ticket-rag-panel mt-5">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-book me-2 text-primary"></i>Knowledge Base</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.IsFirstCommentIndexed)
+                    {
+                        <a asp-controller="Rag" asp-action="Ask"
+                           asp-route-ticketId="@Model.Id"
+                           asp-route-ticketNumber="@Model.Number"
+                           asp-route-knowledgeBaseOnly="true"
+                           class="btn btn-outline-primary w-100 ticket-rag-response-link">
+                            <span class="ticket-rag-response-label">
+                                <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                            </span>
+                            <span class="ticket-rag-response-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                Cargando…
+                            </span>
+                        </a>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-primary w-100" data-rag-blocked-button>
+                            <i class="bi bi-book me-1"></i> Ver respuesta basada en KB
+                        </button>
+                    }
                 </div>
             </div>
             </div>

@@ -117,7 +117,7 @@
 
                     <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-customer">Cliente:</label>
-                        <select id="filter-customer" name="customer" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                        <select id="filter-customer" name="customer" class="form-select form-select-sm tickets-filter-select tickets-filter-select-priority-width tickets-filter-auto">
                             <option value="">Todos</option>
                             @foreach (var option in Model.FilterOptions.Customers)
                             {
@@ -135,7 +135,7 @@
 
                     <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-product">Producto:</label>
-                        <select id="filter-product" name="product" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                        <select id="filter-product" name="product" class="form-select form-select-sm tickets-filter-select tickets-filter-select-priority-width tickets-filter-auto">
                             <option value="">Todos</option>
                             @foreach (var option in Model.FilterOptions.Products)
                             {
@@ -153,7 +153,7 @@
 
                     <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-estado">Estado:</label>
-                        <select id="filter-estado" name="estado" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                        <select id="filter-estado" name="estado" class="form-select form-select-sm tickets-filter-select tickets-filter-select-priority-width tickets-filter-auto">
                             <option value="">Todos</option>
                             @foreach (var option in Model.FilterOptions.Statuses)
                             {
@@ -171,7 +171,7 @@
 
                     <div class="tickets-filter-item">
                         <label class="tickets-filter-label" for="filter-priority">Prioridad:</label>
-                        <select id="filter-priority" name="priority" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
+                        <select id="filter-priority" name="priority" class="form-select form-select-sm tickets-filter-select tickets-filter-select-priority-width tickets-filter-auto">
                             <option value="">Todos</option>
                             @foreach (var option in Model.FilterOptions.Priorities)
                             {
@@ -249,7 +249,7 @@
                         </div>
 
                         <div class="tickets-filter-item">
-                            <label class="tickets-filter-label" for="filter-rag">RAG:</label>
+                            <label class="tickets-filter-label" for="filter-rag">Respuesta:</label>
                             <select id="filter-rag" name="rag" class="form-select form-select-sm tickets-filter-select tickets-filter-auto">
                                 @if (IsSelected(Model.Filters.Rag, ""))
                                 {
@@ -484,11 +484,11 @@
                             <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Indexado" tabindex="0"></span>
                         </th>
                         <th class="tickets-th-resizable text-center tickets-th-sortable@(IsSortActive(TicketSort.Rag) ? " is-active" : "")" data-col="rag" data-sort="@TicketSort.Rag">
-                            <button type="button" class="tickets-th-sort-btn tickets-th-sort-btn-center" aria-label="Ordenar por RAG">
-                                <span class="tickets-th-label">RAG</span>
+                            <button type="button" class="tickets-th-sort-btn tickets-th-sort-btn-center" aria-label="Ordenar por respuesta">
+                                <span class="tickets-th-label">Respuesta</span>
                                 <i class="bi @SortIconClass(TicketSort.Rag) tickets-sort-icon" aria-hidden="true"></i>
                             </button>
-                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna RAG" tabindex="0"></span>
+                            <span class="tickets-col-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionar columna Respuesta" tabindex="0"></span>
                         </th>
                         <th class="tickets-th-resizable text-center" data-col="actions">
                             <span class="tickets-th-label">Acciones</span>
@@ -561,7 +561,7 @@
                             <td class="text-center">
                                 @if (ticket.IsFirstCommentIndexed)
                                 {
-                                    <span class="ticket-indexed-yes" title="Comentario #1 indexado (Índice #1)">
+                                    <span class="ticket-indexed-yes" title="Comentario #1 indexado">
                                         <i class="bi bi-check-circle-fill"></i>
                                     </span>
                                 }
@@ -591,7 +591,7 @@
                                     <a asp-controller="Tickets" asp-action="Rag"
                                        asp-route-id="@ticket.Id"
                                        asp-route-focusGpt="true"
-                                       class="btn btn-ticket-rag ticket-rag-response-link" title="Ver respuesta RAG">
+                                       class="btn btn-ticket-rag ticket-rag-response-link" title="Ver respuesta">
                                         <span class="ticket-rag-response-label">
                                             <i class="bi bi-robot"></i>
                                         </span>

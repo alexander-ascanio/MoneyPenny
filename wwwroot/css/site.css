@@ -169,6 +169,12 @@ body {
   font-size: 0.85rem;
 }
 
+.tickets-filter-select-priority-width {
+  width: 9rem;
+  min-width: 9rem;
+  max-width: 9rem;
+}
+
 .tickets-filter-select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 0.15rem rgba(59, 130, 246, 0.15);
@@ -472,22 +478,52 @@ body.tickets-col-resizing * {
   border-radius: 0.45rem;
   border: none;
   color: #fff;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
 }
 
 .btn-ticket-view {
-  background: #7c3aed;
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #7c3aed;
+  --bs-btn-border-color: #7c3aed;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #6d28d9;
+  --bs-btn-hover-border-color: #6d28d9;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #5b21b6;
+  --bs-btn-active-border-color: #5b21b6;
+  background-color: #7c3aed;
 }
 
 .btn-ticket-rag {
-  background: #10b981;
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #10b981;
+  --bs-btn-border-color: #10b981;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #059669;
+  --bs-btn-hover-border-color: #059669;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #047857;
+  --bs-btn-active-border-color: #047857;
+  background-color: #10b981;
 }
 
 .btn-ticket-view:hover,
-.btn-ticket-rag:hover {
+.btn-ticket-view:focus-visible,
+.btn-ticket-rag:hover,
+.btn-ticket-rag:focus-visible {
   color: #fff;
   transform: translateY(-1px);
-  opacity: 0.92;
+  opacity: 1;
+}
+
+.btn-ticket-view:hover,
+.btn-ticket-view:focus-visible {
+  background-color: #6d28d9;
+}
+
+.btn-ticket-rag:hover,
+.btn-ticket-rag:focus-visible {
+  background-color: #059669;
 }
 
 .btn-ticket-rag.is-loading {
@@ -505,6 +541,19 @@ body.tickets-col-resizing * {
 }
 
 /* Detail page */
+
+.ticket-detail-page {
+  --ticket-detail-sticky-hero-height: 5.75rem;
+}
+
+.ticket-detail-page .ticket-detail-hero {
+  position: sticky;
+  top: var(--app-header-offset, 3.5rem);
+  z-index: 1020;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
 
 .ticket-detail-hero {
   border-radius: 0.75rem;
@@ -544,7 +593,7 @@ body.tickets-col-resizing * {
 
 .ticket-rag-sidebar-sticky {
   position: sticky;
-  top: calc(var(--app-header-offset, 3.5rem) + 1rem);
+  top: calc(var(--app-header-offset, 3.5rem) + var(--ticket-detail-sticky-hero-height, 5.75rem) + 0.75rem);
   align-self: flex-start;
 }
 
