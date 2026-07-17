@@ -204,8 +204,9 @@
     <section class="mb-4 mb-lg-5 home-process-map-section">
         <h2 class="home-section-title"><i class="bi bi-diagram-2"></i> Mapa de procesos</h2>
         <p class="text-muted mb-4">
-            Flujos de los botones <strong>Acciones RAG</strong> en el detalle de un ticket
-            (<code>/Tickets/Details</code>). Cada diagrama resume el recorrido desde el clic hasta el resultado.
+            Flujos de los botones del panel derecho en el detalle de un ticket
+            (<code>/Tickets/Details</code>): <strong>Iniciar acciones manualmente</strong>,
+            <strong>Indexar y generar respuesta GPT</strong> y <strong>Ver respuesta basada en KB</strong>.
             En la indexación con imágenes, <strong>OpenCV</strong> (<code>MessageBoxDetectionService</code>) intenta recortar
             el diálogo Windows antes de enviar texto a <strong>OpenAI Vision</strong>; si no detecta MessageBox, Vision procesa la captura completa.
         </p>
@@ -213,50 +214,61 @@
             <div class="col-lg-6">
                 <article class="home-process-card home-process-card-index">
                     <header class="home-process-card-header">
-                        <span class="home-process-btn home-process-btn-success"><i class="bi bi-arrow-repeat"></i> Indexar ticket</span>
-                        <span class="home-process-endpoint">POST <code>/Tickets/IndexTicket</code></span>
+                        <span class="home-process-btn home-process-btn-success"><i class="bi bi-play-fill"></i> Iniciar acciones manualmente</span>
+                        <span class="home-process-endpoint">GET <code>/Tickets/Details/Rag/{id}</code></span>
                     </header>
                     <div class="home-process-diagram mermaid">
 flowchart TD
-    A["Clic en Indexar ticket"] --> B["Confirmar indexación"]
-    B --> C["POST IndexTicket<br/>processImages=true"]
-    C --> D["Cargar ticket<br/>(TicketsDatabase)"]
-    D --> E["Comentario #1: texto plano<br/>+ filtro firmas/logos/GDPR"]
-    E --> F{"¿Imágenes utilizables<br/>y Vision habilitado?"}
+    A["Clic Iniciar acciones<br/>manualmente"] --> B["GET /Tickets/Details/Rag/id"]
+    B --> C["Vista Acciones RAG"]
+    C --> D{"¿Comentario #1<br/>indexado?"}
+    D -->|No| E["Indexar ticket<br/>POST IndexTicket"]
+    E --> F{"¿Capturas utilizables<br/>y Vision habilitado?"}
     F -->|Sí| G{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
     G -->|Detectado| H["Recortar título y mensaje<br/>del diálogo Windows"]
     H --> I["OpenAI Vision<br/>sobre recortes"]
     G -->|No detectado| J["OpenAI Vision<br/>imagen completa"]
     F -->|No| K["Solo HTML del comentario"]
-    I --> L["Chunks + embeddings<br/>(OpenAI + pgvector)"]
+    I --> L["Chunks + embeddings<br/>VectorDatabase"]
     J --> L
     K --> L
-    L --> M["VectorDatabase<br/>+ sync Índice #1"]
-    M --> N["Vuelta a Details<br/>Estado: Indexado"]
+    L --> C
+    D -->|Sí| M{"¿Contexto<br/>generado?"}
+    M -->|No| N["Generar contexto<br/>POST GenerateContext"]
+    N --> O["Tickets similares<br/>no KB"]
+    O --> C
+    M -->|Sí| P["Generar / Regenerar GPT<br/>POST ConsultGptAnswer"]
+    P --> Q["OpenAI genera respuesta"]
+    Q --> R["rag_query_logs"]
+    R --> S["Comentario privado TS<br/>solo Development"]
+    S --> T["Comprobación técnica<br/>R1–R6"]
+    T --> U["Vista Rag: respuesta GPT<br/>+ valorar / Comparar umbrales"]
                     </div>
                 </article>
             </div>
             <div class="col-lg-6">
-                <article class="home-process-card home-process-card-gpt">
+                <article class="home-process-card home-process-card-api">
                     <header class="home-process-card-header">
-                        <span class="home-process-btn home-process-btn-primary"><i class="bi bi-eye"></i> Ver respuesta basada en GPT</span>
-                        <span class="home-process-endpoint">GET <code>/Rag/Ask</code> · POST <code>/Rag/ConsultGptAnswer</code></span>
+                        <span class="home-process-btn home-process-btn-api"><i class="bi bi-play-fill"></i> Indexar y generar respuesta GPT</span>
+                        <span class="home-process-endpoint">GET/POST <code>/Rag/ProcessTicket</code></span>
                     </header>
                     <div class="home-process-diagram mermaid">
 flowchart TD
-    A["Clic Ver respuesta GPT"] --> B{"¿Ticket indexado?"}
-    B -->|No| C["Botón bloqueado"]
-    B -->|Sí| D["GET /Rag/Ask<br/>focusGpt=true"]
-    D --> E["Embedding comentario #1"]
-    E --> F["Recuperar tickets similares<br/>(no KB)"]
-    F --> G["Vista Ask: contexto<br/>+ comentario indexado"]
-    G --> H["Clic Generar respuesta GPT"]
-    H --> I["POST ConsultGptAnswer"]
-    I --> J["OpenAI genera respuesta"]
-    J --> K["rag_query_logs"]
-    K --> L["Comentario privado<br/>TeamSupport API-TS"]
+    A["Clic Indexar y generar<br/>respuesta GPT"] --> B["Llamada API<br/>ProcessTicket"]
+    B --> C["Resolver ticket<br/>ticketId / ticketNumber"]
+    C --> D{"¿Capturas utilizables?"}
+    D -->|Sí| E["Indexar con Vision<br/>automático"]
+    D -->|No| F["Indexar solo texto"]
+    E --> G{"OpenCV MessageBox"}
+    G -->|Detectado| H["Recortar título/mensaje<br/>→ OpenAI Vision"]
+    G -->|No detectado| I["OpenAI Vision<br/>imagen completa"]
+    H --> J["Chunks + embeddings<br/>VectorDatabase"]
+    I --> J
+    F --> J
+    J --> K["Recuperar contexto<br/>+ generar GPT"]
+    K --> L["rag_query_logs<br/>sin insertar en TeamSupport"]
     L --> M["Comprobación técnica<br/>R1–R6"]
-    M --> N["Vista Ask: respuesta<br/>+ valoración 👍👎"]
+    M --> N["JSON en pantalla<br/>ticket · indexing · gpt · grounding"]
                     </div>
                 </article>
             </div>
@@ -268,8 +280,8 @@ flowchart TD
                     </header>
                     <div class="home-process-diagram mermaid">
 flowchart TD
-    A["Clic Ver respuesta KB"] --> B{"¿Ticket indexado?"}
-    B -->|No| C["Botón bloqueado"]
+    A["Clic Ver respuesta<br/>basada en KB"] --> B{"¿Ticket indexado?"}
+    B -->|No| C["Botón bloqueado<br/>+ aviso en Details"]
     B -->|Sí| D["GET /Rag/Ask<br/>knowledgeBaseOnly=true"]
     D --> E["Embedding comentario #1"]
     E --> F["Recuperar solo tickets<br/>Knowledge Base"]
@@ -279,32 +291,6 @@ flowchart TD
     I --> J{"Opcional"}
     J --> K["Generar respuesta GPT<br/>con contexto KB"]
     K --> L["POST ConsultGptAnswer<br/>knowledgeBaseOnly=true"]
-                    </div>
-                </article>
-            </div>
-            <div class="col-lg-6">
-                <article class="home-process-card home-process-card-api">
-                    <header class="home-process-card-header">
-                        <span class="home-process-btn home-process-btn-api"><i class="bi bi-play-fill"></i> Indexar y generar respuesta GPT</span>
-                        <span class="home-process-endpoint">GET <code>/Rag/ProcessTicket</code></span>
-                    </header>
-                    <div class="home-process-diagram mermaid">
-flowchart TD
-    A["Clic o llamada API<br/>ProcessTicket"] --> B["Resolver ticket<br/>ticketId / ticketNumber"]
-    B --> C{"¿Capturas utilizables?"}
-    C -->|Sí| D["Indexar con Vision<br/>automático"]
-    C -->|No| E["Indexar solo texto"]
-    D --> F{"OpenCV MessageBox<br/>MessageBoxDetectionService"}
-    F -->|Detectado| G["Recortar título/mensaje<br/>→ OpenAI Vision"]
-    F -->|No detectado| H["OpenAI Vision<br/>imagen completa"]
-    G --> I["Chunks + embeddings<br/>en VectorDatabase"]
-    H --> I
-    E --> I
-    I --> J["Recuperar contexto<br/>+ generar GPT"]
-    J --> K["rag_query_logs<br/>(sin TeamSupport)"]
-    K --> L["Comprobación técnica<br/>R1–R6 + HTML"]
-    L --> M["JSON en pantalla<br/>ticket · indexing · gpt · groundingCheck"]
-    M --> N["Uso masivo / integración<br/>externa"]
                     </div>
                 </article>
             </div>
