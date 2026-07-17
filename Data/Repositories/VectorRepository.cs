@@ -422,6 +422,23 @@ public class VectorRepository : IVectorRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<RagRatingMonthlyStatsRow>> GetRatingMonthlyStatsAsync(
+        RagResponseType? responseType = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await BuildRatedQueryLogsQuery(responseType)
+            .Where(l => l.RatedAt != null)
+            .GroupBy(l => new { l.RatedAt!.Value.Year, l.RatedAt!.Value.Month, l.Rating })
+            .Select(g => new RagRatingMonthlyStatsRow
+            {
+                Year = g.Key.Year,
+                Month = g.Key.Month,
+                Rating = g.Key.Rating!.Value,
+                Count = g.Count()
+            })
+            .ToListAsync(cancellationToken);
+    }
+
     private IQueryable<RagQueryLog> BuildRatedQueryLogsQuery(RagResponseType? responseType)
     {
         var query = _context.RagQueryLogs

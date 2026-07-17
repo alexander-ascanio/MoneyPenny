@@ -12,6 +12,9 @@ public class Ticket
     public string Description { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string Priority { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public bool IsClosed { get; set; }
     public string? Customer { get; set; }
     public string? Contacts { get; set; }
     public string? TeamSupportId { get; set; }

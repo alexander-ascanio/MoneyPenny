@@ -48,13 +48,15 @@ public static class ApiDocumentationCatalog
                     },
                     new ApiEndpointViewModel
                     {
-                        HttpMethod = "POST",
+                        HttpMethod = "GET / POST",
                         Path = "/Rag/RateAnswer",
                         Summary = "Guarda o elimina la valoración de una respuesta RAG.",
-                        RequiresAntiForgery = true,
+                        Notes = "Acepta sesión de usuario o Authorization: Bearer <ApiBearer:Token>. Parámetros por query string o formulario (no JSON). Indica queryLogId o ticketNumber; con ticketNumber se valora la última respuesta generada del ticket. Si la petición llega desde un navegador (Accept: text/html, p. ej. un enlace en TeamSupport) devuelve una página de confirmación en lugar de JSON.",
                         RequestFields =
                         [
-                            Field("queryLogId", "int", true, "Id del registro en rag_query_logs."),
+                            Field("queryLogId", "int", false, "Id del registro en rag_query_logs. Obligatorio si no se indica ticketNumber."),
+                            Field("ticketNumber", "string", false, "Número de ticket TeamSupport (con o sin #). Valora la última respuesta generada."),
+                            Field("responseType", "string", false, "Tipo de respuesta a valorar cuando se usa ticketNumber: Gpt (por defecto) o KnowledgeBase."),
                             Field("rating", "short", true, "1 = buena, -1 = mala, -2 = no respondible, 0 = quitar valoración.")
                         ],
                         ResponseFields =
@@ -209,6 +211,53 @@ public static class ApiDocumentationCatalog
                             Field("currentTicketNumber", "string", false, "Ticket en procesamiento."),
                             Field("percentComplete", "double", true, "Porcentaje de avance (0–100)."),
                             Field("errorMessage", "string", false, "Mensaje de error si status=Failed.")
+                        ]
+                    }
+                ]
+            },
+            new ApiEndpointGroupViewModel
+            {
+                Title = "Tickets — Ingesta (API pública)",
+                Description = "Creación de tickets vía Bearer token (ApiBearer:Token) o sesión de usuario. Única escritura autorizada sobre teamsupport_db.",
+                Endpoints =
+                [
+                    new ApiEndpointViewModel
+                    {
+                        HttpMethod = "POST",
+                        Path = "/api/tickets",
+                        Summary = "Crea un ticket y su acción inicial en teamsupport_db.",
+                        Notes = "Acepta Authorization: Bearer <ApiBearer:Token>. Cuerpo JSON con objetos 'ticket' y 'action'. Devuelve 201 con los identificadores generados; 409 si teamSupportId o teamSupportActionId ya existen.",
+                        RequestFields =
+                        [
+                            Field("ticket.subject", "string", true, "Asunto del ticket (máx. 500 caracteres)."),
+                            Field("ticket.description", "string", true, "Descripción completa del ticket."),
+                            Field("ticket.status", "string", false, "Estado inicial. Por defecto New."),
+                            Field("ticket.priority", "string", false, "Prioridad. Por defecto Normal."),
+                            Field("ticket.type", "string", false, "Tipo (Support, Bug/Defect, Issue…). Por defecto Support."),
+                            Field("ticket.source", "string", false, "Origen (Web, EMail, Agent…). Por defecto Web."),
+                            Field("ticket.customerName", "string", false, "Nombre del cliente."),
+                            Field("ticket.contacts", "string", false, "Contactos asociados."),
+                            Field("ticket.assignedToName", "string", false, "Agente asignado."),
+                            Field("ticket.ticketNumber", "string", false, "Número de ticket TeamSupport si ya existe."),
+                            Field("ticket.teamSupportId", "string", false, "Id TeamSupport (máx. 36 caracteres, único). Se genera un GUID si se omite."),
+                            Field("ticket.groupName", "string", false, "Grupo."),
+                            Field("ticket.productName", "string", false, "Producto."),
+                            Field("ticket.codigoTelegestion", "string", false, "Código de telegestión."),
+                            Field("ticket.isKnowledgeBase", "bool", false, "Marca de Knowledge Base. Por defecto false."),
+                            Field("action.content", "string", true, "Contenido (HTML o texto) de la acción inicial."),
+                            Field("action.actionType", "string", false, "Tipo de acción (Description o Comment). Por defecto Description."),
+                            Field("action.createdByName", "string", false, "Autor de la acción."),
+                            Field("action.isVisible", "bool", false, "Visibilidad de la acción. Por defecto true."),
+                            Field("action.teamSupportActionId", "string", false, "Id TeamSupport de la acción (máx. 36, único). GUID automático si se omite.")
+                        ],
+                        ResponseFields =
+                        [
+                            Field("success", "bool", true, "true si el ticket y la acción se insertaron."),
+                            Field("ticketId", "int", true, "Id interno generado en la tabla tickets."),
+                            Field("ticketNumber", "string", false, "Número de ticket almacenado (null si no se envió)."),
+                            Field("teamSupportId", "string", true, "Id TeamSupport almacenado (enviado o generado)."),
+                            Field("actionId", "int", true, "Id interno generado en ticket_actions."),
+                            Field("teamSupportActionId", "string", true, "Id TeamSupport de la acción (enviado o generado).")
                         ]
                     }
                 ]

@@ -18,6 +18,10 @@ La base de datos **TicketsDatabase** (`teamsupport_db` en Azure PostgreSQL) es *
 - Consultas de lectura: listados, detalle, comentarios, contadores, contexto RAG.
 - Indexación RAG: escribir solo en **VectorDatabase** (`document_chunks`, embeddings, logs).
 
+## Excepción autorizada
+
+- `TicketIngestController` (`POST /api/tickets`) es la **única** vía de escritura permitida: inserta un ticket y su acción inicial en `tickets` y `ticket_actions` (confirmado por el usuario el 17/07/2026). No añadir más escrituras fuera de ese endpoint.
+
 ## Configuración
 
 En `appsettings`, `TicketsDatabase` debe mantener `ApplyMigrationsOnStartup: false` y `EnableSeed: false`.

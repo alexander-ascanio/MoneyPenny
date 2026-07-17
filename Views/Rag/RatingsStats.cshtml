@@ -1,0 +1,180 @@
+@using MoneyPenny.Models.Rag
+@model MoneyPenny.ViewModels.Rag.RagRatingsStatsViewModel
+
+@{
+    ViewData["Title"] = "Estadísticas de valoraciones";
+
+    string FilterLabel(RagResponseType? type) => type switch
+    {
+        RagResponseType.Gpt => "GPT",
+        RagResponseType.KnowledgeBase => "Knowledge Base",
+        _ => "Todas"
+    };
+
+    (string Css, string Icon, string Label) RatingBadge(short rating) => rating switch
+    {
+        RagQueryLog.RatingGood => ("text-bg-success", "bi-hand-thumbs-up", "OK"),
+        RagQueryLog.RatingBad => ("text-bg-danger", "bi-hand-thumbs-down", "KO"),
+        RagQueryLog.RatingNotAnswerable => ("text-bg-secondary", "bi-slash-circle", "No valorable"),
+        _ => ("text-bg-light", "bi-question-circle", "—")
+    };
+}
+
+<div class="rag-ratings-stats-page">
+    <h2 class="mb-2">
+        <i class="bi bi-bar-chart-line me-2 text-primary"></i>
+        Estadísticas de valoraciones
+    </h2>
+    <p class="text-muted mb-4">
+        Valoraciones de respuestas generadas registradas en <code>rag_query_logs</code>.
+        Filtro actual: <strong>@FilterLabel(Model.ResponseType)</strong>
+    </p>
+
+    <div class="btn-group mb-4" role="group" aria-label="Filtro por tipo de respuesta">
+        <a asp-action="RatingsStats"
+           class="btn @(Model.ResponseType is null ? "btn-primary" : "btn-outline-primary")">Todas</a>
+        <a asp-action="RatingsStats" asp-route-responseType="@RagResponseType.Gpt"
+           class="btn @(Model.ResponseType == RagResponseType.Gpt ? "btn-primary" : "btn-outline-primary")">GPT</a>
+        <a asp-action="RatingsStats" asp-route-responseType="@RagResponseType.KnowledgeBase"
+           class="btn @(Model.ResponseType == RagResponseType.KnowledgeBase ? "btn-primary" : "btn-outline-primary")">Knowledge Base</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Total valoradas</div>
+                    <div class="fs-3 fw-bold">@Model.TotalCount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES"))</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body">
+                    <div class="text-success small"><i class="bi bi-hand-thumbs-up me-1"></i>OK (buenas)</div>
+                    <div class="fs-3 fw-bold">@Model.GoodCount</div>
+                    <div class="text-muted small">@Model.GoodPercent.ToString("0.#") %</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 border-danger">
+                <div class="card-body">
+                    <div class="text-danger small"><i class="bi bi-hand-thumbs-down me-1"></i>KO (malas)</div>
+                    <div class="fs-3 fw-bold">@Model.BadCount</div>
+                    <div class="text-muted small">@Model.BadPercent.ToString("0.#") %</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card shadow-sm h-100 border-secondary">
+                <div class="card-body">
+                    <div class="text-secondary small"><i class="bi bi-slash-circle me-1"></i>No valorables</div>
+                    <div class="fs-3 fw-bold">@Model.NotAnswerableCount</div>
+                    <div class="text-muted small">@Model.NotAnswerablePercent.ToString("0.#") %</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.TotalCount > 0)
+    {
+        <div class="progress mb-4" style="height: 1.5rem;" role="progressbar" aria-label="Distribución de valoraciones">
+            <div class="progress-bar bg-success" style="width: @Model.GoodPercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
+                @Model.GoodPercent.ToString("0.#") %
+            </div>
+            <div class="progress-bar bg-danger" style="width: @Model.BadPercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
+                @Model.BadPercent.ToString("0.#") %
+            </div>
+            <div class="progress-bar bg-secondary" style="width: @Model.NotAnswerablePercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
+                @Model.NotAnswerablePercent.ToString("0.#") %
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <i class="bi bi-calendar3 me-2"></i>Evolución mensual (por fecha de valoración)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th class="text-end text-success">OK</th>
+                                <th class="text-end text-danger">KO</th>
+                                <th class="text-end text-secondary">No valorables</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var month in Model.Months)
+                            {
+                                <tr>
+                                    <td>@month.MonthName @month.Year</td>
+                                    <td class="text-end">@month.GoodCount</td>
+                                    <td class="text-end">@month.BadCount</td>
+                                    <td class="text-end">@month.NotAnswerableCount</td>
+                                    <td class="text-end fw-semibold">@month.TotalCount</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Últimas valoraciones (máx. 50)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Valoración</th>
+                                <th>Tipo</th>
+                                <th>Respuesta</th>
+                                <th>Fecha</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.RecentItems)
+                            {
+                                var badge = RatingBadge(item.Rating);
+                                <tr>
+                                    <td>
+                                        <span class="badge @badge.Css"><i class="bi @badge.Icon me-1"></i>@badge.Label</span>
+                                    </td>
+                                    <td class="text-muted small">@(item.ResponseType == RagResponseType.KnowledgeBase ? "KB" : item.ResponseType.ToString())</td>
+                                    <td class="small">@item.AnswerExcerpt</td>
+                                    <td class="text-muted small text-nowrap">
+                                        @(item.RatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")
+                                    </td>
+                                    <td class="text-end">
+                                        @if (item.TicketId is int ticketId)
+                                        {
+                                            <a asp-action="Ask" asp-route-ticketId="@ticketId"
+                                               class="btn btn-sm btn-outline-primary text-nowrap">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i>Ver ticket
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Todavía no hay respuestas valoradas para este filtro.
+        </div>
+    }
+</div>

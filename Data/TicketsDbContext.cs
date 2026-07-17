@@ -6,6 +6,7 @@ namespace MoneyPenny.Data;
 /// <summary>
 /// Contexto de solo lectura sobre TeamSupport (Azure: tickets, ticket_actions).
 /// No usar SaveChanges ni migraciones sobre esta base de datos.
+/// Excepción única: TicketIngestController (POST /api/tickets) inserta ticket + acción.
 /// </summary>
 public class TicketsDbContext : DbContext
 {
@@ -29,6 +30,9 @@ public class TicketsDbContext : DbContext
             entity.Property(t => t.Description).HasColumnName("Description");
             entity.Property(t => t.Status).HasColumnName("Status").HasMaxLength(50);
             entity.Property(t => t.Priority).HasColumnName("Priority").HasMaxLength(50);
+            entity.Property(t => t.Type).HasColumnName("Type");
+            entity.Property(t => t.Source).HasColumnName("Source");
+            entity.Property(t => t.IsClosed).HasColumnName("IsClosed");
             entity.Property(t => t.Customer).HasColumnName("CustomerName");
             entity.Property(t => t.Contacts).HasColumnName("Contacts");
             entity.Property(t => t.TeamSupportId).HasColumnName("TeamSupportId").HasMaxLength(50);

@@ -207,29 +207,110 @@ public class RagController : Controller
         return Json(result);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RateAnswer(
-        int queryLogId,
-        short rating,
+    [HttpGet]
+    public async Task<IActionResult> RatingsStats(
+        RagResponseType? responseType = null,
         CancellationToken cancellationToken = default)
     {
+        var rows = await _vectorRepository.GetRatingMonthlyStatsAsync(responseType, cancellationToken);
+        var recent = await _vectorRepository.GetRatedQueryLogsPageAsync(0, 50, responseType, cancellationToken);
+
+        return View(RagRatingsStatsViewModel.Build(responseType, rows, recent));
+    }
+
+    [HttpGet]
+    [HttpPost]
+    [Authorize(Policy = "ApiOrUser")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> RateAnswer(
+        int? queryLogId,
+        string? ticketNumber,
+        short rating,
+        RagResponseType responseType = RagResponseType.Gpt,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedNumber = string.IsNullOrWhiteSpace(ticketNumber)
+            ? null
+            : ticketNumber.Trim().TrimStart('#').Trim();
+
+        IActionResult Respond(int statusCode, string message, int? resolvedId = null, int? ticketId = null, short? storedRating = null)
+        {
+            var success = statusCode == StatusCodes.Status200OK;
+
+            if (RequestPrefersHtml())
+            {
+                Response.StatusCode = statusCode;
+                return View("RateAnswerResult", new RagRateAnswerResultViewModel
+                {
+                    Success = success,
+                    Message = message,
+                    TicketNumber = normalizedNumber,
+                    TicketId = ticketId,
+                    QueryLogId = resolvedId,
+                    Rating = storedRating
+                });
+            }
+
+            return StatusCode(statusCode, new { success, message, queryLogId = resolvedId, rating = storedRating });
+        }
+
         if (rating is not (RagQueryLog.RatingGood or RagQueryLog.RatingBad or RagQueryLog.RatingNotAnswerable or RagQueryLog.RatingClear))
         {
-            return BadRequest(new { success = false, message = "Valoración no válida." });
+            return Respond(StatusCodes.Status400BadRequest, "Valoración no válida.");
+        }
+
+        var resolvedQueryLogId = queryLogId;
+        int? resolvedTicketId = null;
+
+        if (resolvedQueryLogId is not > 0)
+        {
+            if (normalizedNumber is null)
+            {
+                return Respond(StatusCodes.Status400BadRequest, "Indica queryLogId o ticketNumber.");
+            }
+
+            var ticket = await _ticketRepository.GetByNumberAsync(normalizedNumber, cancellationToken);
+            if (ticket is null)
+            {
+                return Respond(StatusCodes.Status404NotFound, $"No se encontró el ticket #{normalizedNumber}.");
+            }
+
+            resolvedTicketId = ticket.Id;
+
+            var latestLog = await _vectorRepository.GetLatestQueryLogByTicketAsync(
+                ticket.Id,
+                responseType,
+                cancellationToken);
+
+            if (latestLog is null)
+            {
+                return Respond(
+                    StatusCodes.Status404NotFound,
+                    $"El ticket #{normalizedNumber} no tiene ninguna respuesta generada ({responseType}) que valorar.");
+            }
+
+            resolvedQueryLogId = latestLog.Id;
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
-        var saved = await _vectorRepository.RateQueryLogAsync(queryLogId, userId, rating, cancellationToken);
+        var saved = await _vectorRepository.RateQueryLogAsync(resolvedQueryLogId.Value, userId, rating, cancellationToken);
 
         if (!saved)
         {
-            return NotFound(new { success = false, message = "Registro no encontrado." });
+            return Respond(StatusCodes.Status404NotFound, "Registro no encontrado.", resolvedQueryLogId, resolvedTicketId);
         }
 
         short? storedRating = rating == RagQueryLog.RatingClear ? null : rating;
-        return Json(new { success = true, rating = storedRating });
+        return Respond(
+            StatusCodes.Status200OK,
+            storedRating is null ? "Valoración eliminada." : "Valoración registrada correctamente.",
+            resolvedQueryLogId,
+            resolvedTicketId,
+            storedRating);
     }
+
+    private bool RequestPrefersHtml()
+        => Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase);
 
     [HttpGet]
     public async Task<IActionResult> CompareThresholds(

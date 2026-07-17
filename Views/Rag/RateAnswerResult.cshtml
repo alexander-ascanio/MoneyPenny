@@ -1,0 +1,57 @@
+@using MoneyPenny.Models.Rag
+@model MoneyPenny.ViewModels.Rag.RagRateAnswerResultViewModel
+
+@{
+    ViewData["Title"] = "Valoración de respuesta";
+
+    var ratingLabel = Model.Rating switch
+    {
+        RagQueryLog.RatingGood => "OK (buena)",
+        RagQueryLog.RatingBad => "KO (mala)",
+        RagQueryLog.RatingNotAnswerable => "No valorable",
+        _ => null
+    };
+}
+
+<div class="d-flex justify-content-center mt-5">
+    <div class="card shadow-sm" style="max-width: 34rem; width: 100%;">
+        <div class="card-body text-center p-4">
+            @if (Model.Success)
+            {
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">@Model.Message</h4>
+                @if (!string.IsNullOrEmpty(Model.TicketNumber))
+                {
+                    <p class="text-muted mb-1">Ticket <strong>#@Model.TicketNumber</strong></p>
+                }
+                @if (ratingLabel is not null)
+                {
+                    <p class="mb-0">
+                        Valoración:
+                        <span class="badge @(Model.Rating == RagQueryLog.RatingGood ? "text-bg-success" : Model.Rating == RagQueryLog.RatingBad ? "text-bg-danger" : "text-bg-secondary")">
+                            @ratingLabel
+                        </span>
+                    </p>
+                }
+            }
+            else
+            {
+                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">No se pudo registrar la valoración</h4>
+                <p class="text-muted mb-0">@Model.Message</p>
+            }
+
+            <div class="mt-4 d-flex justify-content-center gap-2 flex-wrap">
+                @if (Model.TicketId is int ticketId)
+                {
+                    <a asp-action="Ask" asp-route-ticketId="@ticketId" class="btn btn-outline-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Ver ticket
+                    </a>
+                }
+                <a asp-action="RatingsStats" class="btn btn-outline-secondary">
+                    <i class="bi bi-bar-chart-line me-1"></i>Ver estadísticas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
