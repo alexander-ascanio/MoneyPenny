@@ -20,6 +20,9 @@ public static class TicketHtmlHelper
         "Saludos cordiales",
         "Saludos.",
         "Saludos",
+        "Gracias, un saludo,",
+        "Gracias, un saludo.",
+        "Gracias, un saludo",
         "Un saludo,",
         "Un saludo",
         "Atentamente,",
@@ -85,7 +88,11 @@ public static class TicketHtmlHelper
         "\nAtentamente\n",
         "\nUn saludo,",
         "\nCordialmente,",
-        " Saludos,"
+        " Saludos,",
+        "\nGracias, un saludo,",
+        "\nGracias, un saludo.",
+        "\nGracias, un saludo",
+        " Gracias, un saludo"
     ];
 
     private static readonly Regex ContactSignatureLineRegex = new(
@@ -318,15 +325,18 @@ public static class TicketHtmlHelper
                 continue;
             }
 
-            if (signatureStartIndex.HasValue
-                && match.Index >= signatureStartIndex.Value
-                && match.Index >= 15)
+            // Logos / firma: siempre fuera.
+            if (IsLikelySignatureImageUrl(source)
+                || IsLikelyDecorativeSignatureImage(match.Value, source)
+                || source.StartsWith("cid:", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            if (IsLikelySignatureImageUrl(source)
-                || IsLikelyDecorativeSignatureImage(match.Value, source))
+            // Tras el cierre real del correo («Saludos», etc.): no incluir (logos de empresa).
+            if (signatureStartIndex.HasValue
+                && match.Index >= signatureStartIndex.Value
+                && match.Index >= 15)
             {
                 continue;
             }
@@ -689,6 +699,10 @@ public static class TicketHtmlHelper
         ">Cordialmente,",
         ">Un saludo,",
         ">Un saludo<",
+        ">Gracias, un saludo,",
+        ">Gracias, un saludo.",
+        ">Gracias, un saludo<",
+        ">Gracias, un saludo&nbsp;",
         ">Best regards,",
         ">Kind regards,",
         "<br>Saludos,",
@@ -856,7 +870,10 @@ public static class TicketHtmlHelper
             return true;
         }
 
-        return ScoreSignatureWindow(lines, lineIndex, 6) >= 3;
+        // No usar ScoreSignatureWindow aislado: líneas del cuerpo cercanas a la firma
+        // (p. ej. «No puedo ver en pdf…») acumulaban puntuación del bloque final y
+        // truncaban capturas utilizables anteriores a «Saludos».
+        return false;
     }
 
     private static int ScoreSignatureWindow(string[] lines, int startIndex, int maxNonEmptyLines)
