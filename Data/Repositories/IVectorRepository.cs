@@ -76,7 +76,7 @@ public interface IVectorRepository
         RagResponseType? responseType = null,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<RagRatingMonthlyStatsRow>> GetRatingMonthlyStatsAsync(
+    Task<IReadOnlyList<RagRatingDailyStatsRow>> GetRatingDailyStatsAsync(
         RagResponseType? responseType = null,
         CancellationToken cancellationToken = default);
 

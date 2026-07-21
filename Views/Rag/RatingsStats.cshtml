@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using MoneyPenny.Models.Rag
 @model MoneyPenny.ViewModels.Rag.RagRatingsStatsViewModel
 
@@ -18,6 +19,13 @@
         RagQueryLog.RatingNotAnswerable => ("text-bg-secondary", "bi-slash-circle", "No valorable"),
         _ => ("text-bg-light", "bi-question-circle", "—")
     };
+
+    var dailySeriesJson = JsonSerializer.Serialize(Model.DailySeries.Select(d => new
+    {
+        date = d.Date.ToString("yyyy-MM-dd"),
+        good = d.GoodCount,
+        bad = d.BadCount
+    }));
 }
 
 <div class="rag-ratings-stats-page">
@@ -45,6 +53,7 @@
                 <div class="card-body">
                     <div class="text-muted small">Total valoradas</div>
                     <div class="fs-3 fw-bold">@Model.TotalCount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-ES"))</div>
+                    <div class="text-muted small">@Model.RatedCount valorables (OK + KO)</div>
                 </div>
             </div>
         </div>
@@ -53,7 +62,10 @@
                 <div class="card-body">
                     <div class="text-success small"><i class="bi bi-hand-thumbs-up me-1"></i>OK (buenas)</div>
                     <div class="fs-3 fw-bold">@Model.GoodCount</div>
-                    <div class="text-muted small">@Model.GoodPercent.ToString("0.#") %</div>
+                    <div class="text-muted small">
+                        @Model.GoodPercent.ToString("0.#") % del total
+                        · <strong>@Model.GoodPercentExcludingNa.ToString("0.#") %</strong> sin no valorables
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,7 +74,10 @@
                 <div class="card-body">
                     <div class="text-danger small"><i class="bi bi-hand-thumbs-down me-1"></i>KO (malas)</div>
                     <div class="fs-3 fw-bold">@Model.BadCount</div>
-                    <div class="text-muted small">@Model.BadPercent.ToString("0.#") %</div>
+                    <div class="text-muted small">
+                        @Model.BadPercent.ToString("0.#") % del total
+                        · <strong>@Model.BadPercentExcludingNa.ToString("0.#") %</strong> sin no valorables
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,7 +86,7 @@
                 <div class="card-body">
                     <div class="text-secondary small"><i class="bi bi-slash-circle me-1"></i>No valorables</div>
                     <div class="fs-3 fw-bold">@Model.NotAnswerableCount</div>
-                    <div class="text-muted small">@Model.NotAnswerablePercent.ToString("0.#") %</div>
+                    <div class="text-muted small">@Model.NotAnswerablePercent.ToString("0.#") % del total</div>
                 </div>
             </div>
         </div>
@@ -79,48 +94,67 @@
 
     @if (Model.TotalCount > 0)
     {
-        <div class="progress mb-4" style="height: 1.5rem;" role="progressbar" aria-label="Distribución de valoraciones">
-            <div class="progress-bar bg-success" style="width: @Model.GoodPercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
-                @Model.GoodPercent.ToString("0.#") %
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart me-2"></i>Distribución total (OK / KO / No valorables)
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <div style="max-width: 320px; width: 100%;">
+                            <canvas id="pieAll"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="progress-bar bg-danger" style="width: @Model.BadPercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
-                @Model.BadPercent.ToString("0.#") %
-            </div>
-            <div class="progress-bar bg-secondary" style="width: @Model.NotAnswerablePercent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%">
-                @Model.NotAnswerablePercent.ToString("0.#") %
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart-fill me-2"></i>Solo valorables (OK / KO)
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <div style="max-width: 320px; width: 100%;">
+                            @if (Model.RatedCount > 0)
+                            {
+                                <canvas id="pieRated"></canvas>
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center my-5">No hay valoraciones OK/KO todavía.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <i class="bi bi-calendar3 me-2"></i>Evolución mensual (por fecha de valoración)
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Mes</th>
-                                <th class="text-end text-success">OK</th>
-                                <th class="text-end text-danger">KO</th>
-                                <th class="text-end text-secondary">No valorables</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var month in Model.Months)
-                            {
-                                <tr>
-                                    <td>@month.MonthName @month.Year</td>
-                                    <td class="text-end">@month.GoodCount</td>
-                                    <td class="text-end">@month.BadCount</td>
-                                    <td class="text-end">@month.NotAnswerableCount</td>
-                                    <td class="text-end fw-semibold">@month.TotalCount</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="bi bi-graph-up me-2"></i>Evolución OK / KO (sin no valorables)</span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Granularidad">
+                    <button type="button" class="btn btn-outline-primary" data-granularity="day">Días</button>
+                    <button type="button" class="btn btn-outline-primary" data-granularity="week">Semanas</button>
+                    <button type="button" class="btn btn-primary" data-granularity="month">Meses</button>
+                    <button type="button" class="btn btn-outline-primary" data-granularity="year">Años</button>
                 </div>
+            </div>
+            <div class="card-body">
+                @if (Model.DailySeries.Count > 0)
+                {
+                    <h6 class="text-muted">% sobre valorables</h6>
+                    <div style="height: 320px;">
+                        <canvas id="evolutionChart"></canvas>
+                    </div>
+                    <hr />
+                    <h6 class="text-muted">Número de valoraciones</h6>
+                    <div style="height: 320px;">
+                        <canvas id="evolutionCountChart"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center my-4 mb-0">No hay valoraciones OK/KO para dibujar la evolución.</p>
+                }
             </div>
         </div>
 
@@ -178,3 +212,267 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script>
+        (function () {
+            const colors = {
+                good: '#198754',
+                bad: '#dc3545',
+                notAnswerable: '#6c757d'
+            };
+
+            const totals = {
+                good: @Model.GoodCount,
+                bad: @Model.BadCount,
+                notAnswerable: @Model.NotAnswerableCount
+            };
+
+            const percentLabel = (value, total) =>
+                total === 0 ? '0 %' : (value * 100 / total).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' %';
+
+            const pieTooltip = {
+                callbacks: {
+                    label: ctx => {
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                        return ` ${ctx.label}: ${ctx.parsed.toLocaleString('es-ES')} (${percentLabel(ctx.parsed, total)})`;
+                    }
+                }
+            };
+
+            // Etiquetas alrededor del pastel: "Etiqueta\ncontador (porcentaje)"
+            const pieDataLabels = {
+                anchor: 'end',
+                align: 'end',
+                offset: 6,
+                clamp: true,
+                display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+                formatter: (value, ctx) => {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    return `${ctx.chart.data.labels[ctx.dataIndex]}\n${value.toLocaleString('es-ES')} (${percentLabel(value, total)})`;
+                },
+                textAlign: 'center',
+                font: { weight: 'bold', size: 11 },
+                color: '#212529'
+            };
+
+            const pieOptions = {
+                // Deja aire para las etiquetas exteriores
+                layout: { padding: 36 },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: pieTooltip,
+                    datalabels: pieDataLabels
+                }
+            };
+
+            const pieAllCanvas = document.getElementById('pieAll');
+            if (pieAllCanvas) {
+                new Chart(pieAllCanvas, {
+                    type: 'pie',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: ['OK', 'KO', 'No valorables'],
+                        datasets: [{
+                            data: [totals.good, totals.bad, totals.notAnswerable],
+                            backgroundColor: [colors.good, colors.bad, colors.notAnswerable]
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+
+            const pieRatedCanvas = document.getElementById('pieRated');
+            if (pieRatedCanvas) {
+                new Chart(pieRatedCanvas, {
+                    type: 'pie',
+                    plugins: [ChartDataLabels],
+                    data: {
+                        labels: ['OK', 'KO'],
+                        datasets: [{
+                            data: [totals.good, totals.bad],
+                            backgroundColor: [colors.good, colors.bad]
+                        }]
+                    },
+                    options: pieOptions
+                });
+            }
+
+            // --- Evolución: agregación cliente por día/semana/mes/año ---
+            const dailySeries = @Html.Raw(dailySeriesJson);
+            const evolutionCanvas = document.getElementById('evolutionChart');
+            if (!evolutionCanvas || dailySeries.length === 0) {
+                return;
+            }
+
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+            function isoWeek(date) {
+                const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+                const dayNum = d.getUTCDay() || 7;
+                d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                return { year: d.getUTCFullYear(), week };
+            }
+
+            function bucketKeyAndLabel(dateStr, granularity) {
+                const date = new Date(dateStr + 'T00:00:00');
+                switch (granularity) {
+                    case 'day':
+                        return { key: dateStr, label: date.toLocaleDateString('es-ES') };
+                    case 'week': {
+                        const { year, week } = isoWeek(date);
+                        const paddedWeek = String(week).padStart(2, '0');
+                        return { key: `${year}-W${paddedWeek}`, label: `S${paddedWeek} ${year}` };
+                    }
+                    case 'year':
+                        return { key: String(date.getFullYear()), label: String(date.getFullYear()) };
+                    case 'month':
+                    default: {
+                        const paddedMonth = String(date.getMonth() + 1).padStart(2, '0');
+                        return {
+                            key: `${date.getFullYear()}-${paddedMonth}`,
+                            label: `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+                        };
+                    }
+                }
+            }
+
+            function aggregate(granularity) {
+                const buckets = new Map();
+                for (const row of dailySeries) {
+                    const { key, label } = bucketKeyAndLabel(row.date, granularity);
+                    if (!buckets.has(key)) {
+                        buckets.set(key, { label, good: 0, bad: 0 });
+                    }
+                    const bucket = buckets.get(key);
+                    bucket.good += row.good;
+                    bucket.bad += row.bad;
+                }
+
+                const keys = [...buckets.keys()].sort();
+                return keys.map(k => {
+                    const b = buckets.get(k);
+                    const total = b.good + b.bad;
+                    return {
+                        label: b.label,
+                        okPercent: total === 0 ? 0 : Math.round(b.good * 1000 / total) / 10,
+                        koPercent: total === 0 ? 0 : Math.round(b.bad * 1000 / total) / 10,
+                        good: b.good,
+                        bad: b.bad
+                    };
+                });
+            }
+
+            const evolutionCountCanvas = document.getElementById('evolutionCountChart');
+            let evolutionChart = null;
+            let evolutionCountChart = null;
+
+            function render(granularity) {
+                const data = aggregate(granularity);
+                const labels = data.map(d => d.label);
+
+                if (evolutionChart) {
+                    evolutionChart.destroy();
+                }
+
+                if (evolutionCountChart) {
+                    evolutionCountChart.destroy();
+                }
+
+                evolutionChart = new Chart(evolutionCanvas, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: '% OK',
+                                data: data.map(d => d.okPercent),
+                                borderColor: colors.good,
+                                backgroundColor: colors.good,
+                                tension: 0.2,
+                                spanGaps: true
+                            },
+                            {
+                                label: '% KO',
+                                data: data.map(d => d.koPercent),
+                                borderColor: colors.bad,
+                                backgroundColor: colors.bad,
+                                tension: 0.2,
+                                spanGaps: true
+                            }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: { callback: value => value + ' %' }
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    afterBody: items => {
+                                        const d = data[items[0].dataIndex];
+                                        return `OK: ${d.good.toLocaleString('es-ES')} · KO: ${d.bad.toLocaleString('es-ES')}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                evolutionCountChart = new Chart(evolutionCountCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'OK',
+                                data: data.map(d => d.good),
+                                backgroundColor: colors.good
+                            },
+                            {
+                                label: 'KO',
+                                data: data.map(d => d.bad),
+                                backgroundColor: colors.bad
+                            }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            const buttons = document.querySelectorAll('[data-granularity]');
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.replace('btn-primary', 'btn-outline-primary'));
+                    button.classList.replace('btn-outline-primary', 'btn-primary');
+                    render(button.dataset.granularity);
+                });
+            });
+
+            render('month');
+        })();
+    </script>
+}

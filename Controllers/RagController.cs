@@ -212,7 +212,7 @@ public class RagController : Controller
         RagResponseType? responseType = null,
         CancellationToken cancellationToken = default)
     {
-        var rows = await _vectorRepository.GetRatingMonthlyStatsAsync(responseType, cancellationToken);
+        var rows = await _vectorRepository.GetRatingDailyStatsAsync(responseType, cancellationToken);
         var recent = await _vectorRepository.GetRatedQueryLogsPageAsync(0, 50, responseType, cancellationToken);
 
         return View(RagRatingsStatsViewModel.Build(responseType, rows, recent));

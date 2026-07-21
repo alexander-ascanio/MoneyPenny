@@ -1,4 +1,3 @@
-using System.Globalization;
 using MoneyPenny.Models.Rag;
 
 namespace MoneyPenny.ViewModels.Rag;
@@ -12,36 +11,36 @@ public class RagRatingsStatsViewModel
     public int NotAnswerableCount { get; init; }
     public int TotalCount => GoodCount + BadCount + NotAnswerableCount;
 
-    public double GoodPercent => Percent(GoodCount);
-    public double BadPercent => Percent(BadCount);
-    public double NotAnswerablePercent => Percent(NotAnswerableCount);
+    public double GoodPercent => Percent(GoodCount, TotalCount);
+    public double BadPercent => Percent(BadCount, TotalCount);
+    public double NotAnswerablePercent => Percent(NotAnswerableCount, TotalCount);
 
-    public IReadOnlyList<RagRatingsStatsMonthViewModel> Months { get; init; } = [];
+    /// <summary>Total excluyendo los "no valorables" (solo OK + KO).</summary>
+    public int RatedCount => GoodCount + BadCount;
+    public double GoodPercentExcludingNa => Percent(GoodCount, RatedCount);
+    public double BadPercentExcludingNa => Percent(BadCount, RatedCount);
+
+    /// <summary>Serie diaria (solo OK y KO) para los gráficos de evolución.</summary>
+    public IReadOnlyList<RagRatingsStatsDayViewModel> DailySeries { get; init; } = [];
     public IReadOnlyList<RagRatingsStatsRecentItemViewModel> RecentItems { get; init; } = [];
 
-    private double Percent(int count)
-        => TotalCount == 0 ? 0 : Math.Round(count * 100.0 / TotalCount, 1);
+    private static double Percent(int count, int total)
+        => total == 0 ? 0 : Math.Round(count * 100.0 / total, 1);
 
     public static RagRatingsStatsViewModel Build(
         RagResponseType? responseType,
-        IReadOnlyList<RagRatingMonthlyStatsRow> rows,
+        IReadOnlyList<RagRatingDailyStatsRow> rows,
         IReadOnlyList<RagQueryLog> recentLogs)
     {
-        var culture = CultureInfo.GetCultureInfo("es-ES");
-
-        var months = rows
-            .GroupBy(r => new { r.Year, r.Month })
-            .OrderByDescending(g => g.Key.Year)
-            .ThenByDescending(g => g.Key.Month)
-            .Select(g => new RagRatingsStatsMonthViewModel
+        var dailySeries = rows
+            .Where(r => r.Rating is RagQueryLog.RatingGood or RagQueryLog.RatingBad)
+            .GroupBy(r => r.Date.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new RagRatingsStatsDayViewModel
             {
-                Year = g.Key.Year,
-                Month = g.Key.Month,
-                MonthName = culture.TextInfo.ToTitleCase(
-                    culture.DateTimeFormat.GetMonthName(g.Key.Month)),
+                Date = g.Key,
                 GoodCount = g.Where(r => r.Rating == RagQueryLog.RatingGood).Sum(r => r.Count),
-                BadCount = g.Where(r => r.Rating == RagQueryLog.RatingBad).Sum(r => r.Count),
-                NotAnswerableCount = g.Where(r => r.Rating == RagQueryLog.RatingNotAnswerable).Sum(r => r.Count)
+                BadCount = g.Where(r => r.Rating == RagQueryLog.RatingBad).Sum(r => r.Count)
             })
             .ToList();
 
@@ -63,7 +62,7 @@ public class RagRatingsStatsViewModel
             GoodCount = rows.Where(r => r.Rating == RagQueryLog.RatingGood).Sum(r => r.Count),
             BadCount = rows.Where(r => r.Rating == RagQueryLog.RatingBad).Sum(r => r.Count),
             NotAnswerableCount = rows.Where(r => r.Rating == RagQueryLog.RatingNotAnswerable).Sum(r => r.Count),
-            Months = months,
+            DailySeries = dailySeries,
             RecentItems = recent
         };
     }
@@ -77,15 +76,11 @@ public class RagRatingsStatsViewModel
     }
 }
 
-public class RagRatingsStatsMonthViewModel
+public class RagRatingsStatsDayViewModel
 {
-    public int Year { get; init; }
-    public int Month { get; init; }
-    public string MonthName { get; init; } = string.Empty;
+    public DateTime Date { get; init; }
     public int GoodCount { get; init; }
     public int BadCount { get; init; }
-    public int NotAnswerableCount { get; init; }
-    public int TotalCount => GoodCount + BadCount + NotAnswerableCount;
 }
 
 public class RagRatingsStatsRecentItemViewModel
