@@ -150,6 +150,16 @@ public class RagOrchestrator : IRagOrchestrator
             };
         }
 
+        // Misma persistencia que «Generar contexto» antes de la respuesta GPT.
+        if (!request.SkipQueryLog && !request.KnowledgeBaseOnly)
+        {
+            await TrySaveContextQueryLogAsync(
+                request,
+                userId,
+                contextItems.Count,
+                cancellationToken);
+        }
+
         var answer = await _generationService.GenerateAnswerAsync(
             DefaultGenerationQuestion,
             gptContextText,

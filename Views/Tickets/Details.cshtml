@@ -319,8 +319,7 @@ RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con 
                             id="processTicketRagButton"
                             data-ticket-id="@Model.Id"
                             data-ticket-number="@Model.Number"
-                            data-process-url="@Url.Action("ProcessTicket", "Rag")"
-                            data-has-usable-images="@(Model.FirstCommentImageCount > 0 ? "true" : "false")">
+                            data-process-url="@Url.Action("ProcessTicket", "Rag")">
                         <span class="process-ticket-rag-label">
                             <i class="bi bi-play-fill me-1"></i> Indexar y generar respuesta GPT
                         </span>
@@ -426,7 +425,6 @@ RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con 
             const processUrl = button.dataset.processUrl;
             const ticketId = button.dataset.ticketId;
             const ticketNumber = button.dataset.ticketNumber;
-            const hasUsableImages = button.dataset.hasUsableImages === 'true';
 
             function setLoading(isLoading) {
                 button.disabled = isLoading;
@@ -447,26 +445,30 @@ RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con 
                 const verdict = data.groundingCheck?.verdictLabel ?? data.groundingCheck?.verdict ?? '—';
                 const score = data.groundingCheck?.score ?? '—';
                 const chunks = data.indexing?.chunkCount ?? 0;
+                const contextCount = data.gpt?.contextTicketCount ?? 0;
                 const answerPreview = (data.gpt?.answer ?? '').slice(0, 180);
 
                 summaryBox.innerHTML =
                     '<div class="small">' +
                     '<div><strong>Ticket:</strong> #' + (data.ticket?.number ?? '') + ' · ' + (data.ticket?.status ?? '') + '</div>' +
-                    '<div><strong>Indexación:</strong> ' + chunks + ' chunks</div>' +
+                    '<div><strong>Indexación:</strong> ' + chunks + ' chunks' +
+                    (data.indexing?.processImages ? ' · imágenes procesadas' : '') + '</div>' +
+                    '<div><strong>Contexto:</strong> ' + contextCount + ' ticket(s) similar(es)</div>' +
                     '<div><strong>Comprobación técnica:</strong> ' + verdict + ' (' + score + '/100)</div>' +
                     '<div class="text-muted mt-1">' + answerPreview + (data.gpt?.answer?.length > 180 ? '…' : '') + '</div>' +
                     '</div>';
             }
 
-            async function runProcess(processImages) {
+            async function runProcess() {
                 hideResult();
                 setLoading(true);
 
                 try {
+                    // processImages=true: el servidor decide si hay capturas utilizables (sin modal).
                     const params = new URLSearchParams({
                         ticketId: ticketId,
                         ticketNumber: ticketNumber,
-                        processImages: String(processImages)
+                        processImages: 'true'
                     });
                     const response = await fetch(processUrl + '?' + params.toString(), {
                         method: 'GET',
@@ -494,7 +496,7 @@ RAG (Generación Aumentada por Recuperación) enriquece la respuesta de GPT con 
             }
 
             button.addEventListener('click', function () {
-                runProcess(hasUsableImages);
+                runProcess();
             });
         })();
     </script>
