@@ -232,12 +232,22 @@ public class TicketService : ITicketService
                 _logger.LogWarning(ex, "No se pudo calcular la estimación de tokens para el ticket {TicketId}.", id);
             }
 
+            var description = ticket.Description;
+            // Actions come newest-first; UI labels the oldest as comentario #1.
+            var commentNumberOne = actions.Count > 0 ? actions[^1] : null;
+            if (commentNumberOne is not null
+                && !string.IsNullOrWhiteSpace(description)
+                && string.Equals(description, commentNumberOne.Content, StringComparison.Ordinal))
+            {
+                description = string.Empty;
+            }
+
             return new TicketDetailViewModel
             {
                 Id = ticket.Id,
                 Number = ticket.Number ?? string.Empty,
                 Title = ticket.Title,
-                Description = ticket.Description,
+                Description = description,
                 Status = ticket.Status,
                 Priority = ticket.Priority,
                 Customer = ticket.Customer,

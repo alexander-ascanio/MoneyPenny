@@ -41,7 +41,7 @@ public class TeamSupportAttachmentService : ITeamSupportAttachmentService
         var html = TicketHtmlHelper.PrepareCommentHtml(content);
         var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var source in TicketHtmlHelper.ExtractImageSources(content))
+        foreach (var source in TicketHtmlHelper.ExtractCommentImageSources(content))
         {
             if (IsAllowedAttachmentUrl(source))
             {
