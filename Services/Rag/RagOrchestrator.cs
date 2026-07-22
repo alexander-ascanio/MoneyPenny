@@ -123,6 +123,7 @@ public class RagOrchestrator : IRagOrchestrator
                 request,
                 userId,
                 knowledgeBaseSolution,
+                gptContextText,
                 cancellationToken);
 
         if (!request.GenerateGptAnswer)
@@ -175,6 +176,7 @@ public class RagOrchestrator : IRagOrchestrator
                 TicketId = request.TicketId,
                 Question = $"{DefaultGenerationQuestion} (ticket #{request.TicketNumber})",
                 Answer = answer,
+                Context = gptContextText,
                 PromptVersion = OpenAiGenerationService.PromptVersion,
                 ResponseType = RagResponseType.Gpt
             }, cancellationToken: cancellationToken);
@@ -400,6 +402,7 @@ public class RagOrchestrator : IRagOrchestrator
         AskTicketViewModel request,
         string userId,
         RagKnowledgeBaseSolutionViewModel? knowledgeBaseSolution,
+        string? contextText,
         CancellationToken cancellationToken)
     {
         if (!request.KnowledgeBaseOnly || knowledgeBaseSolution is null)
@@ -414,6 +417,7 @@ public class RagOrchestrator : IRagOrchestrator
                 TicketId = request.TicketId,
                 Question = $"Solución Knowledge Base extraída (ticket #{request.TicketNumber})",
                 Answer = knowledgeBaseSolution.Text,
+                Context = contextText,
                 PromptVersion = KnowledgeBasePromptVersion,
                 ResponseType = RagResponseType.KnowledgeBase
             },

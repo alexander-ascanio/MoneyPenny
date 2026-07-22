@@ -213,9 +213,80 @@ public class RagController : Controller
         CancellationToken cancellationToken = default)
     {
         var rows = await _vectorRepository.GetRatingDailyStatsAsync(responseType, cancellationToken);
-        var recent = await _vectorRepository.GetRatedQueryLogsPageAsync(0, 50, responseType, cancellationToken);
 
-        return View(RagRatingsStatsViewModel.Build(responseType, rows, recent));
+        // Todas las valoraciones: la tabla filtra por fecha y texto en el cliente.
+        var recent = await _vectorRepository.GetRatedQueryLogsPageAsync(0, int.MaxValue, responseType, cancellationToken);
+
+        var ticketIds = recent
+            .Where(l => l.TicketId is > 0)
+            .Select(l => l.TicketId!.Value)
+            .Distinct()
+            .ToList();
+        var ticketLookups = await _ticketRepository.GetTicketExportLookupsByIdsAsync(ticketIds, cancellationToken);
+
+        return View(RagRatingsStatsViewModel.Build(responseType, rows, recent, ticketLookups));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> RatedAnswerDetail(
+        int queryLogId,
+        CancellationToken cancellationToken = default)
+    {
+        var log = await _vectorRepository.GetQueryLogByIdAsync(queryLogId, cancellationToken);
+        if (log is null)
+        {
+            return NotFound();
+        }
+
+        RagResponseViewModel response;
+
+        if (log.TicketId is > 0)
+        {
+            var ticket = await _ticketRepository.GetByIdAsync(log.TicketId.Value, cancellationToken);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.Identity?.Name ?? "anonymous";
+
+            // Misma canalización que la vista Ask, sin generar respuesta nueva ni registrar logs.
+            response = await _ragOrchestrator.ProcessTicketAsync(
+                new AskTicketViewModel
+                {
+                    TicketId = log.TicketId.Value,
+                    TicketNumber = ticket?.Number,
+                    GenerateGptAnswer = false,
+                    KnowledgeBaseOnly = log.ResponseType == RagResponseType.KnowledgeBase,
+                    SkipQueryLog = true
+                },
+                userId,
+                cancellationToken);
+        }
+        else
+        {
+            response = new RagResponseViewModel
+            {
+                TicketId = 0,
+                ErrorMessage = "Esta valoración no está asociada a ningún ticket."
+            };
+        }
+
+        // La respuesta mostrada es la que se valoró, no la última generada.
+        response.Answer = log.Answer;
+        response.HasGptAnswer = !string.IsNullOrWhiteSpace(log.Answer);
+        response.GptQueryLogId = log.Id;
+        response.GptRating = log.Rating;
+        response.GptAnswerSavedAt = log.CreatedAt;
+
+        if (string.IsNullOrWhiteSpace(response.ErrorMessage))
+        {
+            ApplyGroundingReport(response);
+        }
+
+        return PartialView("_RatedAnswerDetail", new RagRatedAnswerDetailViewModel
+        {
+            Response = response,
+            Question = log.Question,
+            StoredContext = log.Context,
+            Rating = log.Rating,
+            RatedAt = log.RatedAt
+        });
     }
 
     [HttpGet]

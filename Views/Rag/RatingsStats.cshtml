@@ -159,18 +159,50 @@
         </div>
 
         <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <i class="bi bi-clock-history me-2"></i>Últimas valoraciones (máx. 50)
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span>
+                    <i class="bi bi-clock-history me-2"></i>Valoraciones
+                    <span class="badge text-bg-secondary ms-1">
+                        <span id="ratingsVisibleCount">@Model.RecentItems.Count</span> de @Model.RecentItems.Count
+                    </span>
+                </span>
+            </div>
+            <div class="card-body border-bottom py-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg-5">
+                        <label for="ratingsSearchInput" class="form-label small text-muted mb-1">Buscar</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="search" class="form-control" id="ratingsSearchInput"
+                                   placeholder="Ticket, respuesta, tipo, OK/KO…" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label for="ratingsDateFrom" class="form-label small text-muted mb-1">Desde</label>
+                        <input type="date" class="form-control form-control-sm" id="ratingsDateFrom" />
+                    </div>
+                    <div class="col-6 col-lg-3">
+                        <label for="ratingsDateTo" class="form-label small text-muted mb-1">Hasta</label>
+                        <input type="date" class="form-control form-control-sm" id="ratingsDateTo" />
+                    </div>
+                    <div class="col-12 col-lg-1 d-grid">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="ratingsClearFilters"
+                                title="Limpiar filtros">
+                            <i class="bi bi-x-circle me-1"></i>Limpiar
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" id="recentRatingsTable">
                         <thead>
                             <tr>
-                                <th>Valoración</th>
-                                <th>Tipo</th>
-                                <th>Respuesta</th>
-                                <th>Fecha</th>
+                                <th role="button" data-sort-key="rating">Valoración <i class="bi bi-arrow-down-up sort-icon text-muted"></i></th>
+                                <th role="button" data-sort-key="ticket">Ticket <i class="bi bi-arrow-down-up sort-icon text-muted"></i></th>
+                                <th role="button" data-sort-key="type">Tipo <i class="bi bi-arrow-down-up sort-icon text-muted"></i></th>
+                                <th role="button" data-sort-key="answer">Respuesta <i class="bi bi-arrow-down-up sort-icon text-muted"></i></th>
+                                <th role="button" data-sort-key="date">Fecha <i class="bi bi-arrow-down-up sort-icon text-muted"></i></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -178,11 +210,29 @@
                             @foreach (var item in Model.RecentItems)
                             {
                                 var badge = RatingBadge(item.Rating);
-                                <tr>
+                                var typeLabel = item.ResponseType == RagResponseType.KnowledgeBase ? "KB" : item.ResponseType.ToString();
+                                <tr role="button"
+                                    data-query-log-id="@item.QueryLogId"
+                                    data-rating="@item.Rating"
+                                    data-rating-label="@badge.Label"
+                                    data-ticket="@(item.TicketNumber ?? "")"
+                                    data-type="@typeLabel"
+                                    data-answer="@item.AnswerExcerpt"
+                                    data-date="@(item.RatedAt?.ToLocalTime().ToString("yyyy-MM-ddTHH:mm:ss") ?? "")">
                                     <td>
                                         <span class="badge @badge.Css"><i class="bi @badge.Icon me-1"></i>@badge.Label</span>
                                     </td>
-                                    <td class="text-muted small">@(item.ResponseType == RagResponseType.KnowledgeBase ? "KB" : item.ResponseType.ToString())</td>
+                                    <td class="text-nowrap">
+                                        @if (!string.IsNullOrEmpty(item.TicketNumber))
+                                        {
+                                            <span class="fw-semibold">#@item.TicketNumber</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-muted small">@typeLabel</td>
                                     <td class="small">@item.AnswerExcerpt</td>
                                     <td class="text-muted small text-nowrap">
                                         @(item.RatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")
@@ -201,6 +251,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="ratingsNoResults" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-search me-1"></i>Ninguna valoración coincide con los filtros.
+                </div>
             </div>
         </div>
     }
@@ -211,6 +264,27 @@
             Todavía no hay respuestas valoradas para este filtro.
         </div>
     }
+</div>
+
+<div class="modal fade" id="ratedAnswerModal" tabindex="-1" aria-labelledby="ratedAnswerModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ratedAnswerModalTitle">
+                    <i class="bi bi-robot me-2 text-success"></i>Respuesta RAG
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="ratedAnswerModalLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="text-muted small mt-2">Recuperando respuesta y contexto…</div>
+                </div>
+                <div id="ratedAnswerModalContent" class="d-none"></div>
+                <div id="ratedAnswerModalError" class="alert alert-warning d-none mb-0"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -473,6 +547,156 @@
             });
 
             render('month');
+        })();
+
+        // --- Tabla de últimas valoraciones: ordenación y modal de detalle ---
+        (function () {
+            const table = document.getElementById('recentRatingsTable');
+            if (!table) {
+                return;
+            }
+
+            const tbody = table.querySelector('tbody');
+            let currentKey = null;
+            let currentAsc = true;
+
+            function cellValue(row, key) {
+                const raw = row.dataset[key] ?? '';
+                if (key === 'rating') {
+                    return parseInt(raw, 10) || 0;
+                }
+                if (key === 'ticket') {
+                    const asNumber = parseInt(raw, 10);
+                    return isNaN(asNumber) ? -1 : asNumber;
+                }
+                if (key === 'date') {
+                    return raw === '' ? 0 : new Date(raw).getTime();
+                }
+                return raw.toLowerCase();
+            }
+
+            table.querySelectorAll('th[data-sort-key]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.sortKey;
+                    currentAsc = currentKey === key ? !currentAsc : true;
+                    currentKey = key;
+
+                    table.querySelectorAll('th[data-sort-key] .sort-icon').forEach(icon => {
+                        icon.className = 'bi bi-arrow-down-up sort-icon text-muted';
+                    });
+                    th.querySelector('.sort-icon').className =
+                        `bi ${currentAsc ? 'bi-arrow-up' : 'bi-arrow-down'} sort-icon text-primary`;
+
+                    const rows = [...tbody.querySelectorAll('tr')];
+                    rows.sort((a, b) => {
+                        const va = cellValue(a, key);
+                        const vb = cellValue(b, key);
+                        const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+                        return currentAsc ? cmp : -cmp;
+                    });
+                    rows.forEach(r => tbody.appendChild(r));
+                });
+            });
+
+            // --- Filtros: buscador de texto y rango de fechas ---
+            const searchInput = document.getElementById('ratingsSearchInput');
+            const dateFromInput = document.getElementById('ratingsDateFrom');
+            const dateToInput = document.getElementById('ratingsDateTo');
+            const clearButton = document.getElementById('ratingsClearFilters');
+            const visibleCount = document.getElementById('ratingsVisibleCount');
+            const noResults = document.getElementById('ratingsNoResults');
+
+            function applyFilters() {
+                const query = (searchInput.value ?? '').trim().toLowerCase();
+                const terms = query.split(/\s+/).filter(t => t.length > 0);
+                const from = dateFromInput.value ? new Date(dateFromInput.value + 'T00:00:00') : null;
+                const to = dateToInput.value ? new Date(dateToInput.value + 'T23:59:59') : null;
+
+                let visible = 0;
+                tbody.querySelectorAll('tr[data-query-log-id]').forEach(row => {
+                    let show = true;
+
+                    if (from || to) {
+                        const raw = row.dataset.date;
+                        const date = raw ? new Date(raw) : null;
+                        if (!date) {
+                            show = false;
+                        } else {
+                            if (from && date < from) show = false;
+                            if (to && date > to) show = false;
+                        }
+                    }
+
+                    if (show && terms.length > 0) {
+                        const haystack = [
+                            row.dataset.ticket ? '#' + row.dataset.ticket : '',
+                            row.dataset.ratingLabel,
+                            row.dataset.type,
+                            row.dataset.answer,
+                            row.dataset.date ? new Date(row.dataset.date).toLocaleDateString('es-ES') : ''
+                        ].join(' ').toLowerCase();
+                        show = terms.every(term => haystack.includes(term));
+                    }
+
+                    row.classList.toggle('d-none', !show);
+                    if (show) visible++;
+                });
+
+                visibleCount.textContent = String(visible);
+                noResults.classList.toggle('d-none', visible > 0);
+            }
+
+            searchInput.addEventListener('input', applyFilters);
+            dateFromInput.addEventListener('change', applyFilters);
+            dateToInput.addEventListener('change', applyFilters);
+            clearButton.addEventListener('click', () => {
+                searchInput.value = '';
+                dateFromInput.value = '';
+                dateToInput.value = '';
+                applyFilters();
+            });
+
+            const modalElement = document.getElementById('ratedAnswerModal');
+            const modal = new bootstrap.Modal(modalElement);
+            const loading = document.getElementById('ratedAnswerModalLoading');
+            const content = document.getElementById('ratedAnswerModalContent');
+            const errorBox = document.getElementById('ratedAnswerModalError');
+
+            tbody.querySelectorAll('tr[data-query-log-id]').forEach(row => {
+                row.addEventListener('click', async event => {
+                    if (event.target.closest('a')) {
+                        return; // No abrir el modal al pulsar «Ver ticket».
+                    }
+
+                    const queryLogId = row.dataset.queryLogId;
+                    const ticket = row.dataset.ticket;
+
+                    document.getElementById('ratedAnswerModalTitle').innerHTML =
+                        '<i class="bi bi-robot me-2 text-success"></i>Respuesta RAG' +
+                        (ticket ? ` — Ticket #${ticket}` : '');
+                    loading.classList.remove('d-none');
+                    content.classList.add('d-none');
+                    content.innerHTML = '';
+                    errorBox.classList.add('d-none');
+                    modal.show();
+
+                    try {
+                        const response = await fetch(`@Url.Action("RatedAnswerDetail")?queryLogId=${queryLogId}`,
+                            { headers: { 'Accept': 'text/html' } });
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        content.innerHTML = await response.text();
+                        loading.classList.add('d-none');
+                        content.classList.remove('d-none');
+                    } catch (err) {
+                        loading.classList.add('d-none');
+                        errorBox.textContent = 'No se pudo cargar el detalle: ' + err.message;
+                        errorBox.classList.remove('d-none');
+                    }
+                });
+            });
         })();
     </script>
 }

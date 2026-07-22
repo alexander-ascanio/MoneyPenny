@@ -14,6 +14,8 @@ public class RagQueryLog
     public int? TicketId { get; set; }
     public string Question { get; set; } = string.Empty;
     public string Answer { get; set; } = string.Empty;
+    /// <summary>Contexto de tickets similares enviado al modelo para generar la respuesta (null en registros antiguos).</summary>
+    public string? Context { get; set; }
     public string PromptVersion { get; set; } = string.Empty;
     public RagResponseType ResponseType { get; set; } = RagResponseType.Gpt;
     public short? Rating { get; set; }

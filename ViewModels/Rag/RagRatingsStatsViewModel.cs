@@ -1,4 +1,5 @@
 using MoneyPenny.Models.Rag;
+using MoneyPenny.Services.Rag.Export;
 
 namespace MoneyPenny.ViewModels.Rag;
 
@@ -30,7 +31,8 @@ public class RagRatingsStatsViewModel
     public static RagRatingsStatsViewModel Build(
         RagResponseType? responseType,
         IReadOnlyList<RagRatingDailyStatsRow> rows,
-        IReadOnlyList<RagQueryLog> recentLogs)
+        IReadOnlyList<RagQueryLog> recentLogs,
+        IReadOnlyDictionary<int, TicketExportLookup>? ticketLookups = null)
     {
         var dailySeries = rows
             .Where(r => r.Rating is RagQueryLog.RatingGood or RagQueryLog.RatingBad)
@@ -49,6 +51,9 @@ public class RagRatingsStatsViewModel
             {
                 QueryLogId = l.Id,
                 TicketId = l.TicketId,
+                TicketNumber = l.TicketId is int id && ticketLookups is not null
+                    ? ticketLookups.GetValueOrDefault(id)?.Number
+                    : null,
                 Rating = l.Rating ?? 0,
                 RatedAt = l.RatedAt,
                 ResponseType = l.ResponseType,
@@ -87,6 +92,7 @@ public class RagRatingsStatsRecentItemViewModel
 {
     public int QueryLogId { get; init; }
     public int? TicketId { get; init; }
+    public string? TicketNumber { get; init; }
     public short Rating { get; init; }
     public DateTime? RatedAt { get; init; }
     public RagResponseType ResponseType { get; init; }

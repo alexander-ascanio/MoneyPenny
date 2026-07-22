@@ -80,6 +80,10 @@ public interface IVectorRepository
         RagResponseType? responseType = null,
         CancellationToken cancellationToken = default);
 
+    Task<RagQueryLog?> GetQueryLogByIdAsync(
+        int queryLogId,
+        CancellationToken cancellationToken = default);
+
     Task UpdateQueryLogTeamSupportActionIdAsync(
         int queryLogId,
         string? teamSupportActionId,

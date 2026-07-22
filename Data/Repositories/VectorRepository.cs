@@ -298,6 +298,7 @@ public class VectorRepository : IVectorRepository
                 {
                     existingContext.Question = log.Question;
                     existingContext.Answer = log.Answer;
+                    existingContext.Context = log.Context;
                     existingContext.PromptVersion = log.PromptVersion;
                     existingContext.CreatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync(cancellationToken);
@@ -317,6 +318,12 @@ public class VectorRepository : IVectorRepository
 
                 if (existing is not null)
                 {
+                    if (existing.Context is null && log.Context is not null)
+                    {
+                        existing.Context = log.Context;
+                        await _context.SaveChangesAsync(cancellationToken);
+                    }
+
                     return existing;
                 }
             }
@@ -436,6 +443,15 @@ public class VectorRepository : IVectorRepository
                 Count = g.Count()
             })
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<RagQueryLog?> GetQueryLogByIdAsync(
+        int queryLogId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.RagQueryLogs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == queryLogId, cancellationToken);
     }
 
     private IQueryable<RagQueryLog> BuildRatedQueryLogsQuery(RagResponseType? responseType)
