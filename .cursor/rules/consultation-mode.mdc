@@ -1,27 +1,47 @@
 ---
-description: Modo consulta — mensajes con «Una pregunta:» sin cambios en el proyecto
+description: Modo consulta — Pregunta/Consulta sin cambios hasta «terminar consulta»
 alwaysApply: true
 ---
 
-# Modo consulta («Una pregunta:»)
+# Modo consulta
 
-Cuando el usuario escriba un mensaje que **empiece por** `Una pregunta:` (con o sin mayúsculas en «una»), entra en **modo consulta**.
+## Activación
 
-## Qué hacer
+Si un mensaje del usuario **empieza por** alguno de estos prefijos (mayúsculas/minúsculas indistintas; se permite espacio tras los dos puntos), entra en **modo consulta**:
+
+- `Pregunta:`
+- `Consulta:`
+- `Una pregunta:`
+- `Una consulta:`
+
+También cuenta si el mensaje empieza por una variante cercana del mismo sentido (p. ej. `(Consulta)` / `Una pregunta (no hagas cambios)`), siempre que deje claro que es pregunta/consulta y no una petición de implementación.
+
+## Persistencia
+
+Una vez activado, el **modo consulta permanece activo en los mensajes siguientes** de la conversación, **aunque no lleven prefijo**.
+
+Solo se sale del modo consulta cuando el usuario escriba un mensaje que sea o **empiece por** `terminar consulta` (mayúsculas/minúsculas indistintas).
+
+Hasta entonces, tratar **todos** los mensajes como consulta.
+
+## Qué hacer en modo consulta
 
 - Responder con explicaciones, opiniones, recomendaciones o aclaraciones.
 - Leer el código o la configuración **solo si hace falta** para responder con precisión.
 
-## Qué no hacer
+## Qué no hacer en modo consulta
 
-- **No** modificar archivos del proyecto (código, vistas, CSS, config, migraciones, etc.).
+- **No** modificar archivos del proyecto (código, vistas, CSS, config, migraciones, rules, etc.).
 - **No** crear commits, PRs ni ejecutar cambios en bases de datos.
-- **No** proponer implementación salvo que el usuario lo pida explícitamente en otro mensaje (sin el prefijo de consulta).
+- **No** proponer ni aplicar implementación; si hace falta implementar, indicarlo y esperar a que el usuario diga `terminar consulta` (o lo pida en otro hilo sin modo consulta).
 
 ## Ejemplos
 
-- `Una pregunta: ¿qué base de datos conviene para guardar X?` → solo respuesta.
-- `Una pregunta: ¿cómo funciona el RAG aquí?` → explicar leyendo el repo si hace falta, sin editar.
-- `Añade un botón para X` → modo normal; sí se pueden hacer cambios.
+- `Una pregunta: ¿cómo funciona el RAG aquí?` → modo consulta; solo explicación.
+- Siguiente mensaje: `¿y los embeddings?` → sigue en modo consulta (sin prefijo).
+- `terminar consulta` → sale del modo; a partir de ahí sí se pueden hacer cambios si lo pide.
+- `Añade un botón para X` (sin haber activado consulta, o tras `terminar consulta`) → modo normal; sí se pueden hacer cambios.
 
-Si el mensaje mezcla pregunta y petición de cambio, priorizar el modo consulta **solo** para la parte marcada con `Una pregunta:`; para implementar algo, el usuario debe pedirlo sin ese prefijo o en un mensaje aparte.
+## Mezcla pregunta + cambio
+
+Si un mensaje de activación mezcla consulta y petición de cambio, priorizar **solo** la parte de consulta. No implementar hasta `terminar consulta` o un mensaje posterior fuera de modo consulta.
